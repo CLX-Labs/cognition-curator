@@ -19,9 +19,20 @@ struct cognition_curatorApp: App {
 
     @MainActor
     private func syncDecksFromBackend() async {
+        print("🔄 App: syncDecksFromBackend() called")
+        print("🔄 App: Auth state = \(authService.authState)")
+        print("🔄 App: Is authenticated = \(authService.isAuthenticated)")
+
         guard authService.isAuthenticated else {
             print("⚠️ App: Cannot sync decks - user not authenticated")
             return
+        }
+
+        // Log current user info
+        if case .authenticated(let user) = authService.authState {
+            print("👤 App: Current user ID: \(user.id)")
+            print("👤 App: Current user email: \(user.email)")
+            print("👤 App: Current user name: \(user.name)")
         }
 
         print("🔄 App: Starting deck sync from backend...")
@@ -33,6 +44,10 @@ struct cognition_curatorApp: App {
             // Fetch decks from backend
             let backendDecks = try await deckAPIService.getDecks()
             print("✅ App: Fetched \(backendDecks.count) decks from backend")
+
+            if backendDecks.isEmpty {
+                print("⚠️ App: Backend returned 0 decks - this may indicate user mismatch or empty account")
+            }
 
             // Convert and save to local storage
             for backendDeck in backendDecks {
@@ -58,7 +73,7 @@ struct cognition_curatorApp: App {
                     existingDeck.syncStatus = "synced"
                     existingDeck.needsSync = false
                     existingDeck.lastSyncedAt = Date()
-                    print("✅ App: Updated existing deck: \(backendDeck.name)")
+                    print("✅ App: Updated existing deck: \(backendDeck.name) (id: \(deckId))")
                 } else {
                     // Create new deck
                     let dateFormatter = ISO8601DateFormatter()
@@ -77,7 +92,7 @@ struct cognition_curatorApp: App {
                         lastSyncedAt: Date()
                     )
                     context.insert(newDeck)
-                    print("✅ App: Created new deck: \(backendDeck.name)")
+                    print("✅ App: Created new deck: \(backendDeck.name) (id: \(deckId))")
                 }
             }
 
@@ -85,8 +100,16 @@ struct cognition_curatorApp: App {
             try context.save()
             print("✅ App: Successfully synced \(backendDecks.count) decks to local storage")
 
+            // Verify local storage
+            let localDescriptor = FetchDescriptor<Deck>()
+            let localDecks = try? context.fetch(localDescriptor)
+            print("📦 App: Local SwiftData now has \(localDecks?.count ?? 0) decks")
+
         } catch {
-            print("❌ App: Failed to sync decks from backend: \(error.localizedDescription)")
+            print("❌ App: Failed to sync decks from backend!")
+            print("❌ App: Error type: \(type(of: error))")
+            print("❌ App: Error description: \(error.localizedDescription)")
+            print("❌ App: Full error: \(error)")
         }
     }
 

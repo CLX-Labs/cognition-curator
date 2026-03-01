@@ -398,9 +398,21 @@ class AuthenticationService: ObservableObject {
     // MARK: - Backend API Calls
 
     private func sendAppleSignInToBackend(identityToken: String, authorizationCode: String?, userInfo: AppleUserInfo?) async throws -> BackendAuthResponse {
+        print("🍎 AuthService.sendAppleSignInToBackend() - Starting...")
+        print("🍎 AuthService - Identity token (first 50 chars): \(String(identityToken.prefix(50)))...")
+        if let code = authorizationCode {
+            print("🍎 AuthService - Auth code (first 20 chars): \(String(code.prefix(20)))...")
+        }
+        if let user = userInfo {
+            print("🍎 AuthService - UserInfo: email=\(user.email ?? "nil"), name=\(user.name?.firstName ?? "nil") \(user.name?.lastName ?? "nil")")
+        }
+
         guard let url = URL(string: "\(baseURL)/auth/apple-signin") else {
+            print("❌ AuthService - Invalid backend URL: \(baseURL)/auth/apple-signin")
             throw AuthError.unknown("Invalid backend URL")
         }
+
+        print("🌐 AuthService - Request URL: \(url.absoluteString)")
 
         let request = AppleSignInRequest(
             identityToken: identityToken,
@@ -415,6 +427,7 @@ class AuthenticationService: ObservableObject {
         do {
             urlRequest.httpBody = try JSONEncoder().encode(request)
         } catch {
+            print("❌ AuthService - Failed to encode request: \(error)")
             throw AuthError.unknown("Failed to encode request")
         }
 
@@ -424,21 +437,37 @@ class AuthenticationService: ObservableObject {
             let (data, response) = try await APIConfiguration.authURLSession.data(for: urlRequest)
 
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ AuthService - Invalid response type")
                 throw AuthError.unknown("Invalid response")
+            }
+
+            print("📡 AuthService - Response status: \(httpResponse.statusCode)")
+
+            // Log raw response for debugging
+            if let rawString = String(data: data, encoding: .utf8) {
+                print("📦 AuthService - Raw response (first 500 chars): \(String(rawString.prefix(500)))")
             }
 
             if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
                 let authResponse = try JSONDecoder().decode(BackendAuthResponse.self, from: data)
+                print("✅ AuthService - Successfully authenticated!")
+                print("👤 AuthService - User ID: \(authResponse.user.id)")
+                print("👤 AuthService - User email: \(authResponse.user.email)")
+                print("👤 AuthService - User name: \(authResponse.user.name)")
+                print("🔑 AuthService - JWT token (first 30 chars): \(String(authResponse.accessToken.prefix(30)))...")
                 return authResponse
             } else {
                 // Try to decode error response
                 if let errorResponse = try? JSONDecoder().decode(BackendErrorResponse.self, from: data) {
+                    print("❌ AuthService - Backend error: \(errorResponse.error)")
                     throw AuthError.unknown(errorResponse.error)
                 } else {
+                    print("❌ AuthService - Unknown error with status \(httpResponse.statusCode)")
                     throw AuthError.unknown("Authentication failed with status \(httpResponse.statusCode)")
                 }
             }
         } catch {
+            print("❌ AuthService - Exception: \(error)")
             if error is AuthError {
                 throw error
             }

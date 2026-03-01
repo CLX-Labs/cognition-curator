@@ -106,13 +106,21 @@ class DeckAPIService: ObservableObject {
     }
 
     func getDecks() async throws -> [BackendDeck] {
+        print("🔄 DeckAPIService.getDecks() - Starting fetch...")
+
         guard let jwtToken = authService.getCurrentJWTToken() else {
+            print("❌ DeckAPIService.getDecks() - No JWT token available!")
             throw DeckAPIError.notAuthenticated
         }
 
+        print("🔑 DeckAPIService.getDecks() - JWT token: \(String(jwtToken.prefix(30)))...")
+
         guard let url = URL(string: "\(baseURL)/decks/") else {
+            print("❌ DeckAPIService.getDecks() - Invalid URL: \(baseURL)/decks/")
             throw DeckAPIError.invalidURL
         }
+
+        print("🌐 DeckAPIService.getDecks() - Request URL: \(url.absoluteString)")
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "GET"
@@ -122,17 +130,31 @@ class DeckAPIService: ObservableObject {
             let (data, response) = try await URLSession.shared.data(for: urlRequest)
 
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ DeckAPIService.getDecks() - Invalid response type")
                 throw DeckAPIError.invalidResponse
+            }
+
+            print("📡 DeckAPIService.getDecks() - Response status: \(httpResponse.statusCode)")
+
+            // Log raw response for debugging
+            if let rawString = String(data: data, encoding: .utf8) {
+                print("📦 DeckAPIService.getDecks() - Raw response (first 500 chars): \(String(rawString.prefix(500)))")
             }
 
             if httpResponse.statusCode == 200 {
                 let getResponse = try JSONDecoder().decode(GetDecksResponse.self, from: data)
+                print("✅ DeckAPIService.getDecks() - Successfully decoded \(getResponse.decks.count) decks")
+                for deck in getResponse.decks.prefix(5) {
+                    print("   📁 Deck: '\(deck.name)' (id: \(deck.id))")
+                }
                 return getResponse.decks
             } else {
                 let errorMessage = try? JSONDecoder().decode(BackendErrorResponse.self, from: data)
+                print("❌ DeckAPIService.getDecks() - Server error: \(errorMessage?.error ?? "Unknown")")
                 throw DeckAPIError.serverError(errorMessage?.error ?? "Failed to get decks with status \(httpResponse.statusCode)")
             }
         } catch {
+            print("❌ DeckAPIService.getDecks() - Error: \(error)")
             if error is DeckAPIError {
                 throw error
             }

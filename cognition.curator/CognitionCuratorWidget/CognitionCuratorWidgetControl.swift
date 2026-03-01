@@ -51,9 +51,11 @@ extension CognitionCuratorWidgetControl {
         }
 
         private func getDueCardsCount() -> ReviewData {
-            // Use App Groups to share data between main app and widget
-            let sharedDefaults = UserDefaults(suiteName: "group.collect.software.cognition-curator")
-                                ?? UserDefaults.standard
+            // W3 Fix: Return safe default instead of using standard UserDefaults (which won't share data)
+            guard let sharedDefaults = UserDefaults(suiteName: "group.collect.software.cognition-curator") else {
+                // App Group not available - return safe default
+                return ReviewData(dueCount: 0, hasCards: false)
+            }
 
             let dueCount = sharedDefaults.integer(forKey: "widget.dueCardsCount")
             let hasCards = sharedDefaults.bool(forKey: "widget.hasCards")

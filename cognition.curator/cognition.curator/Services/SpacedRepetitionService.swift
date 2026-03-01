@@ -61,13 +61,15 @@ class SpacedRepetitionService {
         }
     }
 
+    // Daily card limits - kept low (~5 total) to encourage consistent daily habit
+    // Users can review any deck on-demand without these limits
     var maxNewCardsPerDay: Int {
-        get { UserDefaults.standard.integer(forKey: "maxNewCardsPerDay") == 0 ? 20 : UserDefaults.standard.integer(forKey: "maxNewCardsPerDay") }
+        get { UserDefaults.standard.integer(forKey: "maxNewCardsPerDay") == 0 ? 2 : UserDefaults.standard.integer(forKey: "maxNewCardsPerDay") }
         set { UserDefaults.standard.set(newValue, forKey: "maxNewCardsPerDay") }
     }
 
     var maxReviewCardsPerDay: Int {
-        get { UserDefaults.standard.integer(forKey: "maxReviewCardsPerDay") == 0 ? 100 : UserDefaults.standard.integer(forKey: "maxReviewCardsPerDay") }
+        get { UserDefaults.standard.integer(forKey: "maxReviewCardsPerDay") == 0 ? 3 : UserDefaults.standard.integer(forKey: "maxReviewCardsPerDay") }
         set { UserDefaults.standard.set(newValue, forKey: "maxReviewCardsPerDay") }
     }
 
@@ -106,14 +108,14 @@ class SpacedRepetitionService {
             reviewedAt: Date(),
             flashcard: card
         )
-        
+
         // Calculate next review date
         if newInterval < 1440 { // Less than 24 hours (in minutes)
             newSession.nextReview = Calendar.current.date(byAdding: .minute, value: Int(newInterval), to: Date())
         } else { // Days
             newSession.nextReview = Calendar.current.date(byAdding: .day, value: Int(newInterval / 1440), to: Date())
         }
-        
+
         context.insert(newSession)
 
         return newSession.nextReview ?? Date()
@@ -227,16 +229,16 @@ class SpacedRepetitionService {
     private func isDeckSilenced(_ deck: Deck?) -> Bool {
         guard let deck = deck else { return false }
         guard deck.isSilenced else { return false }
-        
+
         if deck.silenceType == "permanent" {
             return true
         }
-        
+
         if deck.silenceType == "temporary",
            let endDate = deck.silenceEndDate {
             return Date() < endDate
         }
-        
+
         return false
     }
 
@@ -265,27 +267,27 @@ class SpacedRepetitionService {
 
     private func getNormalReviewCards(context: ModelContext, limit: Int) -> [Flashcard] {
         let now = Date()
-        
+
         // Fetch all cards and filter in memory (SwiftData predicate limitations)
         let descriptor = FetchDescriptor<Flashcard>(
             sortBy: [SortDescriptor(\.createdAt, order: .forward)]
         )
-        
+
         do {
             let allCards = try context.fetch(descriptor)
-            
+
             // Filter new cards (no review sessions)
             let newCards = allCards.filter { card in
                 (card.reviewSessions?.isEmpty ?? true) && !isDeckSilenced(card.deck)
             }.prefix(min(limit, maxNewCardsPerDay))
-            
+
             // Filter due cards
             let dueCards = allCards.filter { card in
                 guard !isDeckSilenced(card.deck) else { return false }
                 guard let sessions = card.reviewSessions, !sessions.isEmpty else { return false }
                 return sessions.contains { ($0.nextReview ?? Date()) <= now }
             }
-            
+
             // Combine: new cards first, then due cards
             var combinedCards: [Flashcard] = Array(newCards)
             for dueCard in dueCards.shuffled() {
@@ -293,7 +295,7 @@ class SpacedRepetitionService {
                     combinedCards.append(dueCard)
                 }
             }
-            
+
             print("📚 Found \(newCards.count) new cards, \(dueCards.count) due cards, returning \(combinedCards.count) total")
             return combinedCards
         } catch {
@@ -305,24 +307,24 @@ class SpacedRepetitionService {
     private func getPracticeCards(context: ModelContext, limit: Int) -> [Flashcard] {
         let now = Date()
         let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: now) ?? now
-        
+
         let descriptor = FetchDescriptor<Flashcard>(
             sortBy: [SortDescriptor(\.createdAt, order: .forward)]
         )
-        
+
         do {
             let allCards = try context.fetch(descriptor)
-            
+
             let practiceCards = allCards.filter { card in
                 guard !isDeckSilenced(card.deck) else { return false }
                 guard let sessions = card.reviewSessions else { return true } // New cards
-                
+
                 // New cards, due cards, or reviewed in last 3 days
                 return sessions.isEmpty ||
                        sessions.contains { ($0.nextReview ?? Date()) <= now } ||
                        sessions.contains { ($0.reviewedAt ?? Date()) >= threeDaysAgo }
             }
-            
+
             let shuffledCards = practiceCards.shuffled().prefix(limit)
             print("📚 Found \(practiceCards.count) practice cards (shuffled)")
             return Array(shuffledCards)
@@ -336,13 +338,13 @@ class SpacedRepetitionService {
         let descriptor = FetchDescriptor<Flashcard>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        
+
         do {
             let allCards = try context.fetch(descriptor)
             let cramCards = allCards.filter { card in
                 !isDeckSilenced(card.deck)
             }
-            
+
             let shuffledCards = cramCards.shuffled().prefix(limit)
             print("📚 Found \(cramCards.count) cram cards (shuffled)")
             return Array(shuffledCards)
@@ -356,13 +358,13 @@ class SpacedRepetitionService {
         let descriptor = FetchDescriptor<Flashcard>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        
+
         do {
             let allCards = try context.fetch(descriptor)
             let recentCards = allCards.filter { card in
                 !isDeckSilenced(card.deck)
             }
-            
+
             let shuffledCards = recentCards.shuffled().prefix(limit)
             print("📚 Found \(recentCards.count) recent cards (shuffled)")
             return Array(shuffledCards)
@@ -375,25 +377,25 @@ class SpacedRepetitionService {
     // MARK: - Deck-Specific Review Methods
     func getCardsFromDecks(context: ModelContext, deckIds: [UUID], mode: ReviewMode = .normal, limit: Int = 50, respectSilence: Bool = false) -> [Flashcard] {
         let descriptor = FetchDescriptor<Flashcard>()
-        
+
         do {
             let allCards = try context.fetch(descriptor)
-            
+
             // Filter by selected decks
             var deckCards = allCards.filter { card in
                 guard let deckId = card.deck?.id else { return false }
                 return deckIds.contains(deckId)
             }
-            
+
             // Optionally respect silence
             if respectSilence {
                 deckCards = deckCards.filter { !isDeckSilenced($0.deck) }
             }
-            
+
             // Apply mode-specific filtering
             let now = Date()
             let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: now) ?? now
-            
+
             let filteredCards: [Flashcard]
             switch mode {
             case .normal:
@@ -414,7 +416,7 @@ class SpacedRepetitionService {
                 // All cards
                 filteredCards = deckCards
             }
-            
+
             let shuffledCards = filteredCards.shuffled().prefix(limit)
             print("📚 Deck review: Found \(filteredCards.count) cards from \(deckIds.count) decks (\(mode.displayName) mode) (shuffled)")
             return Array(shuffledCards)
@@ -427,21 +429,21 @@ class SpacedRepetitionService {
     func getDeckReviewStats(context: ModelContext, deckIds: [UUID], respectSilence: Bool = false) -> (total: Int, new: Int, due: Int, learning: Int) {
         let now = Date()
         let descriptor = FetchDescriptor<Flashcard>()
-        
+
         do {
             let allCards = try context.fetch(descriptor)
-            
+
             // Filter by selected decks
             var deckCards = allCards.filter { card in
                 guard let deckId = card.deck?.id else { return false }
                 return deckIds.contains(deckId)
             }
-            
+
             // Optionally respect silence
             if respectSilence {
                 deckCards = deckCards.filter { !isDeckSilenced($0.deck) }
             }
-            
+
             let totalCount = deckCards.count
             let newCount = deckCards.filter { ($0.reviewSessions?.isEmpty ?? true) }.count
             let dueCount = deckCards.filter { card in
@@ -452,7 +454,7 @@ class SpacedRepetitionService {
                 guard let sessions = card.reviewSessions, !sessions.isEmpty else { return false }
                 return sessions.contains { $0.interval < 1440 && ($0.nextReview ?? Date()) <= now }
             }.count
-            
+
             return (totalCount, newCount, dueCount, learningCount)
         } catch {
             print("Error getting deck review stats: \(error)")
@@ -490,22 +492,22 @@ class SpacedRepetitionService {
     func getTodayReviewStats(context: ModelContext) -> (dueCards: Int, newCards: Int, learningCards: Int) {
         let now = Date()
         let descriptor = FetchDescriptor<Flashcard>()
-        
+
         do {
             let allCards = try context.fetch(descriptor)
-            
+
             let dueCount = allCards.filter { card in
                 guard let sessions = card.reviewSessions, !sessions.isEmpty else { return false }
                 return sessions.contains { ($0.nextReview ?? Date()) <= now }
             }.count
-            
+
             let newCount = allCards.filter { ($0.reviewSessions?.isEmpty ?? true) }.count
-            
+
             let learningCount = allCards.filter { card in
                 guard let sessions = card.reviewSessions, !sessions.isEmpty else { return false }
                 return sessions.contains { $0.interval < 1440 && ($0.nextReview ?? Date()) <= now }
             }.count
-            
+
             return (dueCount, newCount, learningCount)
         } catch {
             print("Error getting today review stats: \(error)")

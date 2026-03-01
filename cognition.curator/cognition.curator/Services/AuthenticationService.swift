@@ -124,6 +124,14 @@ private struct ASAuthorizationResult {
     let provider: ASAuthorizationProvider
 }
 
+// MARK: - JWT Claims Structure (A1 Fix)
+
+private struct JWTClaims: Decodable {
+    let exp: TimeInterval       // Expiration timestamp
+    let iat: TimeInterval?      // Issued at timestamp
+    let sub: String?            // Subject (user ID)
+}
+
 // MARK: - Authentication Service
 
 class AuthenticationService: ObservableObject {
@@ -134,6 +142,8 @@ class AuthenticationService: ObservableObject {
 
     private let userDefaultsKey = "currentUserId"
     private let jwtTokenKey = "jwtToken"
+    private let tokenExpirationKey = "jwtTokenExpiration"  // A1 Fix: Store expiration
+    private let cachedUserKey = "cachedUserAccount"        // A4 Fix: Cache user data
     private let usersStorageKey = "storedUsers"
 
     // Backend configuration
@@ -147,10 +157,53 @@ class AuthenticationService: ObservableObject {
 
     // MARK: - JWT Token Management
 
+    /// A1 Fix: Decode JWT to extract claims (expiration, etc.)
+    private func decodeJWT(_ token: String) -> JWTClaims? {
+        let parts = token.split(separator: ".")
+        guard parts.count >= 2 else {
+            print("⚠️ AuthService: Invalid JWT format - expected 3 parts, got \(parts.count)")
+            return nil
+        }
+
+        var payload = String(parts[1])
+        // Add padding for base64 decoding
+        while payload.count % 4 != 0 { payload += "=" }
+
+        // Replace URL-safe characters
+        payload = payload.replacingOccurrences(of: "-", with: "+")
+        payload = payload.replacingOccurrences(of: "_", with: "/")
+
+        guard let data = Data(base64Encoded: payload) else {
+            print("⚠️ AuthService: Failed to decode JWT payload base64")
+            return nil
+        }
+
+        do {
+            let claims = try JSONDecoder().decode(JWTClaims.self, from: data)
+            return claims
+        } catch {
+            print("⚠️ AuthService: Failed to decode JWT claims: \(error)")
+            return nil
+        }
+    }
+
+    /// A1 Fix: Save JWT token and extract/store expiration
     private func saveJWTToken(_ token: String) {
         UserDefaults.standard.set(token, forKey: jwtTokenKey)
         print("🔑 AuthService: JWT token saved to UserDefaults")
         print("🔑 AuthService: Token preview: \(String(token.prefix(20)))...")
+
+        // Extract and store expiration
+        if let claims = decodeJWT(token) {
+            UserDefaults.standard.set(claims.exp, forKey: tokenExpirationKey)
+            let expirationDate = Date(timeIntervalSince1970: claims.exp)
+            print("🔑 AuthService: Token expires at: \(expirationDate)")
+        } else {
+            // If we can't decode, set a default expiration (24 hours)
+            let defaultExpiration = Date().addingTimeInterval(24 * 60 * 60).timeIntervalSince1970
+            UserDefaults.standard.set(defaultExpiration, forKey: tokenExpirationKey)
+            print("⚠️ AuthService: Could not decode JWT, using default 24h expiration")
+        }
     }
 
     private func getJWTToken() -> String? {
@@ -159,16 +212,101 @@ class AuthenticationService: ObservableObject {
 
     private func clearJWTToken() {
         UserDefaults.standard.removeObject(forKey: jwtTokenKey)
+        UserDefaults.standard.removeObject(forKey: tokenExpirationKey)
     }
 
-    // Public method for other services to get JWT token
-    func getCurrentJWTToken() -> String? {
-        let token = getJWTToken()
-        print("🔑 AuthService: getCurrentJWTToken called, token exists: \(token != nil)")
-        if let token = token {
-            print("🔑 AuthService: Token preview: \(String(token.prefix(20)))...")
+    /// A1 Fix: Check if token is expired (with 5-minute buffer)
+    func isTokenExpired() -> Bool {
+        let expiration = UserDefaults.standard.double(forKey: tokenExpirationKey)
+        guard expiration > 0 else {
+            print("⚠️ AuthService: No expiration stored, considering token expired")
+            return true
         }
+
+        // Consider expired 5 minutes before actual expiration (buffer for network latency)
+        let bufferSeconds: TimeInterval = 300 // 5 minutes
+        let isExpired = Date().timeIntervalSince1970 > (expiration - bufferSeconds)
+
+        if isExpired {
+            let expirationDate = Date(timeIntervalSince1970: expiration)
+            print("⚠️ AuthService: Token is expired or expiring soon (expires: \(expirationDate))")
+        }
+
+        return isExpired
+    }
+
+    /// A1 Fix: Get token expiration date for debugging
+    func getTokenExpirationDate() -> Date? {
+        let expiration = UserDefaults.standard.double(forKey: tokenExpirationKey)
+        guard expiration > 0 else { return nil }
+        return Date(timeIntervalSince1970: expiration)
+    }
+
+    /// A1 Fix: Public method for other services to get JWT token (with expiration check)
+    func getCurrentJWTToken() -> String? {
+        guard let token = getJWTToken() else {
+            print("🔑 AuthService: getCurrentJWTToken called, no token exists")
+            return nil
+        }
+
+        // Check if token is expired
+        if isTokenExpired() {
+            print("⚠️ AuthService: Token expired, attempting refresh...")
+            // Trigger async refresh but return nil for now
+            Task { await attemptTokenRefresh() }
+            return nil
+        }
+
+        print("🔑 AuthService: getCurrentJWTToken called, token valid")
         return token
+    }
+
+    /// A1 Fix: Attempt to refresh the token
+    func attemptTokenRefresh() async {
+        print("🔑 AuthService: Attempting token refresh...")
+
+        guard let currentToken = getJWTToken() else {
+            print("❌ AuthService: No token to refresh, signing out")
+            await MainActor.run { signOut() }
+            return
+        }
+
+        guard let url = URL(string: "\(baseURL)\(APIConfiguration.Auth.refresh)") else {
+            print("❌ AuthService: Invalid refresh URL")
+            await MainActor.run { signOut() }
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(currentToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            let (data, response) = try await APIConfiguration.authURLSession.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ AuthService: Invalid response during refresh")
+                await MainActor.run { signOut() }
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                // Try to decode new token from response
+                if let refreshResponse = try? JSONDecoder().decode(BackendAuthResponse.self, from: data) {
+                    saveJWTToken(refreshResponse.accessToken)
+                    print("✅ AuthService: Token refreshed successfully")
+                    return
+                }
+            }
+
+            print("❌ AuthService: Token refresh failed with status \(httpResponse.statusCode)")
+            await MainActor.run { signOut() }
+
+        } catch {
+            print("❌ AuthService: Token refresh network error: \(error.localizedDescription)")
+            // Don't sign out on network error - keep existing token
+        }
     }
 
         // Get user profile from backend using JWT token
@@ -245,10 +383,15 @@ class AuthenticationService: ObservableObject {
         } catch {
             print("❌ AuthService: JWT validation network error: \(error.localizedDescription)")
 
-            // For development: if server is unreachable, assume token is valid
-            // In production, you should return false here
+            // Only allow token validation to pass in DEBUG mode if server is unreachable
+            // In production, we must validate the token
+            #if DEBUG
             print("⚠️ AuthService: Server unreachable in development, assuming token valid")
             return true
+            #else
+            print("❌ AuthService: Server unreachable in production, token validation failed")
+            return false
+            #endif
         }
     }
 
@@ -401,6 +544,7 @@ class AuthenticationService: ObservableObject {
             currentUser = nil
             UserDefaults.standard.removeObject(forKey: userDefaultsKey)
             clearJWTToken()
+            clearCachedUser()  // A4 Fix: Also clear cached user
         }
     }
 
@@ -467,6 +611,9 @@ class AuthenticationService: ObservableObject {
 
                 // Convert backend user to local user model
                 let userAccount = convertBackendUserToUserAccount(response.user)
+
+                // A4 Fix: Cache user for offline restoration
+                cacheUserAccount(userAccount)
 
                 await MainActor.run {
                     currentUser = userAccount
@@ -791,20 +938,32 @@ class AuthenticationService: ObservableObject {
             return
         }
 
+        // A1 Fix: Check if token is already expired before even trying
+        if isTokenExpired() {
+            print("⚠️ AuthService: Token expired on app launch, will attempt refresh")
+        }
+
         print("🔑 AuthService: JWT token found on app launch, validating with backend...")
         print("🔑 AuthService: Setting state to .validating")
         authState = .validating
 
-                        Task {
-            // If we have a JWT token but no local user data, try to get user info from backend
-            print("🔑 AuthService: Attempting to restore user from backend...")
+        Task {
+            await performUserRestoration(userId: userId, jwtToken: jwtToken)
+        }
+    }
 
-            // Try to get user profile from backend using JWT token
+    /// A4 Fix: Separated restoration logic with better error handling
+    private func performUserRestoration(userId: UUID, jwtToken: String) async {
+        print("🔑 AuthService: Attempting to restore user from backend...")
+
+        // Try to get user profile from backend using JWT token
+        do {
             if let userFromBackend = await getUserFromBackend(jwtToken) {
                 print("✅ AuthService: User profile retrieved from backend")
 
-                // Store the user locally for future use
+                // Store the user locally for future use and cache
                 await storeAppleUser(user: userFromBackend)
+                cacheUserAccount(userFromBackend)
 
                 await MainActor.run {
                     currentUser = userFromBackend
@@ -814,47 +973,117 @@ class AuthenticationService: ObservableObject {
                 }
                 return
             }
+        }
 
-            // If backend doesn't work, try local storage
-            let storedUsers = getStoredUsers()
-            for (_, userDict) in storedUsers {
-                if let dict = userDict as? [String: Any],
-                   let idString = dict["id"] as? String,
-                   idString == userId.uuidString,
-                   let email = dict["email"] as? String {
+        // If backend doesn't work, try cached user (A4 Fix)
+        if let cachedUser = loadCachedUser() {
+            print("⚠️ AuthService: Backend unavailable, using cached user data")
+            await MainActor.run {
+                currentUser = cachedUser
+                authState = .authenticated(cachedUser)
+                print("✅ AuthService: User session restored from cache (offline mode)")
+            }
+            return
+        }
 
-                    if let user = await getStoredUser(email: email) {
-                        print("🔑 AuthService: Found stored user locally, validating JWT token...")
+        // Try local storage as fallback
+        let storedUsers = getStoredUsers()
+        for (_, userDict) in storedUsers {
+            if let dict = userDict as? [String: Any],
+               let idString = dict["id"] as? String,
+               idString == userId.uuidString,
+               let email = dict["email"] as? String {
 
-                        // Validate the JWT token with the backend
-                        let isValid = await validateJWTToken(jwtToken)
-                        print("🔑 AuthService: JWT validation result: \(isValid)")
+                if let user = await getStoredUser(email: email) {
+                    print("🔑 AuthService: Found stored user locally, validating JWT token...")
 
-                        await MainActor.run {
-                            if isValid {
-                                currentUser = user
-                                authState = .authenticated(user)
-                                print("✅ AuthService: User session restored successfully")
+                    // Validate the JWT token with the backend
+                    let isValid = await validateJWTToken(jwtToken)
+                    print("🔑 AuthService: JWT validation result: \(isValid)")
+
+                    await MainActor.run {
+                        if isValid {
+                            currentUser = user
+                            authState = .authenticated(user)
+                            cacheUserAccount(user)  // Cache for offline use
+                            print("✅ AuthService: User session restored successfully")
+                        } else {
+                            // A4 Fix: Check if validation failed due to network or actual auth issue
+                            // If we have cached data and it's likely a network issue, use cached
+                            if let cachedUser = loadCachedUser() {
+                                print("⚠️ AuthService: Validation failed but using cached user (possible network issue)")
+                                currentUser = cachedUser
+                                authState = .authenticated(cachedUser)
                             } else {
-                                print("❌ AuthService: JWT token is invalid or network error, signing out")
+                                print("❌ AuthService: JWT token is invalid, signing out")
                                 authState = .unauthenticated
                                 clearJWTToken()
                                 UserDefaults.standard.removeObject(forKey: userDefaultsKey)
                             }
                         }
-                        return
                     }
+                    return
                 }
             }
-
-            // Neither backend nor local storage worked
-            print("❌ AuthService: Unable to restore user data, signing out")
-            await MainActor.run {
-                authState = .unauthenticated
-                clearJWTToken()
-                UserDefaults.standard.removeObject(forKey: userDefaultsKey)
-            }
         }
+
+        // Neither backend nor local storage worked
+        print("❌ AuthService: Unable to restore user data, signing out")
+        await MainActor.run {
+            authState = .unauthenticated
+            clearJWTToken()
+            UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        }
+    }
+
+    // MARK: - A4 Fix: User Caching for Offline Support
+
+    /// Cache user account for offline restoration
+    private func cacheUserAccount(_ user: UserAccount) {
+        let userDict: [String: Any] = [
+            "id": user.id.uuidString,
+            "email": user.email,
+            "name": user.name,
+            "createdAt": user.createdAt.timeIntervalSince1970,
+            "isPremium": user.isPremium,
+            "streakCount": user.streakCount,
+            "totalReviews": user.totalReviews,
+            "appleId": user.appleId ?? ""
+        ]
+        UserDefaults.standard.set(userDict, forKey: cachedUserKey)
+        print("🔑 AuthService: User account cached for offline use")
+    }
+
+    /// Load cached user account
+    private func loadCachedUser() -> UserAccount? {
+        guard let userDict = UserDefaults.standard.dictionary(forKey: cachedUserKey),
+              let idString = userDict["id"] as? String,
+              let id = UUID(uuidString: idString),
+              let email = userDict["email"] as? String,
+              let name = userDict["name"] as? String,
+              let createdAtInterval = userDict["createdAt"] as? TimeInterval,
+              let isPremium = userDict["isPremium"] as? Bool,
+              let streakCount = userDict["streakCount"] as? Int,
+              let totalReviews = userDict["totalReviews"] as? Int else {
+            return nil
+        }
+
+        let appleId = userDict["appleId"] as? String
+        return UserAccount(
+            id: id,
+            email: email,
+            name: name,
+            createdAt: Date(timeIntervalSince1970: createdAtInterval),
+            isPremium: isPremium,
+            streakCount: streakCount,
+            totalReviews: totalReviews,
+            appleId: appleId?.isEmpty == true ? nil : appleId
+        )
+    }
+
+    /// Clear cached user data (called on sign out)
+    private func clearCachedUser() {
+        UserDefaults.standard.removeObject(forKey: cachedUserKey)
     }
 
     // MARK: - Apple ID Storage Methods

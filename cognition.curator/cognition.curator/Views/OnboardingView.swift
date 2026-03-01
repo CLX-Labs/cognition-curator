@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    @StateObject private var onboardingState = OnboardingState()
-    @StateObject private var authService = AuthenticationService.shared
+    @EnvironmentObject var onboardingState: OnboardingState
+    @EnvironmentObject var authService: AuthenticationService
 
     var body: some View {
         ZStack {

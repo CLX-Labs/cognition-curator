@@ -1,9 +1,9 @@
-import os
 import logging
-from typing import Optional, Dict, Any
+import os
 from enum import Enum
+from typing import Any, Dict, Optional
 
-from .providers.base import AIProvider, FlashcardData, AIGenerationRequest, AIResponse
+from .providers.base import AIGenerationRequest, AIProvider, AIResponse, FlashcardData
 from .providers.claude import ClaudeProvider
 
 logger = logging.getLogger(__name__)
@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class AIProviderType(Enum):
     """Supported AI providers"""
+
     CLAUDE = "claude"
     OPENAI = "openai"  # For future implementation
     OLLAMA = "ollama"  # For future local model support
@@ -29,10 +30,11 @@ class AIManager:
         return {
             "provider": os.getenv("AI_PROVIDER", "claude").lower(),
             "claude_api_key": os.getenv("ANTHROPIC_API_KEY"),
-            "claude_model": os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022"),
+            "claude_model": os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514"),
             "openai_api_key": os.getenv("OPENAI_API_KEY"),
             "openai_model": os.getenv("OPENAI_MODEL", "gpt-4"),
-            "fallback_enabled": os.getenv("AI_FALLBACK_ENABLED", "true").lower() == "true"
+            "fallback_enabled": os.getenv("AI_FALLBACK_ENABLED", "true").lower()
+            == "true",
         }
 
     def get_provider(self) -> AIProvider:
@@ -63,7 +65,9 @@ class AIManager:
                 raise ValueError(f"Unknown AI provider: {provider_name}")
 
         except Exception as e:
-            logger.error(f"Failed to initialize AI provider '{provider_name}': {str(e)}")
+            logger.error(
+                f"Failed to initialize AI provider '{provider_name}': {str(e)}"
+            )
 
             if self._config["fallback_enabled"]:
                 logger.info("Falling back to mock provider")
@@ -76,14 +80,19 @@ class AIManager:
         """Create Claude provider instance"""
         api_key = self._config["claude_api_key"]
         if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable is required for Claude provider")
+            raise ValueError(
+                "ANTHROPIC_API_KEY environment variable is required for Claude provider"
+            )
 
         model = self._config["claude_model"]
         return ClaudeProvider(api_key=api_key, model=model)
 
     def _create_fallback_provider(self) -> AIProvider:
         """Create a fallback mock provider when real AI fails"""
-        from .providers.mock import MockProvider  # Import here to avoid circular dependency
+        from .providers.mock import (  # Import here to avoid circular dependency
+            MockProvider,
+        )
+
         return MockProvider()
 
     def switch_provider(self, provider_type: AIProviderType, **kwargs):
@@ -111,7 +120,9 @@ class AIManager:
             logger.info(f"Switched to {provider_type.value} provider")
 
         except Exception as e:
-            logger.error(f"Failed to switch to {provider_type.value} provider: {str(e)}")
+            logger.error(
+                f"Failed to switch to {provider_type.value} provider: {str(e)}"
+            )
             raise
 
     def get_provider_info(self) -> Dict[str, Any]:
@@ -121,7 +132,9 @@ class AIManager:
 
         info = self._provider.get_provider_info()
         info["status"] = "active"
-        info["provider_type"] = self._provider_type.value if self._provider_type else "fallback"
+        info["provider_type"] = (
+            self._provider_type.value if self._provider_type else "fallback"
+        )
         return info
 
     def is_available(self) -> bool:
@@ -137,12 +150,16 @@ class AIManager:
         provider = self.get_provider()
         return await provider.generate_flashcards(request)
 
-    async def generate_similar_card(self, base_card: FlashcardData, topic: str) -> FlashcardData:
+    async def generate_similar_card(
+        self, base_card: FlashcardData, topic: str
+    ) -> FlashcardData:
         """Generate a similar card using the current provider"""
         provider = self.get_provider()
         return await provider.generate_similar_card(base_card, topic)
 
-    async def generate_answer(self, question: str, context: str = "", deck_topic: str = "") -> Dict[str, Any]:
+    async def generate_answer(
+        self, question: str, context: str = "", deck_topic: str = ""
+    ) -> Dict[str, Any]:
         """Generate an answer using the current provider"""
         provider = self.get_provider()
         return await provider.generate_answer(question, context, deck_topic)

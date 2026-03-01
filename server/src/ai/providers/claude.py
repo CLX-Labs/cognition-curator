@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from anthropic import Anthropic
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class ClaudeProvider(AIProvider):
     """Anthropic Claude AI provider for flashcard generation"""
 
-    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20241022"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514"):
         super().__init__(api_key, model)
         self.client = Anthropic(api_key=api_key)
         self._model = model
@@ -24,7 +24,7 @@ class ClaudeProvider(AIProvider):
 
     @property
     def max_tokens(self) -> int:
-        return 4096  # Claude's standard max tokens for responses
+        return 2048  # Reduced to encourage concise responses
 
     def get_provider_info(self) -> Dict[str, str]:
         return {
@@ -79,29 +79,19 @@ class ClaudeProvider(AIProvider):
     ) -> FlashcardData:
         """Generate a similar card based on an existing card"""
 
-        prompt = f"""Generate ONE similar flashcard based on this example:
-
-**Original Card:**
-Question: {base_card.question}
-Answer: {base_card.answer}
-Explanation: {base_card.explanation}
+        prompt = f"""Generate ONE flashcard similar to this:
+Q: {base_card.question}
+A: {base_card.answer}
 Topic: {topic}
 
-Create a NEW flashcard that:
-1. Covers a related concept in the same topic
-2. Has similar complexity level
-3. Uses a different angle or approach
-4. Is NOT a variation of the same question
+STRICT RULES:
+- Question: MAX 15 words
+- Answer: MAX 20 words
+- Different concept, same topic
+- NO generic questions
 
-**Keep content CONCISE - flashcards should be brief and focused.**
-
-Respond with ONLY this JSON format:
-{{
-    "question": "Your new question here (keep short)",
-    "answer": "Brief, direct answer (1 sentence max)",
-    "explanation": "Short note on importance (1 sentence)",
-    "confidence": 0.85
-}}"""
+Return ONLY JSON:
+{{"question":"...","answer":"...","explanation":"...","confidence":0.85}}"""
 
         try:
             loop = asyncio.get_event_loop()
@@ -109,8 +99,8 @@ Respond with ONLY this JSON format:
                 None,
                 lambda: self.client.messages.create(
                     model=self._model,
-                    max_tokens=1000,
-                    temperature=0.8,
+                    max_tokens=300,  # Reduced for concise output
+                    temperature=0.7,
                     messages=[{"role": "user", "content": prompt}],
                 ),
             )
@@ -143,9 +133,9 @@ Respond with ONLY this JSON format:
             logger.error(f"Error generating similar card: {str(e)}")
             # Return a basic similar card as fallback
             return FlashcardData(
-                question=f"Related concept to {topic}: What is another important aspect?",
-                answer=f"This is a related concept in {topic} that builds on similar principles.",
-                explanation="This card was generated as a fallback when AI generation failed.",
+                question=f"Related to {topic}: Another key aspect?",
+                answer=f"A related concept in {topic}.",
+                explanation="Fallback card - AI generation failed.",
                 difficulty=base_card.difficulty,
                 tags=base_card.tags + ["fallback"],
                 confidence=0.6,
@@ -156,24 +146,19 @@ Respond with ONLY this JSON format:
     ) -> Dict[str, Any]:
         """Generate an AI answer for a given question"""
 
-        print(f"Generating answer for question: {question}")
+        logger.info(f"Generating answer for: {question[:50]}...")
 
-        prompt = f"""Answer this question with accuracy and depth:
+        prompt = f"""Answer this flashcard question in MAX 20 words:
 
-**Question:** {question}
+Q: {question}
+{f"Context: {context}" if context else ""}
 
-**Context:** {context if context else "General knowledge"}
-**Subject Area:** {deck_topic if deck_topic else "General"}
-
-Provide a comprehensive answer that:
-1. Directly answers the question
-2. Gives practical, useful information
-3. Includes relevant details an expert would know
-4. Avoids generic or vague responses
-
-Keep your answer focused and informative.
-Just a couple of words, it needs to be SUPER concise and to the point. Do not repeat the question in your answer OR ELSE.
-Do not mention the subject area in your answer EVER!!!."""
+Rules:
+- Direct answer only, no fluff
+- MAX 20 words
+- Don't repeat the question
+- Don't say "The answer is..."
+- Just state the fact"""
 
         try:
             loop = asyncio.get_event_loop()
@@ -181,18 +166,19 @@ Do not mention the subject area in your answer EVER!!!."""
                 None,
                 lambda: self.client.messages.create(
                     model=self._model,
-                    max_tokens=800,
-                    temperature=0.6,
+                    max_tokens=200,  # Reduced for concise answers
+                    temperature=0.5,
                     messages=[{"role": "user", "content": prompt}],
                 ),
             )
 
             answer = response.content[0].text.strip()
-            print(f"Answer: {answer}")
+            logger.info(f"Generated answer: {answer[:100]}...")
 
+            topic_label = deck_topic or "general"
             return {
                 "answer": answer,
-                "explanation": f"Generated using {self.name} for {deck_topic or 'general knowledge'}",
+                "explanation": f"Generated via {self.name} for {topic_label}",
                 "confidence": 0.88,
                 "sources": [],
                 "suggested_tags": [
@@ -204,130 +190,60 @@ Do not mention the subject area in your answer EVER!!!."""
         except Exception as e:
             logger.error(f"Error generating answer: {str(e)}")
             return {
-                "answer": "I apologize, but I'm unable to generate an answer at this time due to a technical issue.",
-                "explanation": "This is a fallback response when AI generation fails.",
+                "answer": "Unable to generate answer due to technical issue.",
+                "explanation": "Fallback response - AI generation failed.",
                 "confidence": 0.1,
                 "sources": [],
                 "suggested_tags": ["error", "fallback"],
             }
 
     def _build_flashcard_prompt(self, request: AIGenerationRequest) -> str:
-        """Build optimized prompt for flashcard generation"""
+        """Build optimized prompt for flashcard generation."""
 
         difficulty_guidance = {
-            "easy": "basic concepts, definitions, and fundamental facts",
-            "medium": "practical applications, relationships between concepts, and analytical thinking",
-            "hard": "complex analysis, synthesis of multiple concepts, and expert-level insights",
+            "easy": "definitions and basic facts",
+            "medium": "practical applications",
+            "hard": "expert-level concepts",
         }
 
-        # Detect topic type for specialized prompts
-        topic_lower = request.topic.lower()
+        diff = request.difficulty
+        diff_desc = difficulty_guidance.get(diff, "appropriate")
+        n = request.number_of_cards
+        topic = request.topic
 
-        if any(
-            tech in topic_lower
-            for tech in [
-                "programming",
-                "javascript",
-                "typescript",
-                "python",
-                "coding",
-                "software",
-            ]
-        ):
-            prompt_type = "programming"
-        elif any(
-            culinary in topic_lower
-            for culinary in ["cooking", "culinary", "chef", "food", "baking"]
-        ):
-            prompt_type = "culinary"
-        elif any(
-            strategy in topic_lower for strategy in ["chess", "strategy", "tactics"]
-        ):
-            prompt_type = "strategy"
-        else:
-            prompt_type = "general"
+        base_prompt = f"""Generate {n} flashcards about "{topic}".
 
-        base_prompt = f"""Generate {request.number_of_cards} high-quality flashcards about {request.topic}.
+STRICT LENGTH RULES (MUST FOLLOW):
+- Question: MAX 15 words, single line
+- Answer: MAX 20 words, single line
+- Explanation: MAX 15 words
 
-**Requirements:**
-- Difficulty: {request.difficulty} ({difficulty_guidance.get(request.difficulty, "appropriate level")})
-- Focus on {self._get_topic_focus(prompt_type, request.topic)}
-- Each card should test genuine understanding, not just memorization
-- Questions should be specific and answerable
-- Answers should be accurate and practical
-- NO generic questions like "What is {request.topic}?" or "What are the benefits of..."
+CONTENT RULES:
+- Difficulty: {diff} ({diff_desc})
+- Test real knowledge, not trivia
+- NO "What is X?" or "Define X" questions
+- Answers must be direct facts, not explanations
 
-**CRITICAL: Keep content CONCISE and SUCCINCT. Avoid verbose explanations.**
+BAD EXAMPLES (too long):
+❌ Q: "What approach for state management in large React apps?"
+❌ A: "Redux or Context API depending on complexity."
 
-**Card Format:**
-Return ONLY a JSON array with this exact structure:
-[
-    {{
-        "question": "Specific, testable question (keep short)",
-        "answer": "Brief, direct answer (1 concise sentence max)",
-        "explanation": "Short note on why this matters (1 sentence)",
-        "difficulty": "{request.difficulty}",
-        "tags": ["relevant", "topic", "tags"],
-        "confidence": 0.85
-    }}
-]
+GOOD EXAMPLES (concise):
+✓ Q: "Default React hook for local component state?"
+✓ A: "useState"
 
-{self._get_topic_specific_guidance(prompt_type, request.topic)}
+✓ Q: "Python list method to add item at end?"
+✓ A: "append()"
 
-Generate exactly {request.number_of_cards} cards that an expert in {request.topic} would find valuable.
+✓ Q: "SQL keyword to remove duplicates?"
+✓ A: "DISTINCT"
 
-**REMEMBER: Be concise, direct, and avoid wordiness. Flashcards should be quick to read and review.**"""
+Return ONLY valid JSON array:
+[{{"question":"...","answer":"...","explanation":"...","difficulty":"{diff}","tags":["tag1"],"confidence":0.9}}]
+
+Generate {n} cards. Questions test expert knowledge. Answers are terse."""
 
         return base_prompt
-
-    def _get_topic_focus(self, prompt_type: str, topic: str) -> str:
-        """Get focus guidance based on topic type"""
-        focus_map = {
-            "programming": "practical coding concepts, syntax, best practices, and real-world applications",
-            "culinary": "techniques, temperatures, timing, ingredients, and professional kitchen knowledge",
-            "strategy": "tactics, principles, decision-making, and strategic thinking",
-            "general": "practical knowledge, expert insights, and actionable information",
-        }
-        return focus_map.get(prompt_type, focus_map["general"])
-
-    def _get_topic_specific_guidance(self, prompt_type: str, topic: str) -> str:
-        """Get topic-specific prompt guidance"""
-
-        if prompt_type == "programming":
-            return f"""
-**Programming Focus for {topic}:**
-- Syntax and practical code examples
-- Common pitfalls and debugging
-- Best practices and design patterns
-- Performance considerations
-- Real-world usage scenarios"""
-
-        elif prompt_type == "culinary":
-            return f"""
-**Culinary Focus for {topic}:**
-- Specific temperatures, times, and measurements
-- Professional techniques and methods
-- Food safety and quality indicators
-- Equipment usage and maintenance
-- Flavor development and presentation"""
-
-        elif prompt_type == "strategy":
-            return f"""
-**Strategy Focus for {topic}:**
-- Tactical patterns and principles
-- Decision-making frameworks
-- Position evaluation criteria
-- Common mistakes and how to avoid them
-- Advanced concepts for improvement"""
-
-        else:
-            return f"""
-**Expert Knowledge Focus for {topic}:**
-- Professional insights and industry standards
-- Practical applications and real-world scenarios
-- Quality indicators and best practices
-- Common misconceptions and expert corrections
-- Advanced concepts that separate novices from experts"""
 
     def _parse_flashcard_response(
         self, response_text: str, request: AIGenerationRequest
@@ -352,13 +268,14 @@ Generate exactly {request.number_of_cards} cards that an expert in {request.topi
             cards_json = json.loads(response_text)
 
             cards = []
+            default_tags = [request.topic.lower(), "ai-generated"]
             for card_data in cards_json:
                 card = FlashcardData(
                     question=card_data.get("question", ""),
                     answer=card_data.get("answer", ""),
                     explanation=card_data.get("explanation", ""),
                     difficulty=card_data.get("difficulty", request.difficulty),
-                    tags=card_data.get("tags", [request.topic.lower(), "ai-generated"]),
+                    tags=card_data.get("tags", default_tags),
                     confidence=card_data.get("confidence", 0.85),
                 )
                 cards.append(card)
@@ -385,14 +302,15 @@ Generate exactly {request.number_of_cards} cards that an expert in {request.topi
         self, request: AIGenerationRequest
     ) -> List[FlashcardData]:
         """Create basic fallback cards when AI fails"""
+        topic = request.topic
         return [
             FlashcardData(
-                question=f"What is an important concept in {request.topic}?",
-                answer=f"This is a fundamental concept in {request.topic} that requires further study.",
-                explanation="This card was generated as a fallback when AI generation failed.",
+                question=f"Key concept in {topic}?",
+                answer=f"Fundamental {topic} concept - study further.",
+                explanation="Fallback card - AI generation failed.",
                 difficulty=request.difficulty,
-                tags=[request.topic.lower(), "fallback"],
+                tags=[topic.lower(), "fallback"],
                 confidence=0.3,
             )
-            for _ in range(min(request.number_of_cards, 3))  # Limit fallback cards
+            for _ in range(min(request.number_of_cards, 3))
         ]

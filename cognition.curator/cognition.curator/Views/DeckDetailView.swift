@@ -16,7 +16,11 @@ struct DeckDetailView: View {
     @State private var showingSilenceSettings = false
 
     // Services
-    @StateObject private var deckAPIService = DeckAPIService(authService: AuthenticationService.shared)
+    @EnvironmentObject private var authService: AuthenticationService
+
+    private var deckAPIService: DeckAPIService {
+        DeckAPIService(authService: authService)
+    }
 
     var filteredCards: [Flashcard] {
         let cards = deck.flashcards ?? []

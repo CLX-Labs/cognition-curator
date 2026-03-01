@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AppleOnlyAuthView: View {
-    @StateObject private var authService = AuthenticationService.shared
+    @EnvironmentObject var authService: AuthenticationService
     let onSuccess: () -> Void
 
     var body: some View {

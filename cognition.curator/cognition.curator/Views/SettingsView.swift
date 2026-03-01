@@ -165,7 +165,7 @@ struct SettingsView: View {
                             .foregroundColor(.blue)
                     }
 
-                    Slider(value: $maxNewCardsPerDay, in: 5...50, step: 5)
+                    Slider(value: $maxNewCardsPerDay, in: 1...10, step: 1)
                         .accentColor(.blue)
                 }
 
@@ -183,7 +183,7 @@ struct SettingsView: View {
                             .foregroundColor(.green)
                     }
 
-                    Slider(value: $maxReviewCardsPerDay, in: 20...200, step: 10)
+                    Slider(value: $maxReviewCardsPerDay, in: 1...15, step: 1)
                         .accentColor(.green)
                 }
             }

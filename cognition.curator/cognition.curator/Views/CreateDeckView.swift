@@ -306,9 +306,19 @@ struct CreateDeckView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
         .sheet(isPresented: $showingAIReview) {
-            AICardReviewView(topic: aiTopic, deckName: deckName, generatedCards: $generatedCards) {
+            // Use AI topic as deck name if user hasn't entered one
+            let effectiveDeckName = deckName.isEmpty ? aiTopic : deckName
+            AICardReviewView(
+                topic: aiTopic,
+                deckName: effectiveDeckName,
+                generatedCards: $generatedCards
+            ) {
                 // Called when deck is successfully created by AICardReviewView
                 deckCreatedByAI = true
+                // Also update the local deckName so it shows correctly
+                if deckName.isEmpty {
+                    deckName = aiTopic
+                }
             }
         }
     }
@@ -433,7 +443,7 @@ struct CreateDeckView: View {
                     isPremium: isPremium,
                     isSuperset: isSuperset
                 )
-                
+
                 modelContext.insert(newDeck)
 
                 do {

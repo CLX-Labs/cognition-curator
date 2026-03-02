@@ -18,6 +18,96 @@ struct cognition_curatorApp: App {
     // MARK: - Sync Methods
 
     @MainActor
+    private func syncFlashcardsFromBackend(for decks: [Deck]) async {
+        print("🔄 App: syncFlashcardsFromBackend() called for \(decks.count) decks")
+
+        guard authService.isAuthenticated else {
+            print("⚠️ App: Cannot sync flashcards - user not authenticated")
+            return
+        }
+
+        let context = persistenceController.container.mainContext
+        let flashcardAPIService = FlashcardAPIService(authService: authService)
+
+        var totalCardsCreated = 0
+        var totalCardsUpdated = 0
+
+        for deck in decks {
+            do {
+                print("🔄 App: Fetching flashcards for deck '\(deck.name)' (id: \(deck.id))")
+                let backendFlashcards = try await flashcardAPIService.getFlashcards(for: deck.id.uuidString)
+                print("✅ App: Fetched \(backendFlashcards.count) flashcards for deck '\(deck.name)'")
+
+                for backendCard in backendFlashcards {
+                    guard let cardId = UUID(uuidString: backendCard.id) else {
+                        print("⚠️ App: Invalid flashcard ID: \(backendCard.id)")
+                        continue
+                    }
+
+                    // Check if flashcard already exists locally
+                    var descriptor = FetchDescriptor<Flashcard>(
+                        predicate: #Predicate<Flashcard> { card in
+                            card.id == cardId
+                        }
+                    )
+                    descriptor.fetchLimit = 1
+
+                    let existingCards = try? context.fetch(descriptor)
+
+                    if let existingCard = existingCards?.first {
+                        // Update existing flashcard
+                        existingCard.question = backendCard.front
+                        existingCard.answer = backendCard.back
+                        existingCard.updatedAt = ISO8601DateFormatter().date(from: backendCard.updatedAt)
+                        existingCard.syncStatus = "synced"
+                        existingCard.needsSync = false
+                        existingCard.lastSyncedAt = Date()
+                        existingCard.deck = deck
+                        totalCardsUpdated += 1
+                    } else {
+                        // Create new flashcard
+                        let dateFormatter = ISO8601DateFormatter()
+                        let createdAt = dateFormatter.date(from: backendCard.createdAt) ?? Date()
+                        let updatedAt = dateFormatter.date(from: backendCard.updatedAt)
+
+                        let newCard = Flashcard(
+                            id: cardId,
+                            question: backendCard.front,
+                            answer: backendCard.back,
+                            createdAt: createdAt,
+                            updatedAt: updatedAt,
+                            syncStatus: "synced",
+                            needsSync: false,
+                            lastSyncedAt: Date(),
+                            deck: deck
+                        )
+                        context.insert(newCard)
+                        totalCardsCreated += 1
+                    }
+                }
+            } catch {
+                print("❌ App: Failed to sync flashcards for deck '\(deck.name)': \(error)")
+            }
+        }
+
+        // Save all changes
+        do {
+            try context.save()
+            print("✅ App: Flashcard sync complete - Created: \(totalCardsCreated), Updated: \(totalCardsUpdated)")
+
+            // Verify local storage
+            let localDescriptor = FetchDescriptor<Flashcard>()
+            let localCards = try? context.fetch(localDescriptor)
+            print("📦 App: Local SwiftData now has \(localCards?.count ?? 0) flashcards")
+
+            // Update widget data after flashcard sync
+            WidgetDataService.shared.updateWidgetData()
+        } catch {
+            print("❌ App: Failed to save flashcards: \(error)")
+        }
+    }
+
+    @MainActor
     private func syncDecksFromBackend() async {
         print("🔄 App: syncDecksFromBackend() called")
         print("🔄 App: Auth state = \(authService.authState)")
@@ -104,6 +194,11 @@ struct cognition_curatorApp: App {
             let localDescriptor = FetchDescriptor<Deck>()
             let localDecks = try? context.fetch(localDescriptor)
             print("📦 App: Local SwiftData now has \(localDecks?.count ?? 0) decks")
+
+            // Now sync flashcards for all decks
+            if let decksToSync = localDecks, !decksToSync.isEmpty {
+                await syncFlashcardsFromBackend(for: decksToSync)
+            }
 
         } catch {
             print("❌ App: Failed to sync decks from backend!")

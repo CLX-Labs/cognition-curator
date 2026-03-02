@@ -49,7 +49,7 @@ struct APIConfiguration {
 
     #if DEBUG
     /// Development environment - connects to local Flask server
-    static let baseURL = "http://127.0.0.1:5001/api"
+    static let baseURL = "http://127.0.0.1:5002/api"
     static let environment = "development"
     #else
     /// Production environment - connects to Railway deployment

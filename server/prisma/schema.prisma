@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CardStatus {
+  NEW
+  LEARNING
+  REVIEW
+  MASTERED
+
+  @@map("cardstatus")
+}
+
+model User {
+  id                         String    @id @default(uuid()) @db.Uuid
+  // Stytch — nullable for existing rows that haven't re-authenticated
+  stytchUserId               String?   @unique @map("stytch_user_id")
+  email                      String    @unique @db.VarChar(255)
+  passwordHash               String?   @map("password_hash") @db.VarChar(255)
+  appleId                    String?   @unique @map("apple_id") @db.VarChar(255)
+  name                       String    @db.VarChar(100)
+  displayName                String?   @map("display_name") @db.VarChar(100)
+  profilePictureUrl          String?   @map("profile_picture_url")
+  isActive                   Boolean   @map("is_active")
+  isPremium                  Boolean   @map("is_premium")
+  emailVerified              Boolean   @map("email_verified")
+  createdAt                  DateTime  @map("created_at") @db.Timestamptz
+  updatedAt                  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  lastLoginAt                DateTime? @map("last_login_at") @db.Timestamptz
+  studyPreferences           Json      @map("study_preferences")
+  timezone                   String    @db.VarChar(50)
+  languagePreference         String    @map("language_preference") @db.VarChar(10)
+  totalStudyTimeMinutes      Int       @default(0) @map("total_study_time_minutes")
+  currentStreakDays           Int       @default(0) @map("current_streak_days")
+  longestStreakDays           Int       @default(0) @map("longest_streak_days")
+  totalCardsReviewed          Int       @default(0) @map("total_cards_reviewed")
+  totalDecksCreated           Int       @default(0) @map("total_decks_created")
+  overallAccuracyRate         Float     @default(0) @map("overall_accuracy_rate")
+  averageSessionLengthMinutes Float     @default(0) @map("average_session_length_minutes")
+  masteryRate                 Float     @default(0) @map("mastery_rate")
+
+  decks              Deck[]
+  studySessions      StudySession[]
+  reviewSessions     ReviewSession[]
+  performanceMetrics PerformanceMetric[]
+  learningInsights   LearningInsight[]
+  retentionData      RetentionData[]
+
+  @@map("users")
+}
+
+model Deck {
+  id                      String    @id @default(uuid()) @db.Uuid
+  name                    String    @db.VarChar(200)
+  description             String?
+  category                String?   @db.VarChar(100)
+  userId                  String    @map("user_id") @db.Uuid
+  isPublic                Boolean   @default(false) @map("is_public")
+  isActive                Boolean   @default(true) @map("is_active")
+  color                   String    @default("#007AFF") @db.VarChar(7)
+  icon                    String?   @db.VarChar(50)
+  spacedRepetitionEnabled Boolean   @default(true) @map("spaced_repetition_enabled")
+  dailyGoalCards          Int       @default(20) @map("daily_goal_cards")
+  maxNewCardsPerDay       Int       @default(10) @map("max_new_cards_per_day")
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  lastStudiedAt           DateTime? @map("last_studied_at") @db.Timestamptz
+  totalCards              Int       @default(0) @map("total_cards")
+  cardsDueCount           Int       @default(0) @map("cards_due_count")
+  cardsNewCount           Int       @default(0) @map("cards_new_count")
+  cardsLearningCount      Int       @default(0) @map("cards_learning_count")
+  cardsMasteredCount      Int       @default(0) @map("cards_mastered_count")
+  averageAccuracy         Float     @default(0) @map("average_accuracy")
+  averageStudyTimePerCard Float     @default(0) @map("average_study_time_per_card")
+  totalStudyTimeMinutes   Int       @default(0) @map("total_study_time_minutes")
+  totalReviews            Int       @default(0) @map("total_reviews")
+  tags                    Json      @default("[]")
+  customFields            Json      @default("{}") @map("custom_fields")
+  aiGenerated             Boolean   @default(false) @map("ai_generated")
+  aiGenerationPrompt      String?   @map("ai_generation_prompt")
+  aiModelUsed             String?   @map("ai_model_used") @db.VarChar(100)
+
+  user           User           @relation(fields: [userId], references: [id])
+  flashcards     Flashcard[]
+  studySessions  StudySession[]
+  reviewSessions ReviewSession[]
+
+  @@index([userId])
+  @@map("decks")
+}
+
+model Flashcard {
+  id                         String     @id @default(uuid()) @db.Uuid
+  front                      String
+  back                       String
+  hint                       String?
+  explanation                String?
+  deckId                     String     @map("deck_id") @db.Uuid
+  tags                       Json       @default("[]")
+  isActive                   Boolean    @default(true) @map("is_active")
+  status                     CardStatus @default(NEW)
+  easeFactor                 Float      @default(2.5) @map("ease_factor")
+  intervalDays               Int        @default(0) @map("interval_days")
+  repetitions                Int        @default(0)
+  nextReviewDate             DateTime   @default(now()) @map("next_review_date") @db.Timestamptz
+  lastReviewedAt             DateTime?  @map("last_reviewed_at") @db.Timestamptz
+  totalReviews               Int        @default(0) @map("total_reviews")
+  correctReviews             Int        @default(0) @map("correct_reviews")
+  streakCorrect              Int        @default(0) @map("streak_correct")
+  longestStreak              Int        @default(0) @map("longest_streak")
+  totalStudyTimeSeconds      Int        @default(0) @map("total_study_time_seconds")
+  averageResponseTimeSeconds Float      @default(0) @map("average_response_time_seconds")
+  perceivedDifficulty        Float      @default(0.5) @map("perceived_difficulty")
+  learningVelocity           Float      @default(1.0) @map("learning_velocity")
+  mistakeCount               Int        @default(0) @map("mistake_count")
+  createdAt                  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                  DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  aiGenerated                Boolean    @default(false) @map("ai_generated")
+  aiGenerationPrompt         String?    @map("ai_generation_prompt")
+  aiModelUsed                String?    @map("ai_model_used") @db.VarChar(100)
+  customFields               Json       @default("{}") @map("custom_fields")
+  sourceReference            String?    @map("source_reference")
+
+  deck          Deck            @relation(fields: [deckId], references: [id])
+  reviewSessions ReviewSession[]
+  retentionData  RetentionData[]
+
+  @@index([deckId])
+  @@index([nextReviewDate])
+  @@index([status])
+  @@map("flashcards")
+}
+
+model ReviewSession {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  deckId              String   @map("deck_id") @db.Uuid
+  flashcardId         String   @map("flashcard_id") @db.Uuid
+  difficultyRating    Int      @map("difficulty_rating")
+  wasCorrect          Boolean  @map("was_correct")
+  responseTimeSeconds Float    @map("response_time_seconds")
+  sessionType         String   @map("session_type") @db.VarChar(50)
+  reviewContext       String?  @map("review_context") @db.VarChar(100)
+  easeFactorBefore    Float    @map("ease_factor_before")
+  easeFactorAfter     Float    @map("ease_factor_after")
+  intervalBeforeDays  Int      @map("interval_before_days")
+  intervalAfterDays   Int      @map("interval_after_days")
+  repetitionsBefore   Int      @map("repetitions_before")
+  repetitionsAfter    Int      @map("repetitions_after")
+  confidenceLevel     Float?   @map("confidence_level")
+  hintUsed            Boolean  @default(false) @map("hint_used")
+  multipleAttempts    Boolean  @default(false) @map("multiple_attempts")
+  reviewedAt          DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
+  timeOfDayHour       Int      @map("time_of_day_hour")
+  dayOfWeek           Int      @map("day_of_week")
+  platform            String?  @db.VarChar(50)
+  deviceType          String?  @map("device_type") @db.VarChar(50)
+  appVersion          String?  @map("app_version") @db.VarChar(20)
+  tags                Json     @default("[]")
+  customFields        Json     @default("{}") @map("custom_fields")
+
+  user      User      @relation(fields: [userId], references: [id])
+  deck      Deck      @relation(fields: [deckId], references: [id])
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id])
+
+  @@index([userId])
+  @@index([deckId])
+  @@index([flashcardId])
+  @@map("review_sessions")
+}
+
+model StudySession {
+  id                         String    @id @default(uuid()) @db.Uuid
+  userId                     String    @map("user_id") @db.Uuid
+  deckId                     String?   @map("deck_id") @db.Uuid
+  sessionType                String    @map("session_type") @db.VarChar(50)
+  sessionName                String?   @map("session_name") @db.VarChar(200)
+  startedAt                  DateTime  @map("started_at") @db.Timestamptz
+  endedAt                    DateTime? @map("ended_at") @db.Timestamptz
+  durationMinutes            Int       @map("duration_minutes")
+  cardsReviewed              Int       @map("cards_reviewed")
+  cardsCorrect               Int       @map("cards_correct")
+  cardsIncorrect             Int       @map("cards_incorrect")
+  accuracyRate               Float     @map("accuracy_rate")
+  cardsNewStudied            Int       @map("cards_new_studied")
+  cardsGraduated             Int       @map("cards_graduated")
+  cardsMastered              Int       @map("cards_mastered")
+  cardsReset                 Int       @map("cards_reset")
+  averageResponseTimeSeconds Float     @map("average_response_time_seconds")
+  totalThinkTimeSeconds      Int       @map("total_think_time_seconds")
+  fastestResponseSeconds     Float?    @map("fastest_response_seconds")
+  slowestResponseSeconds     Float?    @map("slowest_response_seconds")
+  sessionQualityScore        Float     @map("session_quality_score")
+  focusScore                 Float     @map("focus_score")
+  difficultyDistribution     Json      @map("difficulty_distribution")
+  platform                   String?   @db.VarChar(50)
+  deviceType                 String?   @map("device_type") @db.VarChar(50)
+  appVersion                 String?   @map("app_version") @db.VarChar(20)
+  interruptionsCount         Int       @map("interruptions_count")
+  targetCards                Int?      @map("target_cards")
+  targetDurationMinutes      Int?      @map("target_duration_minutes")
+  goalAchieved               Boolean   @map("goal_achieved")
+  tags                       Json      @default("[]")
+  notes                      String?
+  customFields               Json      @default("{}") @map("custom_fields")
+
+  user User  @relation(fields: [userId], references: [id])
+  deck Deck? @relation(fields: [deckId], references: [id])
+
+  @@index([userId])
+  @@index([deckId])
+  @@map("study_sessions")
+}
+
+model PerformanceMetric {
+  id                      String   @id @default(uuid()) @db.Uuid
+  userId                  String   @map("user_id") @db.Uuid
+  metricDate              DateTime @map("metric_date") @db.Date
+  metricType              String   @map("metric_type") @db.VarChar(20)
+  totalStudyTimeMinutes   Int      @map("total_study_time_minutes")
+  totalSessions           Int      @map("total_sessions")
+  totalCardsReviewed      Int      @map("total_cards_reviewed")
+  uniqueDecksStudied      Int      @map("unique_decks_studied")
+  overallAccuracy         Float    @map("overall_accuracy")
+  averageSessionQuality   Float    @map("average_session_quality")
+  cardsMastered           Int      @map("cards_mastered")
+  cardsLearned            Int      @map("cards_learned")
+  studyStreakDays          Int      @map("study_streak_days")
+  goalAchievementRate     Float    @map("goal_achievement_rate")
+  averageSessionLength    Float    @map("average_session_length")
+  strongestCategories     Json     @map("strongest_categories")
+  weakestCategories       Json     @map("weakest_categories")
+  improvementSuggestions  Json     @map("improvement_suggestions")
+  createdAt               DateTime @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([metricDate])
+  @@index([metricType])
+  @@map("performance_metrics")
+}
+
+model LearningInsight {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  insightType     String    @map("insight_type") @db.VarChar(50)
+  category        String    @db.VarChar(100)
+  priority        String    @db.VarChar(20)
+  title           String    @db.VarChar(200)
+  description     String
+  actionItems     Json      @map("action_items")
+  evidenceData    Json      @map("evidence_data")
+  confidenceScore Float     @map("confidence_score")
+  isRead          Boolean   @default(false) @map("is_read")
+  isDismissed     Boolean   @default(false) @map("is_dismissed")
+  userRating      Int?      @map("user_rating")
+  userFeedback    String?   @map("user_feedback")
+  generatedAt     DateTime  @map("generated_at") @db.Timestamptz
+  expiresAt       DateTime? @map("expires_at") @db.Timestamptz
+  actedUponAt     DateTime? @map("acted_upon_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([insightType])
+  @@map("learning_insights")
+}
+
+model RetentionData {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  flashcardId         String   @map("flashcard_id") @db.Uuid
+  measurementDate     DateTime @map("measurement_date") @db.Date
+  daysSinceLastReview Int      @map("days_since_last_review")
+  retentionStrength   Float    @map("retention_strength")
+  initialStrength     Float    @map("initial_strength")
+  decayRate           Float    @map("decay_rate")
+  stabilityFactor     Float    @map("stability_factor")
+  reviewContext       String?  @map("review_context") @db.VarChar(100)
+  environmentalFactors Json    @map("environmental_factors")
+  createdAt           DateTime @map("created_at") @db.Timestamptz
+
+  user      User      @relation(fields: [userId], references: [id])
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id])
+
+  @@index([userId])
+  @@index([flashcardId])
+  @@index([measurementDate])
+  @@map("retention_data")
+}

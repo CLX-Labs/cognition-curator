@@ -1,141 +1,19 @@
-# version: '3.8'  # Removed to avoid obsolete warning
-
 services:
-  # Main Flask application
-  app:
-    build:
-      context: .
-      target: development
-    ports:
-      - '5000:5000'
-    environment:
-      - FLASK_ENV=development
-      - FLASK_DEBUG=True
-      - DATABASE_URL=postgresql://cognition_user:cognition_pass@db:5432/cognition_curator_dev
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/2
-      - CELERY_RESULT_BACKEND=redis://redis:6379/3
-    volumes:
-      - .:/app
-      - /app/venv # Anonymous volume to avoid overwriting venv
-    depends_on:
-      - db
-      - redis
-    networks:
-      - cognition-network
-    command: >
-      sh -c "python -m flask db upgrade &&
-             python -m flask run --host=0.0.0.0 --port=5000 --debug"
-
-  # PostgreSQL database
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=cognition_curator_dev
-      - POSTGRES_USER=cognition_user
-      - POSTGRES_PASSWORD=cognition_pass
+      POSTGRES_DB: cognition_curator_dev
+      POSTGRES_USER: cognition_user
+      POSTGRES_PASSWORD: cognition_pass
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - cognition-network
-
-  # Redis for caching and background tasks
-  redis:
-    image: redis:7-alpine
-    ports:
-      - '6379:6379'
-    volumes:
-      - redis_data:/data
-    networks:
-      - cognition-network
-
-  # Celery worker for background tasks
-  celery-worker:
-    build:
-      context: .
-      target: development
-    environment:
-      - FLASK_ENV=development
-      - DATABASE_URL=postgresql://cognition_user:cognition_pass@db:5432/cognition_curator_dev
-      - CELERY_BROKER_URL=redis://redis:6379/2
-      - CELERY_RESULT_BACKEND=redis://redis:6379/3
-    volumes:
-      - .:/app
-      - /app/venv
-    depends_on:
-      - db
-      - redis
-    networks:
-      - cognition-network
-    command: celery -A src.app.celery worker --loglevel=info
-
-  # Celery beat for scheduled tasks
-  celery-beat:
-    build:
-      context: .
-      target: development
-    environment:
-      - FLASK_ENV=development
-      - DATABASE_URL=postgresql://cognition_user:cognition_pass@db:5432/cognition_curator_dev
-      - CELERY_BROKER_URL=redis://redis:6379/2
-      - CELERY_RESULT_BACKEND=redis://redis:6379/3
-    volumes:
-      - .:/app
-      - /app/venv
-    depends_on:
-      - db
-      - redis
-    networks:
-      - cognition-network
-    command: celery -A src.app.celery beat --loglevel=info
-
-  # Flower for monitoring Celery tasks
-  flower:
-    build:
-      context: .
-      target: development
-    ports:
-      - '5555:5555'
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/2
-      - CELERY_RESULT_BACKEND=redis://redis:6379/3
-    depends_on:
-      - redis
-    networks:
-      - cognition-network
-    command: celery -A src.app.celery flower --port=5555
-
-  # PostgreSQL admin interface
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@cognition-curator.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
-    ports:
-      - '5050:80'
-    depends_on:
-      - db
-    networks:
-      - cognition-network
-
-  # Mock AI service for development (optional)
-  mock-ai:
-    image: wiremock/wiremock:latest
-    ports:
-      - '8080:8080'
-    volumes:
-      - ./tests/fixtures/wiremock:/home/wiremock
-    command: --global-response-templating
-    networks:
-      - cognition-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cognition_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
-  redis_data:
-
-networks:
-  cognition-network:
-    driver: bridge

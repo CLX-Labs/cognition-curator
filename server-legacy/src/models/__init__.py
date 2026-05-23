@@ -18,11 +18,11 @@ from .analytics import (
 
 __all__ = [
     'User',
-    'Deck', 
+    'Deck',
     'Flashcard',
     'ReviewSession',
     'StudySession',
     'PerformanceMetric',
     'LearningInsight',
     'RetentionData'
-] 
+]

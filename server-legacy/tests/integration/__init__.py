@@ -1,1 +1,1 @@
-"""Integration tests for Cognition Curator Server""" 
+"""Integration tests for Cognition Curator Server"""

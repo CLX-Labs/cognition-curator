@@ -114,7 +114,7 @@ The server includes a comprehensive testing suite with unit tests, integration t
 # Run only unit tests
 ./scripts/dev/test.sh -u
 
-# Run only integration tests  
+# Run only integration tests
 ./scripts/dev/test.sh -i
 
 # Run tests without coverage (faster)
@@ -175,7 +175,7 @@ python scripts/db/seed_data.py
 Configuration is managed through environment variables and configuration classes:
 
 - **Development**: `DevelopmentConfig`
-- **Testing**: `TestingConfig`  
+- **Testing**: `TestingConfig`
 - **Production**: `ProductionConfig`
 
 ### Key Environment Variables
@@ -336,4 +336,4 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 
 ---
 
-Built with ❤️ by the Cognition Curator Team 
+Built with ❤️ by the Cognition Curator Team

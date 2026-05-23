@@ -11,9 +11,9 @@ from .sync import sync_bp
 
 __all__ = [
     'auth_bp',
-    'users_bp', 
+    'users_bp',
     'decks_bp',
     'flashcards_bp',
     'analytics_bp',
     'sync_bp'
-] 
+]

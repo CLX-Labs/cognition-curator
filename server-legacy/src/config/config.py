@@ -10,7 +10,7 @@ class Config:
 
     # Flask Configuration
     SECRET_KEY: str = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
-    
+
     # Database Configuration
     SQLALCHEMY_DATABASE_URI: str = os.environ.get(
         "DATABASE_URL", "postgresql://localhost/cognition_curator"
@@ -88,13 +88,13 @@ class DevelopmentConfig(Config):
 
     DEBUG: bool = True
     TESTING: bool = False
-    
+
     # More verbose logging in development
     LOG_LEVEL: str = "DEBUG"
-    
+
     # Disable rate limiting in development
     RATELIMIT_ENABLED: bool = False
-    
+
     # Development database
     SQLALCHEMY_DATABASE_URI: str = os.environ.get(
         "DATABASE_URL", "postgresql://localhost/cognition_curator_dev"
@@ -106,21 +106,21 @@ class TestingConfig(Config):
 
     DEBUG: bool = True
     TESTING: bool = True
-    
+
     # Use in-memory SQLite for fast testing
     SQLALCHEMY_DATABASE_URI: str = os.environ.get(
         "TEST_DATABASE_URL", "sqlite:///:memory:"
     )
-    
+
     # Disable CSRF for testing
     WTF_CSRF_ENABLED: bool = False
-    
+
     # Disable rate limiting in tests
     RATELIMIT_ENABLED: bool = False
-    
+
     # Use shorter JWT expiration for testing
     JWT_ACCESS_TOKEN_EXPIRES: timedelta = timedelta(minutes=5)
-    
+
     # Mock AI services in tests
     OPENAI_API_KEY: str = "test-openai-key"
     LANGGRAPH_API_URL: str = "http://localhost:8000"
@@ -132,25 +132,25 @@ class ProductionConfig(Config):
 
     DEBUG: bool = False
     TESTING: bool = False
-    
+
     # Stricter settings for production
     SQLALCHEMY_RECORD_QUERIES: bool = False
-    
+
     # Enable rate limiting
     RATELIMIT_ENABLED: bool = True
-    
+
     # Production logging
     LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "WARNING")
-    
+
     @staticmethod
     def init_app(app) -> None:
         """Initialize production app"""
         Config.init_app(app)
-        
+
         # Production-specific initialization
         import logging
         from logging.handlers import RotatingFileHandler
-        
+
         if not app.debug:
             # Set up file logging
             file_handler = RotatingFileHandler(
@@ -163,7 +163,7 @@ class ProductionConfig(Config):
             )
             file_handler.setLevel(logging.INFO)
             app.logger.addHandler(file_handler)
-            
+
             app.logger.setLevel(logging.INFO)
             app.logger.info("Cognition Curator startup")
 
@@ -174,4 +174,4 @@ config = {
     "testing": TestingConfig,
     "production": ProductionConfig,
     "default": DevelopmentConfig,
-} 
+}

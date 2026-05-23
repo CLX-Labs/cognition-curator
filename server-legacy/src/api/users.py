@@ -18,12 +18,12 @@ def get_current_user():
     try:
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
-        
+
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        
+
         return jsonify({'user': user.to_dict(include_sensitive=True)}), 200
-    
+
     except Exception as e:
         return jsonify({'error': f'Failed to get user: {str(e)}'}), 500
 
@@ -35,12 +35,12 @@ def get_user_stats():
     try:
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
-        
+
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        
+
         level, progress = user.get_study_level()
-        
+
         stats = {
             'basic_stats': user.to_dict(),
             'study_level': {
@@ -58,8 +58,8 @@ def get_user_stats():
                 'dedicated_learner': user.total_study_time_minutes >= 1000
             }
         }
-        
+
         return jsonify(stats), 200
-    
+
     except Exception as e:
-        return jsonify({'error': f'Failed to get user stats: {str(e)}'}), 500 
+        return jsonify({'error': f'Failed to get user stats: {str(e)}'}), 500

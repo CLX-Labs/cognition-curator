@@ -30,15 +30,15 @@ def app() -> Generator[Flask, None, None]:
             "JWT_SECRET_KEY": "test-jwt-secret",
             "WTF_CSRF_ENABLED": False,
         })
-        
+
         mock_create_app.return_value = test_app
-        
+
         # Create application context
         ctx = test_app.app_context()
         ctx.push()
-        
+
         yield test_app
-        
+
         ctx.pop()
 
 
@@ -53,12 +53,12 @@ def db(app: Flask) -> Generator[SQLAlchemy, None, None]:
     _db.session.commit = Mock()
     _db.session.rollback = Mock()
     _db.session.remove = Mock()
-    
+
     # Setup database
     _db.create_all()
-    
+
     yield _db
-    
+
     # Cleanup database
     _db.session.remove()
     _db.drop_all()
@@ -153,7 +153,7 @@ def mock_openai_client():
     with patch("openai.OpenAI") as mock_client:
         mock_instance = Mock()
         mock_client.return_value = mock_instance
-        
+
         # Mock chat completions
         mock_instance.chat.completions.create.return_value = Mock(
             choices=[
@@ -164,7 +164,7 @@ def mock_openai_client():
                 )
             ]
         )
-        
+
         yield mock_instance
 
 
@@ -184,7 +184,7 @@ def mock_langgraph_client():
             }
         }
         mock_post.return_value = mock_response
-        
+
         yield mock_post
 
 
@@ -230,23 +230,23 @@ def pytest_collection_modifyitems(config, items):
         # Mark all tests in unit/ directory as unit tests
         if "unit/" in str(item.fspath):
             item.add_marker(pytest.mark.unit)
-        
+
         # Mark all tests in integration/ directory as integration tests
         if "integration/" in str(item.fspath):
             item.add_marker(pytest.mark.integration)
-        
+
         # Mark tests that contain "slow" in their name
         if "slow" in item.name:
             item.add_marker(pytest.mark.slow)
-        
+
         # Mark tests that contain "ai" in their name
         if "ai" in item.name.lower():
             item.add_marker(pytest.mark.ai)
-        
+
         # Mark tests in auth related modules
         if "auth" in str(item.fspath):
             item.add_marker(pytest.mark.auth)
-        
+
         # Mark API tests
         if "api" in str(item.fspath) or "test_api" in item.name:
             item.add_marker(pytest.mark.api)
@@ -255,25 +255,25 @@ def pytest_collection_modifyitems(config, items):
 # Test database utilities
 class DatabaseTestMixin:
     """Mixin class for database testing utilities."""
-    
+
     @staticmethod
     def create_user(db, **kwargs):
         """Create a test user."""
         # This will be implemented once we have the User model
         pass
-    
+
     @staticmethod
     def create_deck(db, user=None, **kwargs):
         """Create a test deck."""
         # This will be implemented once we have the Deck model
         pass
-    
+
     @staticmethod
     def create_flashcard(db, deck=None, **kwargs):
         """Create a test flashcard."""
         # This will be implemented once we have the Flashcard model
         pass
-    
+
     @staticmethod
     def create_review_session(db, flashcard=None, user=None, **kwargs):
         """Create a test review session."""
@@ -284,19 +284,19 @@ class DatabaseTestMixin:
 # API testing utilities
 class APITestMixin:
     """Mixin class for API testing utilities."""
-    
+
     def post_json(self, client, url, data, headers=None):
         """Helper method to post JSON data."""
         if headers is None:
             headers = {"Content-Type": "application/json"}
         return client.post(url, json=data, headers=headers)
-    
+
     def put_json(self, client, url, data, headers=None):
         """Helper method to put JSON data."""
         if headers is None:
             headers = {"Content-Type": "application/json"}
         return client.put(url, json=data, headers=headers)
-    
+
     def assert_api_error(self, response, status_code, error_message=None):
         """Assert API error response."""
         assert response.status_code == status_code
@@ -304,9 +304,9 @@ class APITestMixin:
             data = response.get_json()
             assert "error" in data
             assert error_message in data["error"]
-    
+
     def assert_api_success(self, response, status_code=200):
         """Assert API success response."""
         assert response.status_code == status_code
         data = response.get_json()
-        assert "error" not in data or data["error"] is None 
+        assert "error" not in data or data["error"] is None

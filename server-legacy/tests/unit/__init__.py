@@ -1,1 +1,1 @@
-"""Unit tests for Cognition Curator Server""" 
+"""Unit tests for Cognition Curator Server"""

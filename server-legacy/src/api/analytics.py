@@ -24,15 +24,15 @@ def get_dashboard():
     try:
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
-        
+
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        
+
         # Get date range parameters
         days = request.args.get('days', 30, type=int)
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=days)
-        
+
         # Basic user stats
         user_stats = {
             'total_study_time_minutes': user.total_study_time_minutes,
@@ -45,13 +45,13 @@ def get_dashboard():
             'level_progress': round(user.get_study_level()[1], 3),
             'mastery_rate': round(user.mastery_rate, 3)
         }
-        
+
         # Recent study sessions
         recent_sessions = StudySession.query.filter(
             StudySession.user_id == user.id,
             StudySession.started_at >= start_date
         ).order_by(desc(StudySession.started_at)).limit(10).all()
-        
+
         # Daily study time for chart
         daily_stats = db.session.query(
             func.date(StudySession.started_at).label('date'),
@@ -62,7 +62,7 @@ def get_dashboard():
             StudySession.user_id == user.id,
             StudySession.started_at >= start_date
         ).group_by(func.date(StudySession.started_at)).all()
-        
+
         # Deck performance
         deck_stats = db.session.query(
             Deck.id, Deck.name, Deck.total_cards, Deck.cards_mastered_count,
@@ -71,7 +71,7 @@ def get_dashboard():
             Deck.user_id == user.id,
             Deck.is_active == True
         ).order_by(desc(Deck.total_study_time_minutes)).limit(5).all()
-        
+
         # Cards due today
         cards_due_today = db.session.query(func.count(Flashcard.id)).filter(
             Flashcard.deck_id.in_(
@@ -80,7 +80,7 @@ def get_dashboard():
             Flashcard.is_active == True,
             Flashcard.next_review_date <= datetime.now(timezone.utc)
         ).scalar() or 0
-        
+
         # Weekly progress
         week_start = end_date - timedelta(days=7)
         weekly_progress = db.session.query(
@@ -92,13 +92,13 @@ def get_dashboard():
             StudySession.user_id == user.id,
             StudySession.started_at >= week_start
         ).first()
-        
+
         # Learning insights
         insights = LearningInsight.query.filter(
             LearningInsight.user_id == user.id,
             LearningInsight.is_dismissed == False
         ).order_by(desc(LearningInsight.priority), desc(LearningInsight.generated_at)).limit(3).all()
-        
+
         return jsonify({
             'user_stats': user_stats,
             'cards_due_today': cards_due_today,
@@ -140,7 +140,7 @@ def get_dashboard():
                 for insight in insights
             ]
         }), 200
-    
+
     except Exception as e:
         return jsonify({'error': f'Failed to get dashboard: {str(e)}'}), 500
 
@@ -151,30 +151,30 @@ def get_study_sessions():
     """Get detailed study session history."""
     try:
         current_user_id = get_jwt_identity()
-        
+
         # Pagination parameters
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 20, type=int), 100)
-        
+
         # Filter parameters
         days = request.args.get('days', 30, type=int)
         deck_id = request.args.get('deck_id')
-        
+
         # Build query
         query = StudySession.query.filter(StudySession.user_id == current_user_id)
-        
+
         if days:
             start_date = datetime.now(timezone.utc) - timedelta(days=days)
             query = query.filter(StudySession.started_at >= start_date)
-        
+
         if deck_id:
             query = query.filter(StudySession.deck_id == deck_id)
-        
+
         # Get paginated results
         sessions = query.order_by(desc(StudySession.started_at)).paginate(
             page=page, per_page=per_page, error_out=False
         )
-        
+
         return jsonify({
             'sessions': [session.to_dict(include_analytics=True) for session in sessions.items],
             'pagination': {
@@ -186,7 +186,7 @@ def get_study_sessions():
                 'has_prev': sessions.has_prev
             }
         }), 200
-    
+
     except Exception as e:
         return jsonify({'error': f'Failed to get study sessions: {str(e)}'}), 500
 
@@ -197,12 +197,12 @@ def get_performance_trends():
     """Get performance trends and learning curve analysis."""
     try:
         current_user_id = get_jwt_identity()
-        
+
         # Date range
         days = request.args.get('days', 30, type=int)
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=days)
-        
+
         # Get daily performance metrics
         daily_metrics = db.session.query(
             func.date(StudySession.started_at).label('date'),
@@ -215,20 +215,20 @@ def get_performance_trends():
             StudySession.user_id == current_user_id,
             StudySession.started_at >= start_date
         ).group_by(func.date(StudySession.started_at)).order_by('date').all()
-        
+
         # Calculate trends (simple moving averages)
         trend_data = []
         window_size = min(7, len(daily_metrics))  # 7-day moving average
-        
+
         for i, metric in enumerate(daily_metrics):
             if i >= window_size - 1:
                 # Calculate moving averages
                 window_metrics = daily_metrics[i - window_size + 1:i + 1]
-                
+
                 avg_accuracy = sum(m.accuracy or 0 for m in window_metrics) / window_size
                 avg_quality = sum(m.quality or 0 for m in window_metrics) / window_size
                 avg_response_time = sum(m.response_time or 0 for m in window_metrics) / window_size
-                
+
                 trend_data.append({
                     'date': metric.date.isoformat(),
                     'accuracy_trend': round(avg_accuracy, 3),
@@ -239,7 +239,7 @@ def get_performance_trends():
                     'cards_mastered': int(metric.cards_mastered or 0),
                     'study_time_minutes': int(metric.study_time or 0)
                 })
-        
+
         # Category performance (if deck categories exist)
         category_performance = db.session.query(
             Deck.category,
@@ -252,7 +252,7 @@ def get_performance_trends():
             Deck.is_active == True,
             Deck.category.isnot(None)
         ).group_by(Deck.category).all()
-        
+
         return jsonify({
             'trend_data': trend_data,
             'category_performance': [
@@ -271,7 +271,7 @@ def get_performance_trends():
                 'overall_improvement': calculate_improvement_rate(trend_data) if trend_data else 0
             }
         }), 200
-    
+
     except Exception as e:
         return jsonify({'error': f'Failed to get performance trends: {str(e)}'}), 500
 
@@ -282,10 +282,10 @@ def get_card_difficulty_analysis():
     """Get analysis of card difficulty and learning patterns."""
     try:
         current_user_id = get_jwt_identity()
-        
+
         # Get user's decks
         user_decks = db.session.query(Deck.id).filter(Deck.user_id == current_user_id).subquery()
-        
+
         # Difficulty distribution
         difficulty_stats = db.session.query(
             Flashcard.status,
@@ -297,7 +297,7 @@ def get_card_difficulty_analysis():
             Flashcard.deck_id.in_(user_decks),
             Flashcard.is_active == True
         ).group_by(Flashcard.status).all()
-        
+
         # Most difficult cards
         difficult_cards = db.session.query(
             Flashcard.id, Flashcard.front, Flashcard.get_difficulty_score(),
@@ -308,7 +308,7 @@ def get_card_difficulty_analysis():
             Flashcard.is_active == True,
             Flashcard.total_reviews > 2  # Only cards with some history
         ).order_by(desc(Flashcard.perceived_difficulty)).limit(10).all()
-        
+
         # Learning velocity analysis
         velocity_stats = db.session.query(
             func.avg(Flashcard.learning_velocity).label('avg_velocity'),
@@ -319,7 +319,7 @@ def get_card_difficulty_analysis():
             Flashcard.deck_id.in_(user_decks),
             Flashcard.is_active == True
         ).first()
-        
+
         return jsonify({
             'difficulty_distribution': [
                 {
@@ -349,7 +349,7 @@ def get_card_difficulty_analysis():
                 'total_cards': int(velocity_stats.total_cards or 0)
             }
         }), 200
-    
+
     except Exception as e:
         return jsonify({'error': f'Failed to get card difficulty analysis: {str(e)}'}), 500
 
@@ -360,10 +360,10 @@ def get_time_analysis():
     """Get time-based learning pattern analysis."""
     try:
         current_user_id = get_jwt_identity()
-        
+
         days = request.args.get('days', 30, type=int)
         start_date = datetime.now(timezone.utc) - timedelta(days=days)
-        
+
         # Hour of day analysis
         hourly_stats = db.session.query(
             ReviewSession.time_of_day_hour,
@@ -374,7 +374,7 @@ def get_time_analysis():
             ReviewSession.user_id == current_user_id,
             ReviewSession.reviewed_at >= start_date
         ).group_by(ReviewSession.time_of_day_hour).order_by(ReviewSession.time_of_day_hour).all()
-        
+
         # Day of week analysis
         daily_stats = db.session.query(
             ReviewSession.day_of_week,
@@ -385,7 +385,7 @@ def get_time_analysis():
             ReviewSession.user_id == current_user_id,
             ReviewSession.reviewed_at >= start_date
         ).group_by(ReviewSession.day_of_week).order_by(ReviewSession.day_of_week).all()
-        
+
         # Study session patterns
         session_patterns = db.session.query(
             func.extract('hour', StudySession.started_at).label('hour'),
@@ -396,13 +396,13 @@ def get_time_analysis():
             StudySession.user_id == current_user_id,
             StudySession.started_at >= start_date
         ).group_by(func.extract('hour', StudySession.started_at)).order_by('hour').all()
-        
+
         # Best performance times
         best_hours = sorted(hourly_stats, key=lambda x: x.avg_performance or 0, reverse=True)[:3]
         best_days = sorted(daily_stats, key=lambda x: x.avg_performance or 0, reverse=True)[:3]
-        
+
         day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        
+
         return jsonify({
             'hourly_performance': [
                 {
@@ -449,7 +449,7 @@ def get_time_analysis():
                 ]
             }
         }), 200
-    
+
     except Exception as e:
         return jsonify({'error': f'Failed to get time analysis: {str(e)}'}), 500
 
@@ -458,11 +458,11 @@ def calculate_improvement_rate(trend_data):
     """Calculate improvement rate from trend data."""
     if len(trend_data) < 2:
         return 0
-    
+
     first_accuracy = trend_data[0]['accuracy_trend']
     last_accuracy = trend_data[-1]['accuracy_trend']
-    
+
     if first_accuracy == 0:
         return 0
-    
-    return round(((last_accuracy - first_accuracy) / first_accuracy) * 100, 1) 
+
+    return round(((last_accuracy - first_accuracy) / first_accuracy) * 100, 1)

@@ -1,0 +1,25 @@
+import { Deck } from '@prisma/client';
+
+export const serializeDeck = (deck: Deck) => ({
+  id: deck.id,
+  name: deck.name,
+  description: deck.description,
+  category: deck.category,
+  user_id: deck.userId,
+  is_public: deck.isPublic,
+  is_active: deck.isActive,
+  color: deck.color,
+  icon: deck.icon,
+  created_at: deck.createdAt.toISOString(),
+  updated_at: deck.updatedAt.toISOString(),
+  last_studied_at: deck.lastStudiedAt?.toISOString() ?? null,
+  total_cards: deck.totalCards,
+  cards_due_count: deck.cardsDueCount,
+  cards_new_count: deck.cardsNewCount,
+  cards_learning_count: deck.cardsLearningCount,
+  cards_mastered_count: deck.cardsMasteredCount,
+  average_accuracy: deck.averageAccuracy,
+  total_reviews: deck.totalReviews,
+  ai_generated: deck.aiGenerated,
+  tags: deck.tags,
+});

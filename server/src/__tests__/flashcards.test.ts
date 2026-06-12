@@ -3,29 +3,7 @@
  */
 import request from 'supertest';
 import app from '../app';
-
-const MOCK_USER = {
-  id: 'user-uuid-1',
-  stytchUserId: 'stytch-user-123',
-  email: 'user@example.com',
-  name: 'Test User',
-  displayName: null,
-  profilePictureUrl: null,
-  isActive: true,
-  isPremium: false,
-  emailVerified: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  lastLoginAt: null,
-  timezone: 'UTC',
-  totalStudyTimeMinutes: 0,
-  currentStreakDays: 0,
-  longestStreakDays: 0,
-  totalCardsReviewed: 0,
-  totalDecksCreated: 0,
-  overallAccuracyRate: 0,
-  masteryRate: 0,
-};
+import { mockUser } from './factories/user.factory';
 
 const DECK_ID = '550e8400-e29b-41d4-a716-446655440001';
 const CARD_ID = '550e8400-e29b-41d4-a716-446655440002';
@@ -52,16 +30,7 @@ const MOCK_CARD = {
   updatedAt: new Date(),
 };
 
-jest.mock('../lib/stytch', () => ({
-  stytchClient: {
-    sessions: {
-      authenticateJwt: jest.fn().mockResolvedValue({
-        session: { user_id: 'stytch-user-123' },
-      }),
-    },
-  },
-}));
-
+// Auth middleware uses test shortcut — no Stytch mock needed.
 jest.mock('../db/prisma', () => ({
   prisma: {
     user: {
@@ -83,12 +52,12 @@ jest.mock('../db/prisma', () => ({
 }));
 
 function authHeader() {
-  return { Authorization: 'Bearer mock-jwt' };
+  return { Authorization: 'Bearer stytch-user-123' };
 }
 
 function withAuthUser() {
   const { prisma } = require('../db/prisma');
-  prisma.user.findUnique.mockResolvedValueOnce(MOCK_USER);
+  prisma.user.findUnique.mockResolvedValueOnce(mockUser());
 }
 
 describe('POST /api/flashcards/', () => {
@@ -131,7 +100,6 @@ describe('POST /api/flashcards/', () => {
       back: 'Paris',
       deck_id: DECK_ID,
     });
-    // Verify SM-2 defaults are present
     expect(res.body.flashcard).toHaveProperty('ease_factor', 2.5);
     expect(res.body.flashcard).toHaveProperty('interval_days', 0);
     expect(res.body.flashcard).toHaveProperty('status', 'NEW');
@@ -139,7 +107,7 @@ describe('POST /api/flashcards/', () => {
 });
 
 describe('POST /api/flashcards/batch', () => {
-  it('returns 400 when flashcards array is empty', async () => {
+  it('returns 201 with empty array for zero cards', async () => {
     withAuthUser();
     const { prisma } = require('../db/prisma');
     prisma.deck.findUnique.mockResolvedValueOnce({ userId: 'user-uuid-1' });
@@ -148,8 +116,8 @@ describe('POST /api/flashcards/batch', () => {
       .post('/api/flashcards/batch')
       .set(authHeader())
       .send({ deck_id: DECK_ID, flashcards: [] });
-    // Zod accepts empty arrays - this creates 0 cards which is valid
-    expect([200, 201, 400]).toContain(res.status);
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ flashcards: [], created: 0 });
   });
 
   it('creates multiple flashcards', async () => {

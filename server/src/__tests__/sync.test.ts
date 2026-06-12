@@ -3,40 +3,9 @@
  */
 import request from 'supertest';
 import app from '../app';
+import { mockUser } from './factories/user.factory';
 
-const MOCK_USER = {
-  id: 'user-uuid-1',
-  stytchUserId: 'stytch-user-123',
-  email: 'user@example.com',
-  name: 'Test User',
-  displayName: null,
-  profilePictureUrl: null,
-  isActive: true,
-  isPremium: false,
-  emailVerified: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  lastLoginAt: null,
-  timezone: 'UTC',
-  totalStudyTimeMinutes: 0,
-  currentStreakDays: 0,
-  longestStreakDays: 0,
-  totalCardsReviewed: 0,
-  totalDecksCreated: 0,
-  overallAccuracyRate: 0,
-  masteryRate: 0,
-};
-
-jest.mock('../lib/stytch', () => ({
-  stytchClient: {
-    sessions: {
-      authenticateJwt: jest.fn().mockResolvedValue({
-        session: { user_id: 'stytch-user-123' },
-      }),
-    },
-  },
-}));
-
+// Auth middleware uses test shortcut — no Stytch mock needed.
 jest.mock('../db/prisma', () => ({
   prisma: {
     user: {
@@ -61,12 +30,12 @@ jest.mock('../db/prisma', () => ({
 }));
 
 function authHeader() {
-  return { Authorization: 'Bearer mock-jwt' };
+  return { Authorization: 'Bearer stytch-user-123' };
 }
 
 function withAuthUser() {
   const { prisma } = require('../db/prisma');
-  prisma.user.findUnique.mockResolvedValueOnce(MOCK_USER);
+  prisma.user.findUnique.mockResolvedValueOnce(mockUser());
 }
 
 describe('POST /api/sync/flashcard-review', () => {
@@ -150,7 +119,7 @@ describe('POST /api/sync/study-session', () => {
     withAuthUser();
     const { prisma } = require('../db/prisma');
     prisma.studySession.create.mockResolvedValueOnce({ id: 'session-id' });
-    prisma.user.update.mockResolvedValueOnce(MOCK_USER);
+    prisma.user.update.mockResolvedValueOnce(mockUser());
 
     const res = await request(app)
       .post('/api/sync/study-session')
@@ -173,7 +142,7 @@ describe('POST /api/sync/user-stats', () => {
   it('returns 200 with valid stats', async () => {
     withAuthUser();
     const { prisma } = require('../db/prisma');
-    prisma.user.update.mockResolvedValueOnce(MOCK_USER);
+    prisma.user.update.mockResolvedValueOnce(mockUser());
 
     const res = await request(app)
       .post('/api/sync/user-stats')

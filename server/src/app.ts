@@ -9,6 +9,7 @@ import { syncRouter } from './routes/sync';
 import { analyticsRouter } from './routes/analytics';
 import { aiRouter } from './routes/ai';
 import { errorHandler, notFound } from './middleware/errorHandler';
+import { logger } from './utils/logger';
 
 const app = express();
 
@@ -63,7 +64,7 @@ app.use(errorHandler);
 // ---------------------------------------------------------------------------
 if (require.main === module) {
   app.listen(env.PORT, () => {
-    console.log(`🚀 Cognition Curator API running on port ${env.PORT} [${env.NODE_ENV}]`);
+    logger.info(`Cognition Curator API running on port ${env.PORT}`, { env: env.NODE_ENV });
   });
 }
 

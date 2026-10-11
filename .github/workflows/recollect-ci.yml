@@ -1,0 +1,81 @@
+name: Recollect checks
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recollect-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  types-and-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: recollect
+          POSTGRES_PASSWORD: recollect
+          POSTGRES_DB: recollect_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U recollect -d recollect_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgresql://recollect:recollect@127.0.0.1:5432/recollect_test
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  expo-bundle-and-native-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx expo install --check
+        working-directory: apps/mobile
+      - run: npx expo export --platform ios
+        working-directory: apps/mobile
+      - run: npx expo prebuild --platform ios --no-install
+        working-directory: apps/mobile
+      - run: node scripts/check-native-config.mjs
+
+  native-recovery-tests:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: node apps/mobile/modules/legacy-storage/verify-models.cjs
+      - run: swift test --package-path apps/mobile/modules/legacy-storage
+      - name: Typecheck Home Screen and Control Center widgets
+        run: |
+          xcrun swiftc -typecheck -parse-as-library \
+            -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
+            -target arm64-apple-ios18.4-simulator \
+            apps/mobile/modules/recollect-widget/ios/WidgetSnapshot.swift \
+            apps/mobile/modules/recollect-widget/widget/CognitionCuratorWidget.swift

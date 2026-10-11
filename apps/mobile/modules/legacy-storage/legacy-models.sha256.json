@@ -1,0 +1,12 @@
+{
+  "sourceRevision": "a8ff38320b01d93438efe44694f72168a56ada7b",
+  "moduleName": "cognition_curator",
+  "files": {
+    "Deck.swift": "64159c97b94eb255c7957737a2bbcef9a6b187ac3b45e1307c042de90d4f9764",
+    "Flashcard.swift": "f82f1826916c345d9fb946c7f8067e2076972f208c8464feb72172cb0269438c",
+    "ReviewSession.swift": "52c9033b22fc0660078ff7f0163eab61308fe12350c800aa32b9ea8b23add603",
+    "SyncOperation.swift": "bd9fd1cc52d51460adfc912acc1ad304acfc322955f9c6cc0932b76896ac6ecc",
+    "User.swift": "47958731307eb31447264a38fdf96984d5115d13bfa3ef9b56900cd8f27eb574",
+    "CodableHelpers.swift": "0ba60099b7f438c8d049da71e38476f325aa4c2e65d7b05ecb5a5b33771988b8"
+  }
+}

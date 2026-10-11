@@ -1,0 +1,12 @@
+# Configure this root Dockerfile for a NEW staging API service first.
+# Existing server/railway.json remains the legacy service configuration.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "npm run start --workspace @recollect/api"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

@@ -1,0 +1,7 @@
+/ios
+/android
+/.expo
+/dist
+/.env.local
+/.env.*.local
+/.env.eas-simulator

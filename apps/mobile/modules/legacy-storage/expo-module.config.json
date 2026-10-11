@@ -1,0 +1,4 @@
+{
+  "platforms": ["apple"],
+  "apple": { "modules": ["RecollectLegacyStorageModule"], "swiftModuleName": "cognition_curator" }
+}

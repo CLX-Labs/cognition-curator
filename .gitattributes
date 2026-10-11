@@ -1,0 +1,4 @@
+# Archived recovery inputs stay byte-for-byte identical, including old whitespace.
+# The model hash check verifies their identity; do not normalize these files.
+apps/mobile/modules/legacy-storage/ios/LegacyModels/*.swift -text -whitespace
+docs/legacy-overview.md -text -whitespace

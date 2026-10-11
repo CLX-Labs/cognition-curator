@@ -9,7 +9,9 @@ export default function Home() {
   const { session, data } = useStore();
   const due = dueCards(data);
   const today = new Date().toDateString();
-  const todayReviews = data.reviews.filter((r) => new Date(r.reviewedAt).toDateString() === today);
+  const todayReviews = data.reviews.filter(
+    (r) => new Date(r.reviewedAt).toDateString() === today,
+  );
   const name = session?.user.name.split(' ')[0] ?? 'there';
   return (
     <Screen
@@ -39,7 +41,7 @@ export default function Home() {
     >
       <Panel tint>
         <View style={s.pill}>
-          <Text style={s.pillText}>A LITTLE EVERY DAY</Text>
+          <Text style={s.pillText}>PRACTICE YOUR CARDS</Text>
         </View>
         <Text style={[s.title, { fontSize: 34 }]}>
           {due.length
@@ -73,11 +75,20 @@ export default function Home() {
                 ? '/review'
                 : data.cards.length
                   ? { pathname: '/review', params: { practice: 'true' } }
-                  : '/decks/new',
+                  : '/generate',
             )
           }
         />
       </Panel>
+      <Pressable onPress={() => router.push('/generate')}>
+        <Panel>
+          <Text style={s.eyebrow}>CREATE CARDS & DECKS</Text>
+          <Text style={s.sectionTitle}>Turn a subject into a deck.</Text>
+          <Text style={s.body}>
+            Generate 5–10 cards, or write a card and generate its answer. →
+          </Text>
+        </Panel>
+      </Pressable>
       <View style={s.row}>
         <View style={{ flex: 1 }}>
           <Panel>
@@ -138,18 +149,11 @@ export default function Home() {
             <Button
               title="Make a deck"
               variant="secondary"
-              onPress={() => router.push('/decks/new')}
+              onPress={() => router.push('/generate')}
             />
           }
         />
       )}
-      <Pressable onPress={() => router.push('/generate')}>
-        <Panel>
-          <Text style={s.eyebrow}>FROM CURIOSITY TO CARDS</Text>
-          <Text style={s.sectionTitle}>Give your learning a head start.</Text>
-          <Text style={s.body}>Draft cards with AI, then make them your own. →</Text>
-        </Panel>
-      </Pressable>
     </Screen>
   );
 }

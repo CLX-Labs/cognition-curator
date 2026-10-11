@@ -80,7 +80,8 @@ export function Screen({
             {(
               [
                 ['/', '◉', 'Today'],
-                ['/decks', '▤', 'Library'],
+                ['/decks', '▤', 'Practice'],
+                ['/generate', '+', 'Create'],
                 ['/progress', '↗', 'Progress'],
                 ['/profile', '◎', 'You'],
               ] as const

@@ -6,6 +6,7 @@ import { useStore } from '../src/store';
 import {
   acceptGeneration,
   fetchGeneration,
+  prepareGeneration,
   GENERATION_KEY,
   type GenerationWorkflow,
 } from '../src/generation';
@@ -14,8 +15,11 @@ import { Back, Button, Field, Panel, Screen, colors, reportError, s } from '../s
 export default function GenerateScreen() {
   const params = useLocalSearchParams<{ deckId?: string }>();
   const { repository, data, sync, refresh } = useStore();
-  const [deckId, setDeckId] = useState(params.deckId ?? data.decks[0]?.id ?? '');
-  const [prompt, setPrompt] = useState('');
+  const [deckId, setDeckId] = useState(params.deckId ?? '');
+  const [newDeck, setNewDeck] = useState(!params.deckId);
+  const [prompt, setPrompt] = useState(
+    data.decks.find((d) => d.id === params.deckId)?.name ?? '',
+  );
   const [count, setCount] = useState(5);
   const [state, setState] = useState<GenerationWorkflow | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -24,6 +28,7 @@ export default function GenerateScreen() {
   const current = useRef<GenerationWorkflow | null>(null);
   const writes = useRef<Promise<unknown>>(Promise.resolve());
   const mounted = useRef(true);
+  const inFlight = useRef(false);
   const update = useCallback(
     (next: GenerationWorkflow) => {
       current.current = next;
@@ -65,11 +70,16 @@ export default function GenerateScreen() {
     };
   }, [repository]);
   const resume = useCallback(async () => {
-    if (!repository || !current.current) return;
+    if (!repository || !current.current || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
       await writes.current;
+      if (!current.current.job) {
+        await prepareGeneration(repository, current.current, sync);
+        await refresh();
+      }
       const next = await fetchGeneration(repository, current.current);
       if (mounted.current) {
         current.current = next;
@@ -78,14 +88,18 @@ export default function GenerateScreen() {
     } catch (cause) {
       if (mounted.current)
         setError(
-          cause instanceof Error ? cause.message : 'Connection interrupted. Your request is saved.',
+          cause instanceof Error
+            ? cause.message
+            : 'Connection interrupted. Your request is saved.',
         );
     } finally {
+      inFlight.current = false;
       if (mounted.current) setBusy(false);
     }
-  }, [repository]);
+  }, [repository, sync, refresh]);
   useEffect(() => {
-    if (!state?.job || !['queued', 'running'].includes(state.job.status) || busy || error) return;
+    if (!state?.job || !['queued', 'running'].includes(state.job.status) || busy || error)
+      return;
     const timer = setTimeout(() => {
       void resume();
     }, 2500);
@@ -93,35 +107,33 @@ export default function GenerateScreen() {
   }, [state, busy, error, resume]);
 
   async function create() {
-    if (!repository) return;
+    if (!repository || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
-      await sync();
-      const local = await repository.snapshot();
-      const deck = local.decks.find((d) => d.id === deckId);
-      if (
-        !deck ||
-        deck.version < 1 ||
-        local.issues.some(
-          (issue) =>
-            issue.operation.type.startsWith('deck.') &&
-            'id' in issue.operation.payload &&
-            issue.operation.payload.id === deckId,
-        )
-      ) {
-        throw new Error(
-          'Synchronize this deck before generating cards. Your manual cards remain available offline.',
-        );
-      }
+      const destinationId = newDeck ? repository.newId() : deckId;
       const request = generationRequestSchema.parse({
         operationId: repository.newId(),
-        deckId,
+        deckId: destinationId,
         prompt: prompt.trim(),
         count,
       });
       const pending: GenerationWorkflow = {
         request,
+        ...(newDeck
+          ? {
+              newDeck: {
+                id: destinationId,
+                name: prompt.trim().slice(0, 200),
+                description: '',
+                color: '#DDE8D9',
+                icon: '📚',
+                isSilenced: false,
+                silencedUntil: null,
+              },
+            }
+          : {}),
         job: null,
         drafts: {},
         selectedIds: [],
@@ -131,17 +143,21 @@ export default function GenerateScreen() {
       await repository.setState(GENERATION_KEY, pending);
       current.current = pending;
       setState(pending);
+      await prepareGeneration(repository, pending, sync);
+      await refresh();
       const next = await fetchGeneration(repository, pending);
       current.current = next;
       setState(next);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The request could not be started.');
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
   async function accept() {
-    if (!repository || !current.current) return;
+    if (!repository || !current.current || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -174,18 +190,26 @@ export default function GenerateScreen() {
         cause instanceof Error ? cause.message : 'Your selection is saved. Retry to finish.',
       );
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
   async function startAgain() {
-    if (!repository || !state) return;
-    await writes.current;
-    await repository.archive({ generation: state });
-    await repository.setState(GENERATION_KEY, null);
-    current.current = null;
-    setState(null);
-    setError(null);
-    setPrompt('');
+    if (!repository || !state || inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    try {
+      await writes.current;
+      await repository.archive({ generation: state });
+      await repository.setState(GENERATION_KEY, null);
+      current.current = null;
+      setState(null);
+      setError(null);
+      setPrompt('');
+    } finally {
+      inFlight.current = false;
+      if (mounted.current) setBusy(false);
+    }
   }
   function edit(
     candidate: GenerationCandidate,
@@ -199,11 +223,11 @@ export default function GenerateScreen() {
     });
   }
   return (
-    <Screen title="A spark for your next idea." eyebrow="CREATE WITH AI" tabs={false}>
-      <Back />
+    <Screen title="What are you learning?" eyebrow="CREATE CARDS & DECKS">
+      {params.deckId && <Back />}
       <Text style={s.body}>
-        Turn a topic or your notes into a small set of cards. Read each draft, correct it, and
-        choose what belongs in your library.
+        Enter a subject or deck title to generate 5–10 cards. Review the questions and answers,
+        then save them to your deck.
       </Text>
       {!loaded && <ActivityIndicator color={colors.accent} />}
       {error && (
@@ -212,7 +236,9 @@ export default function GenerateScreen() {
           {state && (
             <Button
               title={
-                state.acceptance ? 'Retry saving the same selection' : 'Retry the saved request'
+                state.acceptance
+                  ? 'Retry saving the same selection'
+                  : 'Retry the saved request'
               }
               onPress={() => void (state.acceptance ? accept() : resume())}
               disabled={busy}
@@ -222,45 +248,80 @@ export default function GenerateScreen() {
       )}
       {loaded && !state && (
         <>
-          <Text style={s.label}>Save cards to</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {data.decks.map((deck) => (
-              <Pressable
-                key={deck.id}
-                onPress={() => setDeckId(deck.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: deckId === deck.id }}
-                style={[
-                  s.pill,
-                  { backgroundColor: deckId === deck.id ? colors.green : '#EAEDE5', padding: 12 },
-                ]}
-              >
-                <Text style={{ color: colors.ink, fontWeight: '600' }}>
-                  {deck.icon} {deck.name}
-                </Text>
-              </Pressable>
-            ))}
+          <View style={s.row}>
+            <Button
+              title="New deck"
+              variant={newDeck ? 'primary' : 'secondary'}
+              disabled={busy}
+              onPress={() => setNewDeck(true)}
+            />
+            <Button
+              title="Existing deck"
+              variant={!newDeck ? 'primary' : 'secondary'}
+              disabled={busy || !data.decks.length}
+              onPress={() => {
+                setNewDeck(false);
+                if (!deckId) setDeckId(data.decks[0]!.id);
+              }}
+            />
           </View>
-          {!data.decks.length && (
-            <Button title="Create your first deck" onPress={() => router.push('/decks/new')} />
-          )}
+          {!newDeck && <Text style={s.label}>Save cards to</Text>}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {!newDeck &&
+              data.decks.map((deck) => (
+                <Pressable
+                  key={deck.id}
+                  disabled={busy}
+                  onPress={() => {
+                    setDeckId(deck.id);
+                    setPrompt(deck.name);
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: deckId === deck.id }}
+                  style={[
+                    s.pill,
+                    {
+                      backgroundColor: deckId === deck.id ? colors.green : '#EAEDE5',
+                      padding: 12,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: colors.ink, fontWeight: '600' }}>
+                    {deck.icon} {deck.name}
+                  </Text>
+                </Pressable>
+              ))}
+          </View>
           <Field
-            label="What would you like to remember?"
+            label={newDeck ? 'Subject or deck title' : 'Subject'}
             multiline
             value={prompt}
+            editable={!busy}
             onChangeText={setPrompt}
-            placeholder="Paste your notes, or try: The main ideas in cellular respiration, for a first-year biology course."
-            style={{ minHeight: 180 }}
-            maxLength={20000}
+            placeholder={
+              newDeck
+                ? 'e.g. Biology, French verbs, World history'
+                : (data.decks.find((d) => d.id === deckId)?.name ??
+                  'What should these cards cover?')
+            }
+            style={{ minHeight: 104 }}
+            maxLength={newDeck ? 200 : 20000}
           />
-          <View style={s.between}>
+          <View style={{ gap: 10 }}>
             <Text style={s.label}>Number of cards</Text>
-            <View style={s.row}>
-              {[3, 5, 10, 20].map((value) => (
+            <View style={[s.row, { flexWrap: 'wrap' }]}>
+              {[5, 6, 7, 8, 9, 10].map((value) => (
                 <Pressable
                   key={value}
+                  disabled={busy}
                   onPress={() => setCount(value)}
-                  style={[s.pill, { backgroundColor: count === value ? colors.green : '#EAEDE5' }]}
+                  accessibilityRole="radio"
+                  accessibilityLabel={value + ' cards'}
+                  accessibilityState={{ checked: count === value }}
+                  style={[
+                    s.pill,
+                    { backgroundColor: count === value ? colors.green : '#EAEDE5' },
+                  ]}
                 >
                   <Text style={s.label}>{value}</Text>
                 </Pressable>
@@ -268,22 +329,35 @@ export default function GenerateScreen() {
             </View>
           </View>
           <Button
-            title={'Draft ' + count + ' cards'}
+            title={
+              newDeck
+                ? 'Generate deck with ' + count + ' cards'
+                : 'Generate ' + count + ' cards'
+            }
             loading={busy}
-            disabled={!deckId || prompt.trim().length < 10}
+            disabled={(!newDeck && !deckId) || !prompt.trim()}
             onPress={() => void create()}
           />
           <Text style={s.caption}>
-            Your prompt is sent to the generation service. AI can make mistakes; these cards enter
-            your library only after you approve them.
+            Your prompt is sent to the generation service. AI can make mistakes; these cards
+            enter your library only after you approve them.
           </Text>
         </>
+      )}
+      {loaded && !state && (
+        <Button
+          title="Create a deck manually"
+          variant="secondary"
+          onPress={() => router.push('/decks/new')}
+        />
       )}
       {state && (
         <>
           <Panel tint>
             <Text style={s.label}>
-              {data.decks.find((d) => d.id === state.request.deckId)?.name ?? 'Your deck'}
+              {data.decks.find((d) => d.id === state.request.deckId)?.name ??
+                state.newDeck?.name ??
+                'Your deck'}
             </Text>
             <Text style={s.body}>{state.request.prompt}</Text>
             <Text style={s.caption}>
@@ -295,7 +369,8 @@ export default function GenerateScreen() {
               <>
                 <ActivityIndicator color={colors.ink} />
                 <Text style={s.body}>
-                  Your request survives closing the app. Return here to pick up where you left off.
+                  Your request survives closing the app. Return here to pick up where you left
+                  off.
                 </Text>
                 {!state.job && !busy && !error && (
                   <Button title="Resume saved request" onPress={() => void resume()} />
@@ -415,7 +490,7 @@ export default function GenerateScreen() {
               onPress={() => void startAgain().catch(reportError)}
             />
           )}
-          {state.job?.status === 'succeeded' && !state.acceptance && !state.accepted && (
+          {!state.acceptance && !state.accepted && !busy && (
             <Button
               title="Set these drafts aside"
               variant="secondary"

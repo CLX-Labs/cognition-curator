@@ -2,6 +2,7 @@ import {
   generationAcceptResponseSchema,
   generationJobSchema,
   type CardInput,
+  type DeckInput,
   type GenerationCandidate,
   type GenerationJob,
   type GenerationRequest,
@@ -10,6 +11,8 @@ import { api } from './api';
 import { cardContent, type Repository } from './repository';
 
 export type GenerationWorkflow = {
+  newDeck?: DeckInput;
+  sourceQuestion?: string;
   request: GenerationRequest;
   job: GenerationJob | null;
   drafts: Record<string, GenerationCandidate>;
@@ -23,9 +26,44 @@ export type GenerationWorkflow = {
 };
 export const GENERATION_KEY = 'generation';
 
+/** Save the destination before networking; retries reuse its persisted ID. */
+export async function prepareGeneration(
+  repo: Repository,
+  state: GenerationWorkflow,
+  sync: () => Promise<unknown>,
+) {
+  let local = await repo.snapshot();
+  if (state.newDeck && !local.decks.some((deck) => deck.id === state.request.deckId)) {
+    await repo.saveDeck(state.newDeck);
+  }
+  await sync();
+  local = await repo.snapshot();
+  const deck = local.decks.find((deck) => deck.id === state.request.deckId);
+  if (
+    !deck ||
+    deck.version < 1 ||
+    local.issues.some(
+      (issue) =>
+        issue.operation.type.startsWith('deck.') &&
+        'id' in issue.operation.payload &&
+        issue.operation.payload.id === state.request.deckId,
+    )
+  )
+    throw new Error(
+      'Connect and synchronize this deck before generating. Your request is saved for retry.',
+    );
+}
+
+export function answerForQuestion(state: GenerationWorkflow | null, question: string) {
+  if (state?.sourceQuestion !== question.trim() || state?.job?.status !== 'succeeded')
+    return null;
+  return state.job.candidates[0]?.back ?? null;
+}
+
 export async function fetchGeneration(
   repo: Repository,
   state: GenerationWorkflow,
+  storageKey = GENERATION_KEY,
 ): Promise<GenerationWorkflow> {
   const job = generationJobSchema.parse(
     await api.request(state.job ? '/v1/generations/' + state.job.id : '/v1/generations', {
@@ -40,7 +78,7 @@ export async function fetchGeneration(
     ? state.selectedIds
     : job.candidates.filter((c) => !job.acceptedCandidateIds.includes(c.id)).map((c) => c.id);
   const next = { ...state, job, drafts, selectedIds };
-  await repo.setState(GENERATION_KEY, next);
+  await repo.setState(storageKey, next);
   return next;
 }
 

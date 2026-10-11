@@ -565,6 +565,50 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL backend integration'
     expect(again.revision).toBe(first.revision);
     expect((await db.query('SELECT count(*)::int n FROM recollect.cards')).rows[0].n).toBe(3);
   });
+  it.each([5, 10])(
+    'generates and saves %i cards from a short subject into their chosen deck',
+    async (count) => {
+      const s = await login();
+      const ids = await setup(s);
+      const generationApp = await buildApp({
+        db,
+        config: { ...config, dailyGenerationCards: 100 },
+      });
+      try {
+        const response = await generationApp.inject({
+          method: 'POST',
+          url: '/v1/generations',
+          headers: headers(s),
+          payload: { operationId: randomUUID(), deckId: ids.deckId, prompt: 'AI', count },
+        });
+        expect(response.statusCode, response.body).toBe(202);
+        const job = response.json();
+        const generate = vi.fn(provider().generate);
+        expect(await runGeneration(db, { generate }, job.id)).toBe('completed');
+        expect(generate).toHaveBeenCalledWith({ prompt: 'AI', count });
+        const finished = (
+          await app.inject({ url: '/v1/generations/' + job.id, headers: headers(s) })
+        ).json();
+        expect(finished.candidates).toHaveLength(count);
+        const saved = await app.inject({
+          method: 'POST',
+          url: '/v1/generations/' + job.id + '/accept',
+          headers: headers(s),
+          payload: {
+            operationId: randomUUID(),
+            candidateIds: finished.candidates.map((card: { id: string }) => card.id),
+          },
+        });
+        expect(saved.statusCode, saved.body).toBe(200);
+        expect(saved.json().cards).toHaveLength(count);
+        expect(
+          saved.json().cards.every((card: { deckId: string }) => card.deckId === ids.deckId),
+        ).toBe(true);
+      } finally {
+        await generationApp.close();
+      }
+    },
+  );
   it('does not publish stale worker results after cancellation or lease takeover', async () => {
     const s = await login(),
       ids = await setup(s),

@@ -6,6 +6,8 @@ The original Swift app in `cognition.curator/` and Python server in `server/` re
 
 ## Start locally
 
+For Codex running on your Mac, follow [CODEX_HANDOFF.md](CODEX_HANDOFF.md) to build, launch, and validate the complete app with a disposable backend and dedicated simulator.
+
 Install Node 24 and npm 11. PostgreSQL 16 is supplied by the optional Docker Compose service.
 
 ```sh

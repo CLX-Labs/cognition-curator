@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { useStore } from '../src/store';
-import { Panel, Screen, colors, s } from '../src/ui';
+import { useStore } from '../../src/store';
+import { Panel, Screen, colors, s } from '../../src/ui';
 export default function Progress() {
   const { data } = useStore();
   const days = Array.from({ length: 7 }, (_, i) => {

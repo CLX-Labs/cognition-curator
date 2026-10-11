@@ -1,18 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useIsFocused } from 'expo-router/react-navigation';
 import { generationRequestSchema, type GenerationCandidate } from '@recollect/contracts';
-import { useStore } from '../src/store';
+import { useStore } from '../../src/store';
 import {
   acceptGeneration,
   fetchGeneration,
   prepareGeneration,
   GENERATION_KEY,
   type GenerationWorkflow,
-} from '../src/generation';
-import { Back, Button, Field, Panel, Screen, colors, reportError, s } from '../src/ui';
+} from '../../src/generation';
+import { Button, Field, Panel, Screen, colors, reportError, s } from '../../src/ui';
 
 export default function GenerateScreen() {
+  const focused = useIsFocused();
   const params = useLocalSearchParams<{ deckId?: string }>();
   const { repository, data, sync, refresh } = useStore();
   const [deckId, setDeckId] = useState(params.deckId ?? '');
@@ -69,6 +71,17 @@ export default function GenerateScreen() {
       mounted.current = false;
     };
   }, [repository]);
+  useEffect(() => {
+    if (!loaded || !params.deckId) return;
+    const deck = data.decks.find((deck) => deck.id === params.deckId);
+    if (!current.current && deck) {
+      setDeckId(deck.id);
+      setNewDeck(false);
+      setPrompt(deck.name);
+    }
+    // Consume an explicit destination once; returning to this tab keeps draft edits.
+    router.setParams({ deckId: undefined });
+  }, [loaded, params.deckId, data.decks]);
   const resume = useCallback(async () => {
     if (!repository || !current.current || inFlight.current) return;
     inFlight.current = true;
@@ -98,13 +111,19 @@ export default function GenerateScreen() {
     }
   }, [repository, sync, refresh]);
   useEffect(() => {
-    if (!state?.job || !['queued', 'running'].includes(state.job.status) || busy || error)
+    if (
+      !focused ||
+      !state?.job ||
+      !['queued', 'running'].includes(state.job.status) ||
+      busy ||
+      error
+    )
       return;
     const timer = setTimeout(() => {
       void resume();
     }, 2500);
     return () => clearTimeout(timer);
-  }, [state, busy, error, resume]);
+  }, [focused, state, busy, error, resume]);
 
   async function create() {
     if (!repository || inFlight.current) return;
@@ -224,7 +243,6 @@ export default function GenerateScreen() {
   }
   return (
     <Screen title="What are you learning?" eyebrow="CREATE CARDS & DECKS">
-      {params.deckId && <Back />}
       <Text style={s.body}>
         Enter a subject or deck title to generate 5–10 cards. Review the questions and answers,
         then save them to your deck.
@@ -477,7 +495,7 @@ export default function GenerateScreen() {
               <Text style={s.sectionTitle}>Make them part of your practice.</Text>
               <Button
                 title="Open this deck"
-                onPress={() => router.replace('/decks/' + state.request.deckId)}
+                onPress={() => router.push('/decks/' + state.request.deckId)}
               />
             </>
           )}

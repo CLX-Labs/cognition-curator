@@ -39,7 +39,7 @@ export default function CardEditor() {
           baseline,
         ),
       );
-      router.replace({ pathname: '/decks/[id]', params: { id: parentId } });
+      router.dismissTo({ pathname: '/decks/[id]', params: { id: parentId } });
     } catch (error) {
       reportError(error);
     } finally {
@@ -48,7 +48,7 @@ export default function CardEditor() {
   }
   if (id !== 'new' && !existing)
     return (
-      <Screen tabs={false}>
+      <Screen>
         <Back />
         <Text style={s.body}>This card is no longer available.</Text>
       </Screen>
@@ -57,7 +57,6 @@ export default function CardEditor() {
     <Screen
       title={existing ? 'Make it stick.' : 'A new card.'}
       eyebrow={existing ? 'EDIT CARD' : 'QUESTION + ANSWER'}
-      tabs={false}
     >
       <Back />
       <Field

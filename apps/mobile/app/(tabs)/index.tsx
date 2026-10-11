@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { useStore } from '../src/store';
-import { dueCards } from '../src/repository';
-import { Button, Empty, Panel, Screen, colors, s } from '../src/ui';
+import { useStore } from '../../src/store';
+import { dueCards } from '../../src/repository';
+import { Button, Empty, Panel, Screen, colors, s } from '../../src/ui';
 
 export default function Home() {
   const { session, data } = useStore();
@@ -23,7 +23,7 @@ export default function Home() {
       })}
       action={
         <Pressable
-          onPress={() => router.push('/profile')}
+          onPress={() => router.navigate('/profile')}
           style={{
             width: 44,
             height: 44,
@@ -69,18 +69,15 @@ export default function Home() {
                 ? 'Practice your cards  →'
                 : 'Create your first deck  →'
           }
-          onPress={() =>
-            router.push(
-              due.length
-                ? '/review'
-                : data.cards.length
-                  ? { pathname: '/review', params: { practice: 'true' } }
-                  : '/generate',
-            )
-          }
+          onPress={() => {
+            if (due.length) router.push('/review');
+            else if (data.cards.length)
+              router.push({ pathname: '/review', params: { practice: 'true' } });
+            else router.navigate('/generate');
+          }}
         />
       </Panel>
-      <Pressable onPress={() => router.push('/generate')}>
+      <Pressable onPress={() => router.navigate('/generate')}>
         <Panel>
           <Text style={s.eyebrow}>CREATE CARDS & DECKS</Text>
           <Text style={s.sectionTitle}>Turn a subject into a deck.</Text>
@@ -105,7 +102,7 @@ export default function Home() {
       </View>
       <View style={s.between}>
         <Text style={s.sectionTitle}>Your collection</Text>
-        <Pressable onPress={() => router.push('/decks')}>
+        <Pressable onPress={() => router.navigate('/decks')}>
           <Text style={{ color: colors.accent, fontWeight: '700' }}>View all →</Text>
         </Pressable>
       </View>
@@ -149,7 +146,7 @@ export default function Home() {
             <Button
               title="Make a deck"
               variant="secondary"
-              onPress={() => router.push('/generate')}
+              onPress={() => router.navigate('/generate')}
             />
           }
         />

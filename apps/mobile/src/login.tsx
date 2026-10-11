@@ -23,7 +23,7 @@ export default function Login() {
     }
   }
   return (
-    <Screen tabs={false}>
+    <Screen>
       <View style={{ paddingTop: 36, gap: 18 }}>
         <View
           style={{
@@ -48,8 +48,8 @@ export default function Login() {
       <Panel tint>
         <Text style={s.sectionTitle}>Your knowledge, growing.</Text>
         <Text style={s.body}>
-          Create a deck. Make your own cards or draft them with AI. Review a few at a time, even
-          offline.
+          Create a deck. Make your own cards or draft them with AI. Review a few at a time,
+          even offline.
         </Text>
         <View style={s.row}>
           <View style={s.pill}>

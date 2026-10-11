@@ -2,9 +2,10 @@ name: Recollect checks
 
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: ['feat/**']
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -40,6 +41,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: node --test scripts/test-release-pipeline.mjs
 
   expo-bundle-and-native-config:
     runs-on: ubuntu-latest

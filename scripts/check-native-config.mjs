@@ -74,6 +74,10 @@ for (const source of [
 ]) {
   assert(projectText.includes(source), `Missing extension source or embedding: ${source}`);
 }
+const widgetGroup = project.getPBXGroupByKey(
+  project.findPBXGroupKey({ name: 'CognitionCuratorWidget' }),
+);
+assert.equal(widgetGroup.path, undefined, 'Widget file paths must resolve from the project root.');
 const widgetProduct = widget[0][1].productReference;
 const embedFile = Object.entries(project.pbxBuildFileSection()).find(
   ([key, value]) => !key.endsWith('_comment') && value.fileRef === widgetProduct,

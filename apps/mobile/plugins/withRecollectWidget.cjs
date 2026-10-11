@@ -34,6 +34,9 @@ function configureProject(project, config) {
     const main = project.getPBXGroupByKey(project.getFirstProject().firstProject.mainGroup);
     main.children.push({ value: group.uuid, comment: TARGET });
   }
+  // File references already include TARGET; keep this group relative to the project root.
+  // node-xcode serializes an omitted addPbxGroup path as the literal 'undefined'.
+  delete project.getPBXGroupByKey(groupKey).path;
   for (const file of ['CognitionCuratorWidget.swift', 'WidgetSnapshot.swift']) {
     const filePath = `${TARGET}/${file}`;
     if (!project.hasFile(filePath)) project.addSourceFile(filePath, { target: uuid }, groupKey);

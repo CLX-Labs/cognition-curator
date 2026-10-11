@@ -1,5 +1,8 @@
 {
-  "cli": { "version": ">=18.0.0", "appVersionSource": "remote" },
+  "cli": {
+    "version": ">=18.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
     "development": {
       "developmentClient": true,
@@ -9,12 +12,24 @@
     },
     "simulator": {
       "extends": "development",
-      "ios": { "simulator": true }
+      "ios": {
+        "simulator": true
+      }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "ios": {
+        "image": "sdk-57"
+      },
+      "node": "24.21.0"
+    },
+    "testflight": {
+      "extends": "preview",
+      "distribution": "store",
+      "channel": "testflight",
+      "autoIncrement": true
     },
     "production": {
       "autoIncrement": true,
@@ -22,5 +37,12 @@
       "environment": "production"
     }
   },
-  "submit": { "production": {} }
+  "submit": {
+    "testflight": {
+      "ios": {
+        "appleTeamId": "KF8643NB33"
+      }
+    },
+    "production": {}
+  }
 }

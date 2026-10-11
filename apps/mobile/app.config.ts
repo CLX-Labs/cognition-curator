@@ -1,9 +1,13 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
+const easProjectId =
+  process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '2d6f42f7-8c17-4f27-9c69-7ce868abdb74';
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Recollect AI',
   slug: 'recollect-ai',
+  owner: 'collectsoftware',
   version: '2.0.0',
   icon: './assets/icon.png',
   backgroundColor: '#F7F5F0',
@@ -40,10 +44,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/withRecollectWidget.cjs',
   ],
   runtimeVersion: { policy: 'fingerprint' },
-  ...(process.env.EXPO_PUBLIC_EAS_PROJECT_ID
+  ...(easProjectId
     ? {
-        updates: { url: `https://u.expo.dev/${process.env.EXPO_PUBLIC_EAS_PROJECT_ID}` },
-        extra: { eas: { projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID } },
+        updates: { url: `https://u.expo.dev/${easProjectId}` },
+        extra: { eas: { projectId: easProjectId } },
       }
     : {}),
 });

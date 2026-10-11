@@ -70,3 +70,6 @@ apps/mobile/android/
 *.apk
 *.aab
 .eas/
+!apps/mobile/.eas/
+!apps/mobile/.eas/workflows/
+!apps/mobile/.eas/workflows/*.yml

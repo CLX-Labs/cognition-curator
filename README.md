@@ -89,6 +89,10 @@ GitHub Actions runs TypeScript, database/SQLite tests, Expo bundle/prebuild chec
 
 ## Build iOS without opening Xcode
 
+For automatic staging API/worker deployments and TestFlight/OTA releases on pushes to
+`main`, see [CI/CD setup](docs/ci-cd.md). The pipeline needs one-time Railway, GitHub
+and Apple configuration before it can run.
+
 The configuration preserves bundle `collect.software.cognition-curator`, team `KF8643NB33`, App Group `group.collect.software.cognition-curator`, widget extension `collect.software.cognition-curator.CognitionCuratorWidget`, scheme `cognitioncurator`, and minimum iOS 18.4.
 
 Link the project to the correct Expo account once and configure signing through EAS. Set `EXPO_PUBLIC_EAS_PROJECT_ID` and `EXPO_PUBLIC_API_URL` in the matching EAS environment. Account access and App Store agreements still require their account owner.

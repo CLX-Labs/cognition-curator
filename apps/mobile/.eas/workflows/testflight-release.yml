@@ -1,0 +1,57 @@
+name: TestFlight release or OTA update
+
+# GitHub invokes this only after tests and staging deployment succeed.
+# No direct push trigger: that would bypass the backend deployment gate.
+on:
+  workflow_dispatch:
+    inputs:
+      force_native:
+        type: boolean
+        default: false
+      release_sha:
+        type: string
+        required: true
+
+defaults:
+  tools:
+    node: '24.21.0'
+
+jobs:
+  fingerprint:
+    type: fingerprint
+    environment: preview
+  compatible_build:
+    needs: [fingerprint]
+    type: get-build
+    params:
+      platform: ios
+      profile: testflight
+      channel: testflight
+      distribution: store
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      wait_for_in_progress: true
+  native_build:
+    needs: [compatible_build]
+    if: ${{ inputs.force_native || !needs.compatible_build.outputs.build_id }}
+    type: build
+    params:
+      platform: ios
+      profile: testflight
+      message: ${{ inputs.release_sha }}
+  submit_testflight:
+    needs: [native_build]
+    type: testflight
+    params:
+      build_id: ${{ needs.native_build.outputs.build_id }}
+      profile: testflight
+      changelog: ${{ inputs.release_sha }}
+      submit_beta_review: false
+  ota_update:
+    needs: [compatible_build]
+    if: ${{ !inputs.force_native && needs.compatible_build.outputs.build_id }}
+    type: update
+    environment: preview
+    params:
+      platform: ios
+      channel: testflight
+      message: ${{ inputs.release_sha }}

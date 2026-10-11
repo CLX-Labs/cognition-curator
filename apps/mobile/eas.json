@@ -1,0 +1,48 @@
+{
+  "cli": {
+    "version": ">=18.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "environment": "development"
+    },
+    "simulator": {
+      "extends": "development",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "environment": "preview",
+      "ios": {
+        "image": "sdk-57"
+      },
+      "node": "24.21.0"
+    },
+    "testflight": {
+      "extends": "preview",
+      "distribution": "store",
+      "channel": "testflight",
+      "autoIncrement": true
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "environment": "production"
+    }
+  },
+  "submit": {
+    "testflight": {
+      "ios": {
+        "appleTeamId": "KF8643NB33"
+      }
+    },
+    "production": {}
+  }
+}

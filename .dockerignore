@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+**/.expo
+**/ios
+**/android
+**/dist
+**/coverage
+**/*.db
+**/*.sqlite*
+**/*.log
+server
+cognition.curator
+tmp

@@ -1,0 +1,32 @@
+{
+  "name": "@recollect/api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/app.ts"
+  },
+  "scripts": {
+    "dev": "tsx --env-file-if-exists=../../.env watch src/start.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/start.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@recollect/contracts": "*",
+    "@recollect/scheduler": "*",
+    "@recollect/db": "*",
+    "@recollect/ai": "*",
+    "fastify": "5.12.5",
+    "jose": "^6.1.0",
+    "pg": "^8.16.3",
+    "zod": "^4.0.0",
+    "tsx": "^4.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.5",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "5.0.3"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "recollect",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11"
+  },
+  "scripts": {
+    "dev:api": "npm run dev --workspace @recollect/api",
+    "dev:worker": "npm run dev --workspace @recollect/worker",
+    "dev:mobile": "npm run start --workspace @recollect/mobile",
+    "db:migrate": "npm run migrate --workspace @recollect/db",
+    "db:import:legacy": "npm run import:legacy --workspace @recollect/db",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p tsconfig.tests.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm test",
+    "test:embedded": "node scripts/run-embedded-tests.mjs",
+    "setup": "node scripts/setup-local.mjs",
+    "db:queue:setup": "npm run setup --workspace @recollect/worker"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
+    "@types/node": "^24.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "5.0.3"
+  }
+}

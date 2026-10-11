@@ -1,0 +1,47 @@
+name: Recollect iOS cloud build
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile
+        type: choice
+        required: true
+        default: preview
+        options: [development, preview, production]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: ios-build
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EXPO_PUBLIC_EAS_PROJECT_ID }}
+      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+      BUILD_PROFILE: ${{ inputs.profile }}
+      EXPO_PUBLIC_ENABLE_DEV_AUTH: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Check cloud configuration
+        run: |
+          node --input-type=module <<'JS'
+          for (const key of ['EXPO_TOKEN', 'EXPO_PUBLIC_EAS_PROJECT_ID', 'EXPO_PUBLIC_API_URL']) {
+            if (!process.env[key]) throw new Error(`Configure ${key} in the ios-build GitHub environment.`);
+          }
+          if (new URL(process.env.EXPO_PUBLIC_API_URL).protocol !== 'https:') {
+            throw new Error('Cloud builds require an HTTPS API URL.');
+          }
+          JS
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Build with EAS managed signing
+        working-directory: apps/mobile
+        run: npx --yes eas-cli@24.12.1 build --platform ios --profile "$BUILD_PROFILE" --non-interactive --wait

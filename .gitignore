@@ -56,3 +56,20 @@ logs/
 # Project-specific
 server/migrations/
 server/run_server.sh
+
+# TypeScript / Expo workspaces
+node_modules/
+.expo/
+coverage/
+*.tsbuildinfo
+apps/mobile/ios/
+apps/mobile/android/
+!**/.env.example
+!**/.env.test.example
+*.ipa
+*.apk
+*.aab
+.eas/
+!apps/mobile/.eas/
+!apps/mobile/.eas/workflows/
+!apps/mobile/.eas/workflows/*.yml

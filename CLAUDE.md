@@ -1,5 +1,28 @@
 # Cognition Curator - Claude Code Rules
 
+## TypeScript / Expo migration branch
+
+The active rebuild is the root npm workspace. Read `README.md`, `docs/architecture.md`,
+and `docs/native-migration.md` first. Use Node 24.
+
+- UI: `apps/mobile`; API: `apps/api`; worker: `apps/worker`.
+- Share schemas and scheduling through `packages/contracts` and `packages/scheduler`.
+- Run `npm run typecheck` and relevant tests. `npm run test:embedded` supplies an
+  isolated PostgreSQL process. CI also uses PostgreSQL 16 and macOS native checks.
+- Commit migrations; do not run them automatically at service startup.
+- Commit every local mutation with its outbox entry. Preserve owner separation,
+  stable event/operation IDs, conflicts, and migration evidence.
+- Use Expo CNG/config plugins and EAS. Generated mobile `ios`/`android` folders are
+  not the source of truth and must not be committed.
+- Preserve archived Swift model hashes. Support different shipped schemas with
+  explicit additional readers, not changes to the pinned original models.
+- Read the rollout plan before deployment. The old API writers are gated by the
+  new server; a branch and passing tests do not replace a reviewed cutover.
+
+The reference below describes the original Swift app retained for recovery.
+
+---
+
 ## Project Overview
 
 **Cognition Curator** is an iOS flashcard application that helps users learn and retain information using science-backed spaced repetition (SM-2 algorithm).

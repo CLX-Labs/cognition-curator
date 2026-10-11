@@ -1,0 +1,30 @@
+{
+  "name": "@recollect/worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/worker.ts"
+  },
+  "scripts": {
+    "setup": "tsx --env-file-if-exists=../../.env src/setup.ts",
+    "dev": "tsx --env-file-if-exists=../../.env watch src/start.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/start.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@recollect/contracts": "*",
+    "@recollect/db": "*",
+    "@recollect/ai": "*",
+    "pg": "^8.16.3",
+    "pg-boss": "12.37.1",
+    "tsx": "^4.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.5",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "5.0.3"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@recollect/db",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./migrate": "./src/migrate.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
+    "import:legacy": "tsx --env-file-if-exists=../../.env src/import-legacy.ts"
+  },
+  "dependencies": {
+    "@recollect/contracts": "*",
+    "@recollect/scheduler": "*",
+    "pg": "^8.16.3",
+    "tsx": "^4.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.5",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "5.0.3",
+    "drizzle-orm": "0.45.4"
+  }
+}

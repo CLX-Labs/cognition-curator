@@ -4,6 +4,7 @@ import { generationRequestSchema } from '@recollect/contracts';
 import { useStore } from './store';
 import {
   answerForQuestion,
+  answerRequestLabel,
   fetchGeneration,
   prepareGeneration,
   type GenerationWorkflow,
@@ -138,7 +139,7 @@ export default function AnswerGenerator({
   return (
     <>
       <Button
-        title={pending ? 'Generating answer…' : 'Generate answer'}
+        title={answerRequestLabel(pending, busy, error)}
         variant="secondary"
         disabled={!loaded || !question.trim() || pending}
         loading={busy}

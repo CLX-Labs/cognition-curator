@@ -9,6 +9,7 @@ const provider = new AnthropicProvider(
   process.env.ANTHROPIC_MODEL ?? '',
 );
 const stop = await startWorker(db, process.env.DATABASE_URL, provider);
+process.stdout.write('Recollect generation worker ready.\n');
 let stopping = false;
 const shutdown = async () => {
   if (stopping) return;

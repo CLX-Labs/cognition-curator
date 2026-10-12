@@ -8,12 +8,19 @@ const request = vi.hoisted(() => vi.fn());
 vi.mock('../src/api', () => ({ api: { request } }));
 import {
   answerForQuestion,
+  answerRequestLabel,
   fetchGeneration,
   prepareGeneration,
   type GenerationWorkflow,
 } from '../src/generation';
 
 const databases: TestDatabase[] = [];
+it('marks a failed saved answer request as paused, then generating only while a retry runs', () => {
+  expect(answerRequestLabel(true, false, 'Connection failed')).toBe('Answer request paused');
+  expect(answerRequestLabel(true, true, null)).toBe('Generating answer…');
+  expect(answerRequestLabel(true, false, null)).toBe('Generating answer…');
+  expect(answerRequestLabel(false, false, null)).toBe('Generate answer');
+});
 afterEach(() => {
   for (const db of databases.splice(0)) db.close();
 });

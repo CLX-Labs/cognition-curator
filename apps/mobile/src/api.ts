@@ -2,6 +2,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { appleChallengeSchema, sessionSchema, type Session } from '@recollect/contracts';
+import { release } from './release';
 
 const SESSION_KEY = 'recollect.session.v2';
 export class ApiError extends Error {
@@ -17,11 +18,13 @@ type Listener = (session: Session | null) => void;
 export const developmentAuthEnabled = __DEV__ && process.env.EXPO_PUBLIC_ENABLE_DEV_AUTH === 'true';
 
 function baseUrl() {
-  const value = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
+  // Pin installed releases to the origin stamped by CI, independent of which
+  // EAS environment or local dotenv file the bundler happened to load.
+  const value = ((!__DEV__ && release.apiUrl) || process.env.EXPO_PUBLIC_API_URL)?.replace(/\/$/, '');
   if (!value)
     throw new Error('The API address is not configured. Set EXPO_PUBLIC_API_URL for this build.');
   const url = new URL(value);
-  if (url.protocol !== 'https:' && !(__DEV__ && url.protocol === 'http:')) {
+  if ((url.protocol !== 'https:' && !(__DEV__ && url.protocol === 'http:')) || url.username || url.password) {
     throw new Error('A secure HTTPS API address is required.');
   }
   return value;
@@ -85,10 +88,11 @@ export class ApiClient {
     options: { method?: string; body?: unknown; token?: string } = {},
   ) {
     if (!path.startsWith('/v1/')) throw new Error('Invalid API route.');
+    const origin = baseUrl();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25_000);
     try {
-      const response = await fetch(baseUrl() + path, {
+      const response = await fetch(origin + path, {
         method: options.method ?? 'GET',
         headers: {
           Accept: 'application/json',
@@ -97,6 +101,16 @@ export class ApiClient {
         },
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
         signal: controller.signal,
+      }).catch(() => {
+        const code = controller.signal.aborted ? 'request_timeout' : 'network_unavailable';
+        console.warn('[Recollect API]', { code, host: new URL(origin).hostname, route: path.split('?')[0] });
+        throw new ApiError(
+          code === 'request_timeout'
+            ? 'Recollect took too long to respond. Your request is saved; try again.'
+            : 'Cannot connect to Recollect. Your request is saved. Check your connection and try again.',
+          0,
+          code,
+        );
       });
       return await responseBody(response);
     } finally {

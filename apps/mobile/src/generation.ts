@@ -26,6 +26,11 @@ export type GenerationWorkflow = {
 };
 export const GENERATION_KEY = 'generation';
 
+export function answerRequestLabel(pending: boolean, busy: boolean, error: string | null) {
+  if (busy || (pending && !error)) return 'Generating answer…';
+  return pending ? 'Answer request paused' : 'Generate answer';
+}
+
 /** Save the destination before networking; retries reuse its persisted ID. */
 export async function prepareGeneration(
   repo: Repository,

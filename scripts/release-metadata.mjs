@@ -10,6 +10,7 @@ export function createReleaseMetadata(env, now = new Date()) {
   return {
     id: `r${env.GITHUB_RUN_NUMBER}.${env.GITHUB_RUN_ATTEMPT}-${env.GITHUB_SHA.slice(0, 7)}`,
     version: env.RELEASE_VERSION ?? null,
+    apiUrl: env.API_URL ?? null,
     commit: env.GITHUB_SHA,
     createdAt: now.toISOString(),
     runUrl: `https://github.com/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`,

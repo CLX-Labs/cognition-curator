@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import type { Session } from '@recollect/contracts';
 
 const store = vi.hoisted(() => ({ value: null as string | null }));
+const releaseStamp = vi.hoisted(() => ({ apiUrl: null as string | null }));
+vi.mock('../src/release', () => ({ release: releaseStamp }));
 vi.mock('expo-secure-store', () => ({
   AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 'device-only',
   getItemAsync: vi.fn(async () => store.value),
@@ -30,6 +32,8 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   store.value = null;
+  releaseStamp.apiUrl = null;
+  process.env.EXPO_PUBLIC_API_URL = 'https://test.recollect.invalid';
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -52,6 +56,35 @@ function deferred<T>() {
 }
 
 describe('rotating authentication and account race boundaries', () => {
+  it('uses the stamped release API even when the bundled environment still names a preview tunnel', async () => {
+    vi.stubGlobal('__DEV__', false);
+    releaseStamp.apiUrl = 'https://cognition-curator-production.up.railway.app';
+    process.env.EXPO_PUBLIC_API_URL = 'https://expired-preview.trycloudflare.com';
+    const client = new ApiClient();
+    client.session = session();
+    const fetcher = vi.fn(async () => json({ okay: true }));
+    vi.stubGlobal('fetch', fetcher);
+    await client.request('/v1/generations', { method: 'POST', body: { prompt: 'question' } });
+    expect(fetcher.mock.calls[0][0]).toBe('https://cognition-curator-production.up.railway.app/v1/generations');
+  });
+  it('turns a native hostname error into a retryable connection error without losing the session', async () => {
+    const client = new ApiClient();
+    const original = session();
+    client.session = original;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('fetch failed: UnexpectedException: A server with the specified hostname could not be found.');
+    }));
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await expect(client.request('/v1/generations')).rejects.toMatchObject({
+        status: 0, code: 'network_unavailable', message: expect.stringContaining('Your request is saved'),
+      });
+      expect(client.session).toBe(original);
+      expect(warning).toHaveBeenCalledWith('[Recollect API]', {
+        code: 'network_unavailable', host: 'test.recollect.invalid', route: '/v1/generations',
+      });
+    } finally { warning.mockRestore(); }
+  });
   it('uses one refresh for simultaneous expired requests and persists rotation', async () => {
     const client = new ApiClient();
     const old = session(randomUUID(), 'old', true);

@@ -18,7 +18,8 @@ COPY tsconfig.base.json ./
 COPY apps/api apps/api
 COPY apps/worker apps/worker
 COPY packages packages
+COPY scripts/start-backend.mjs scripts/start-backend.mjs
 USER node
 ENV NODE_ENV=production
 EXPOSE 3001
-CMD ["npm", "run", "start", "--workspace", "@recollect/api"]
+CMD ["node", "scripts/start-backend.mjs"]

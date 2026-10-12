@@ -58,6 +58,7 @@ jobs:
       - run: node --test scripts/test-release-pipeline.mjs
       - run: node --test scripts/test-release-metadata.mjs
       - run: node --test scripts/test-release-policy.mjs
+      - run: node --test scripts/test-release-notifications.mjs
 
   expo-bundle-and-native-config:
     runs-on: ubuntu-latest

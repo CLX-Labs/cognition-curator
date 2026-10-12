@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StoreProvider, useStore } from '../src/store';
 import Login from '../src/login';
 import { colors, s } from '../src/ui';
+import { AppUpdateProvider, UpdateNotice } from '../src/app-updates';
 
 export const unstable_settings = { initialRouteName: '(tabs)' };
 
@@ -38,7 +39,10 @@ function AppNavigation() {
   return (
     <Stack
       key={session.user.id}
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
     >
       <Stack.Screen name="(tabs)" />
     </Stack>
@@ -48,8 +52,13 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StoreProvider>
-        <StatusBar style="dark" />
-        <AppNavigation />
+        <AppUpdateProvider>
+          <StatusBar style="dark" />
+          <View style={{ flex: 1 }}>
+            <AppNavigation />
+            <UpdateNotice />
+          </View>
+        </AppUpdateProvider>
       </StoreProvider>
     </SafeAreaProvider>
   );

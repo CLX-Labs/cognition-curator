@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { downloadCompatibleUpdate, releaseLabel } from '../src/release';
+import { createUpdateChecker, downloadCompatibleUpdate, releaseLabel } from '../src/release';
 
 describe('running release and manual OTA application', () => {
   it('distinguishes development, unstamped builds and versioned releases', () => {
@@ -57,5 +57,58 @@ describe('running release and manual OTA application', () => {
         },
       }),
     ).rejects.toThrow('Offline');
+  });
+});
+
+describe('foreground and manual update checks', () => {
+  it('shares an in-flight download across foreground, timer and manual requests', async () => {
+    let complete!: (value: { isAvailable: boolean; isRollBackToEmbedded: boolean }) => void;
+    const checkForUpdateAsync = vi.fn(
+      () =>
+        new Promise<{ isAvailable: boolean; isRollBackToEmbedded: boolean }>((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const fetchUpdateAsync = vi.fn(async () => ({ isNew: true, isRollBackToEmbedded: false }));
+    const checker = createUpdateChecker({ checkForUpdateAsync, fetchUpdateAsync });
+    const foreground = checker.check();
+    const manual = checker.check(true);
+    expect(manual).toBe(foreground);
+    complete({ isAvailable: true, isRollBackToEmbedded: false });
+    expect(await manual).toBe('ready');
+    expect(checkForUpdateAsync).toHaveBeenCalledTimes(1);
+    expect(fetchUpdateAsync).toHaveBeenCalledTimes(1);
+  });
+  it('backs off automatic checks while permitting an explicit manual retry', async () => {
+    let time = 0;
+    const checkForUpdateAsync = vi.fn(async () => ({
+      isAvailable: false,
+      isRollBackToEmbedded: false,
+    }));
+    const checker = createUpdateChecker(
+      { checkForUpdateAsync, fetchUpdateAsync: vi.fn() },
+      () => time,
+    );
+    await checker.check();
+    time = 30_000;
+    await checker.check();
+    expect(checkForUpdateAsync).toHaveBeenCalledTimes(1);
+    await checker.check(true);
+    expect(checkForUpdateAsync).toHaveBeenCalledTimes(2);
+    time = 90_000;
+    await checker.check();
+    expect(checkForUpdateAsync).toHaveBeenCalledTimes(3);
+  });
+  it('an offline check releases the shared request so a later retry can succeed', async () => {
+    const checkForUpdateAsync = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Offline'))
+      .mockResolvedValue({ isAvailable: true, isRollBackToEmbedded: false });
+    const checker = createUpdateChecker({
+      checkForUpdateAsync,
+      fetchUpdateAsync: async () => ({ isNew: true, isRollBackToEmbedded: false }),
+    });
+    await expect(checker.check()).rejects.toThrow('Offline');
+    expect(await checker.check(true)).toBe('ready');
   });
 });

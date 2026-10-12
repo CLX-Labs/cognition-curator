@@ -4,7 +4,7 @@ import { checkHealth, deploy, validateConfig, waitForDeployment } from './releas
 
 const env = { RAILWAY_TOKEN: 'test', EXPO_TOKEN: 'test', RAILWAY_PROJECT_ID: 'project',
   RAILWAY_ENVIRONMENT_ID: 'staging', RAILWAY_API_SERVICE_ID: 'api', RAILWAY_WORKER_SERVICE_ID: 'worker',
-  STAGING_API_URL: 'https://api.example.com', GITHUB_SHA: 'a'.repeat(40), ASC_APP_ID: '1234567890' };
+  API_URL: 'https://api.example.com', GITHUB_SHA: 'a'.repeat(40), ASC_APP_ID: '1234567890' };
 const options = { attempts: 3, pause: async () => {}, log: () => {} };
 
 test('rejects incomplete targets and temporary or credential-bearing API origins', () => {
@@ -12,7 +12,7 @@ test('rejects incomplete targets and temporary or credential-bearing API origins
   assert.throws(() => validateConfig({ ...env, RAILWAY_WORKER_SERVICE_ID: 'api' }), /separate/);
   for (const url of ['http://api.example.com', 'https://test.trycloudflare.com', 'https://localhost',
     'https://user:password@api.example.com', 'https://api.example.com/api']) {
-    assert.throws(() => validateConfig({ ...env, STAGING_API_URL: url }), /stable HTTPS/);
+    assert.throws(() => validateConfig({ ...env, API_URL: url }), /stable HTTPS/);
   }
 });
 

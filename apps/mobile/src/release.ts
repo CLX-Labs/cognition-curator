@@ -32,3 +32,24 @@ export async function downloadCompatibleUpdate(
   const downloaded = await client.fetchUpdateAsync();
   return downloaded.isNew || downloaded.isRollBackToEmbedded ? 'ready' : 'unchanged';
 }
+
+/** Foreground, timer and manual checks share one download and a background cooldown. */
+export function createUpdateChecker(
+  client: UpdateClient,
+  now: () => number = Date.now,
+  cooldownMs = 60_000,
+) {
+  let inFlight: ReturnType<typeof downloadCompatibleUpdate> | null = null;
+  let lastCheck = -Infinity;
+  return {
+    check(force = false): ReturnType<typeof downloadCompatibleUpdate> {
+      if (inFlight) return inFlight;
+      if (!force && now() - lastCheck < cooldownMs) return Promise.resolve('unchanged');
+      lastCheck = now();
+      inFlight = downloadCompatibleUpdate(client).finally(() => {
+        inFlight = null;
+      });
+      return inFlight;
+    },
+  };
+}

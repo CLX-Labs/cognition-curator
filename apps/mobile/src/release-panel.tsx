@@ -3,7 +3,8 @@ import { Platform, Text } from 'react-native';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 import { Button, Panel, colors, s } from './ui';
-import { downloadCompatibleUpdate, release, releaseLabel } from './release';
+import { release, releaseLabel } from './release';
+import { useAppUpdates } from './app-updates';
 
 export function ReleaseStamp() {
   return (
@@ -14,19 +15,24 @@ export function ReleaseStamp() {
 }
 
 export default function ReleasePanel() {
-  const { currentlyRunning, isUpdatePending, isChecking, isDownloading } =
-    Updates.useUpdates();
+  const {
+    currentlyRunning,
+    pending,
+    isChecking,
+    isDownloading,
+    enabled,
+    check: checkUpdate,
+    restart: applyUpdate,
+    restarting,
+  } = useAppUpdates();
   const [busy, setBusy] = useState(false);
-  const [ready, setReady] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const development = Platform.OS === 'web' || __DEV__;
-  const enabled = !development && Updates.isEnabled;
   // The installed binary's number is independent of the changeable OTA manifest.
   const build =
     Constants.platform?.ios?.buildNumber ?? Constants.platform?.android?.versionCode;
-  const pending = ready || isUpdatePending;
   async function check() {
     if (!enabled || inFlight.current) return;
     inFlight.current = true;
@@ -34,8 +40,7 @@ export default function ReleasePanel() {
     setError(null);
     setMessage(null);
     try {
-      const result = await downloadCompatibleUpdate(Updates);
-      setReady(result === 'ready');
+      const result = await checkUpdate();
       setMessage(
         result === 'ready'
           ? 'Update downloaded. Restart to run it; the release label changes after restart.'
@@ -60,7 +65,7 @@ export default function ReleasePanel() {
     setBusy(true);
     setError(null);
     try {
-      await Updates.reloadAsync();
+      await applyUpdate();
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -111,7 +116,7 @@ export default function ReleasePanel() {
         pending ? (
           <Button
             title="Restart to apply update"
-            loading={busy}
+            loading={busy || restarting}
             onPress={() => void restart()}
           />
         ) : (

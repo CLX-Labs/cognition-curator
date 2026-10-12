@@ -59,7 +59,6 @@ export default function ReviewScreen() {
       <Screen
         title={queue.length ? 'A little more yours.' : 'You are up to date.'}
         eyebrow={practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE'}
-        tabs={false}
       >
         <Panel tint>
           <Text style={[s.metric, { fontSize: 64 }]}>{index}</Text>
@@ -72,7 +71,7 @@ export default function ReviewScreen() {
         <Text style={s.body}>
           Come back when your next cards are ready. A little, often, goes a long way.
         </Text>
-        <Button title="Back to today" onPress={() => router.replace('/')} />
+        <Button title="Back to today" onPress={() => router.dismissTo('/')} />
       </Screen>
     );
   const deck = data.decks.find((d) => d.id === card.deckId);
@@ -84,7 +83,6 @@ export default function ReviewScreen() {
     <Screen
       title={deck?.name ?? 'Your review'}
       eyebrow={practice ? 'PRACTICE · NO SCHEDULE CHANGES' : 'REVIEW SESSION'}
-      tabs={false}
     >
       <Back label="Finish later" />
       <View style={s.between}>
@@ -111,7 +109,9 @@ export default function ReviewScreen() {
           {revealed && (
             <>
               <View style={s.divider} />
-              <Text style={{ fontSize: 22, lineHeight: 32, color: colors.ink }}>{card.back}</Text>
+              <Text style={{ fontSize: 22, lineHeight: 32, color: colors.ink }}>
+                {card.back}
+              </Text>
             </>
           )}
           {showHint && !revealed && <Text style={s.body}>{card.hint}</Text>}

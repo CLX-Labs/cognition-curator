@@ -195,7 +195,7 @@ export const refreshRequestSchema = z.strictObject({ refreshToken: z.string().mi
 export const generationRequestSchema = z.strictObject({
   operationId: uuidSchema,
   deckId: uuidSchema,
-  prompt: z.string().trim().min(10).max(20_000),
+  prompt: z.string().trim().min(1).max(20_000),
   count: z.number().int().min(1).max(20),
 });
 export type GenerationRequest = z.infer<typeof generationRequestSchema>;

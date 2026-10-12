@@ -11,7 +11,7 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, usePathname } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { useStore } from './store';
 
 export const colors = {
@@ -26,23 +26,24 @@ export const colors = {
   danger: '#A43232',
 };
 export function reportError(error: unknown) {
-  Alert.alert('Could not finish', error instanceof Error ? error.message : 'Please try again.');
+  Alert.alert(
+    'Could not finish',
+    error instanceof Error ? error.message : 'Please try again.',
+  );
 }
 export function Screen({
   children,
   title,
   eyebrow,
   action,
-  tabs = true,
 }: {
   children: React.ReactNode;
   title?: string;
   eyebrow?: string;
   action?: React.ReactNode;
-  tabs?: boolean;
 }) {
-  const path = usePathname();
   const { data, syncState, sync } = useStore();
+  const segments = useSegments();
   return (
     <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
@@ -58,7 +59,11 @@ export function Screen({
         {(data.pending > 0 || data.issues.length > 0 || syncState !== 'idle') && (
           <Pressable
             style={s.sync}
-            onPress={() => (data.issues.length ? router.push('/profile') : void sync())}
+            onPress={() => {
+              if (!data.issues.length) void sync();
+              else if (segments[0] === '(tabs)') router.navigate('/profile');
+              else router.dismissTo('/profile');
+            }}
           >
             <Text style={s.syncText}>
               {data.issues.length
@@ -74,35 +79,6 @@ export function Screen({
         )}
         {children}
       </ScrollView>
-      {tabs && (
-        <SafeAreaView edges={['bottom']} style={s.tabs}>
-          <View style={s.tabRow}>
-            {(
-              [
-                ['/', '◉', 'Today'],
-                ['/decks', '▤', 'Library'],
-                ['/progress', '↗', 'Progress'],
-                ['/profile', '◎', 'You'],
-              ] as const
-            ).map(([href, icon, label]) => {
-              const active = href === '/' ? path === '/' : path.startsWith(href);
-              return (
-                <Pressable
-                  key={href}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={label}
-                  onPress={() => router.replace(href)}
-                  style={s.tab}
-                >
-                  <Text style={[s.tabIcon, active && { color: colors.accent }]}>{icon}</Text>
-                  <Text style={[s.tabLabel, active && { color: colors.accent }]}>{label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </SafeAreaView>
-      )}
     </SafeAreaView>
   );
 }
@@ -143,7 +119,13 @@ export function Button({
     </Pressable>
   );
 }
-export function Panel({ children, tint = false }: { children: React.ReactNode; tint?: boolean }) {
+export function Panel({
+  children,
+  tint = false,
+}: {
+  children: React.ReactNode;
+  tint?: boolean;
+}) {
   return <View style={[s.panel, tint && { backgroundColor: colors.green }]}>{children}</View>;
 }
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
@@ -249,7 +231,12 @@ export const s = StyleSheet.create({
     color: colors.ink,
   },
   row: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  between: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
   metric: { fontSize: 38, fontWeight: '700', color: colors.ink, letterSpacing: -1 },
   pill: {
     alignSelf: 'flex-start',

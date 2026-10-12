@@ -7,6 +7,8 @@ import { StoreProvider, useStore } from '../src/store';
 import Login from '../src/login';
 import { colors, s } from '../src/ui';
 
+export const unstable_settings = { initialRouteName: '(tabs)' };
+
 function AppNavigation() {
   const { ready, session, initializationError, repository } = useStore();
   if (!ready)
@@ -37,7 +39,9 @@ function AppNavigation() {
     <Stack
       key={session.user.id}
       screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-    />
+    >
+      <Stack.Screen name="(tabs)" />
+    </Stack>
   );
 }
 export default function RootLayout() {

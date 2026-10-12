@@ -5,18 +5,18 @@ import {
   type ImportRequest,
   type ImportResponse,
 } from '@recollect/contracts';
-import { useStore } from '../src/store';
-import { api, ApiError } from '../src/api';
-import { Button, Panel, Screen, colors, reportError, s } from '../src/ui';
-import { shareExistingFile, shareJSON } from '../src/export';
+import { useStore } from '../../src/store';
+import { api, ApiError } from '../../src/api';
+import { Button, Panel, Screen, colors, reportError, s } from '../../src/ui';
+import { shareExistingFile, shareJSON } from '../../src/export';
 import {
   exportLegacyStore,
   inspectLegacyStore,
   type LegacyExport,
   type LegacyInspection,
-} from '../modules/legacy-storage';
-import { planMigration, type MigrationPlan } from '../src/migration';
-import type { LocalIssue } from '../src/repository';
+} from '../../modules/legacy-storage';
+import { planMigration, type MigrationPlan } from '../../src/migration';
+import type { LocalIssue } from '../../src/repository';
 
 type ImportWorkflow = {
   legacy: LegacyExport;

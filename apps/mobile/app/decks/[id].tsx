@@ -12,7 +12,7 @@ export default function DeckDetail() {
   const deck = data.decks.find((d) => d.id === id);
   if (!deck)
     return (
-      <Screen tabs={false}>
+      <Screen>
         <Back />
         <Empty
           title="This deck is unavailable."
@@ -35,7 +35,7 @@ export default function DeckDetail() {
           style: 'destructive',
           onPress: () => {
             void mutate((repo) => repo.remove('deck', displayed.id, displayed))
-              .then(() => router.replace('/decks'))
+              .then(() => router.dismissTo('/decks'))
               .catch(reportError);
           },
         },
@@ -43,16 +43,16 @@ export default function DeckDetail() {
     );
   }
   return (
-    <Screen
-      title={deck.name}
-      eyebrow={cards.length + ' CARDS · ' + due.length + ' DUE'}
-      tabs={false}
-    >
+    <Screen title={deck.name} eyebrow={cards.length + ' CARDS · ' + due.length + ' DUE'}>
       <Back label="Library" />
       {editing ? (
         <Panel>
           <DeckForm deck={deck} complete={() => setEditing(false)} />
-          <Button title="Cancel editing" variant="secondary" onPress={() => setEditing(false)} />
+          <Button
+            title="Cancel editing"
+            variant="secondary"
+            onPress={() => setEditing(false)}
+          />
         </Panel>
       ) : (
         <>
@@ -81,7 +81,9 @@ export default function DeckDetail() {
               <Button
                 title="Draft with AI"
                 variant="secondary"
-                onPress={() => router.push({ pathname: '/generate', params: { deckId: id } })}
+                onPress={() =>
+                  router.dismissTo({ pathname: '/generate', params: { deckId: id } })
+                }
               />
             </View>
           </View>

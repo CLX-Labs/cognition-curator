@@ -1,15 +1,17 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { useStore } from '../src/store';
-import { dueCards } from '../src/repository';
-import { Button, Empty, Panel, Screen, colors, s } from '../src/ui';
+import { useStore } from '../../src/store';
+import { dueCards } from '../../src/repository';
+import { Button, Empty, Panel, Screen, colors, s } from '../../src/ui';
 
 export default function Home() {
   const { session, data } = useStore();
   const due = dueCards(data);
   const today = new Date().toDateString();
-  const todayReviews = data.reviews.filter((r) => new Date(r.reviewedAt).toDateString() === today);
+  const todayReviews = data.reviews.filter(
+    (r) => new Date(r.reviewedAt).toDateString() === today,
+  );
   const name = session?.user.name.split(' ')[0] ?? 'there';
   return (
     <Screen
@@ -21,7 +23,7 @@ export default function Home() {
       })}
       action={
         <Pressable
-          onPress={() => router.push('/profile')}
+          onPress={() => router.navigate('/profile')}
           style={{
             width: 44,
             height: 44,
@@ -39,7 +41,7 @@ export default function Home() {
     >
       <Panel tint>
         <View style={s.pill}>
-          <Text style={s.pillText}>A LITTLE EVERY DAY</Text>
+          <Text style={s.pillText}>PRACTICE YOUR CARDS</Text>
         </View>
         <Text style={[s.title, { fontSize: 34 }]}>
           {due.length
@@ -67,17 +69,23 @@ export default function Home() {
                 ? 'Practice your cards  →'
                 : 'Create your first deck  →'
           }
-          onPress={() =>
-            router.push(
-              due.length
-                ? '/review'
-                : data.cards.length
-                  ? { pathname: '/review', params: { practice: 'true' } }
-                  : '/decks/new',
-            )
-          }
+          onPress={() => {
+            if (due.length) router.push('/review');
+            else if (data.cards.length)
+              router.push({ pathname: '/review', params: { practice: 'true' } });
+            else router.navigate('/generate');
+          }}
         />
       </Panel>
+      <Pressable onPress={() => router.navigate('/generate')}>
+        <Panel>
+          <Text style={s.eyebrow}>CREATE CARDS & DECKS</Text>
+          <Text style={s.sectionTitle}>Turn a subject into a deck.</Text>
+          <Text style={s.body}>
+            Generate 5–10 cards, or write a card and generate its answer. →
+          </Text>
+        </Panel>
+      </Pressable>
       <View style={s.row}>
         <View style={{ flex: 1 }}>
           <Panel>
@@ -94,7 +102,7 @@ export default function Home() {
       </View>
       <View style={s.between}>
         <Text style={s.sectionTitle}>Your collection</Text>
-        <Pressable onPress={() => router.push('/decks')}>
+        <Pressable onPress={() => router.navigate('/decks')}>
           <Text style={{ color: colors.accent, fontWeight: '700' }}>View all →</Text>
         </Pressable>
       </View>
@@ -138,18 +146,11 @@ export default function Home() {
             <Button
               title="Make a deck"
               variant="secondary"
-              onPress={() => router.push('/decks/new')}
+              onPress={() => router.navigate('/generate')}
             />
           }
         />
       )}
-      <Pressable onPress={() => router.push('/generate')}>
-        <Panel>
-          <Text style={s.eyebrow}>FROM CURIOSITY TO CARDS</Text>
-          <Text style={s.sectionTitle}>Give your learning a head start.</Text>
-          <Text style={s.body}>Draft cards with AI, then make them your own. →</Text>
-        </Panel>
-      </Pressable>
     </Screen>
   );
 }

@@ -10,21 +10,23 @@ export default function Decks() {
   const due = dueCards(data);
   const decks = data.decks.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()));
   return (
-    <Screen title="Your library." eyebrow="A PLACE FOR WHAT YOU KNOW">
+    <Screen title="Practice your decks." eyebrow="PRACTICE">
       <Field
         label="Find a deck"
         placeholder="Search your collection"
         value={search}
         onChangeText={setSearch}
       />
-      <Button title="+ Create a deck" onPress={() => router.push('/decks/new')} />
+      <Text style={s.body}>Choose a deck to practice, or review the cards due today.</Text>
+      <Button
+        title={'Review due cards (' + due.length + ')'}
+        disabled={!due.length}
+        onPress={() => router.push('/review')}
+      />
       {decks.map((deck) => {
         const cards = data.cards.filter((c) => c.deckId === deck.id);
         return (
-          <Pressable
-            key={deck.id}
-            onPress={() => router.push({ pathname: '/decks/[id]', params: { id: deck.id } })}
-          >
+          <View key={deck.id}>
             <Panel>
               <View style={s.between}>
                 <View
@@ -49,17 +51,35 @@ export default function Decks() {
                   </View>
                 )}
               </View>
-              <Text style={s.sectionTitle}>{deck.name}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={'Open ' + deck.name}
+                onPress={() =>
+                  router.push({ pathname: '/decks/[id]', params: { id: deck.id } })
+                }
+              >
+                <Text style={s.sectionTitle}>{deck.name} →</Text>
+              </Pressable>
               {!!deck.description && (
                 <Text numberOfLines={2} style={s.body}>
                   {deck.description}
                 </Text>
               )}
+              <Button
+                title="Practice this deck"
+                disabled={!cards.length}
+                onPress={() =>
+                  router.push({
+                    pathname: '/review',
+                    params: { deckId: deck.id, practice: 'true' },
+                  })
+                }
+              />
               <Text style={s.caption}>
                 {cards.length} cards{deck.version === 0 ? ' · saved on this device' : ''}
               </Text>
             </Panel>
-          </Pressable>
+          </View>
         );
       })}
       {!decks.length && (
@@ -68,7 +88,7 @@ export default function Decks() {
           detail={
             search
               ? 'Try a different name.'
-              : 'Create your first deck and add the things you want to remember.'
+              : 'Use Create to generate your first deck, then come here to practice.'
           }
         />
       )}

@@ -3,6 +3,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { readFile, writeFile } from 'node:fs/promises';
+import { prepareRelease } from './release-metadata.mjs';
 
 export function validateConfig(env) {
   for (const name of ['RAILWAY_TOKEN', 'EXPO_TOKEN', 'RAILWAY_PROJECT_ID',
@@ -83,6 +84,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     validateConfig(process.env);
     console.log('Release configuration is present and uses a stable API origin.');
   } else if (process.argv[2] === 'deploy') await deploy(process.env);
+  else if (process.argv[2] === 'prepare-release') {
+    const release = await prepareRelease(process.env);
+    console.log(`App release: ${release.id}`);
+  }
   else if (process.argv[2] === 'configure-app') await configureApp(process.env.ASC_APP_ID);
-  else throw new Error('Usage: node scripts/release-pipeline.mjs validate|deploy|configure-app');
+  else throw new Error('Usage: node scripts/release-pipeline.mjs validate|deploy|configure-app|prepare-release');
 }

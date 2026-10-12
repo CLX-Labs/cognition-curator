@@ -17,6 +17,7 @@ import {
 } from '../../modules/legacy-storage';
 import { planMigration, type MigrationPlan } from '../../src/migration';
 import type { LocalIssue } from '../../src/repository';
+import ReleasePanel from '../../src/release-panel';
 
 type ImportWorkflow = {
   legacy: LegacyExport;
@@ -156,6 +157,7 @@ export default function ProfileScreen() {
   }
   return (
     <Screen title="Your learning, kept yours." eyebrow="YOUR SPACE">
+      <ReleasePanel />
       <Panel tint>
         <View style={s.row}>
           <View
@@ -420,7 +422,7 @@ export default function ProfileScreen() {
           Manual cards and reviews work offline. Generation, account verification, and cross-device
           synchronization use your configured server.
         </Text>
-        <Text style={s.caption}>Recollect AI · 2.0 · SM-2 v1</Text>
+        <Text style={s.caption}>Recollect AI</Text>
       </Panel>
       <Button
         title="Sign out"

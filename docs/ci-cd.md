@@ -5,6 +5,35 @@ existing checks, deploys the API and AI worker, waits for the exact deployment I
 to become healthy, checks `/health`, then starts the Expo release workflow.
 Release runs are serialized so a new push does not interrupt a database migration.
 
+## Identifying the version on your phone
+
+Each main release is stamped as `r<workflow run>.<attempt>-<short commit>`, for
+example `r14.1-80ce215`. Re-running that release produces `r14.2-80ce215`.
+The label appears in the GitHub run summary, EAS build/update messages, TestFlight
+release notes, Home, the sign-in screen, and **You → App version**. A failed run
+does not make its label available on your phone; check the release job's result.
+
+The App version panel shows the app version, the installed binary's build number,
+the running release's commit and Expo update ID, and whether the code came from
+the built-in bundle or OTA. The build number increments only for a new native
+build. An OTA keeps that number and changes the release label after it is applied.
+App version `2.0.0` is the marketing version; change it deliberately for a new
+marketing release rather than bumping it for every OTA.
+
+In an installed release build, **Check for updates** checks and downloads a
+compatible OTA. **Restart to apply update** starts the downloaded code. Until
+restart, the displayed release still identifies the currently running code.
+A check with no compatible OTA does not prove there is no newer native build;
+install that through TestFlight and compare its release notes. Development builds
+display their development status and do not offer OTA checks.
+
+CI overwrites the tracked `apps/mobile/src/release-info.json` before uploading
+the source to EAS. This JSON is imported into the JavaScript bundle, independently
+of native configuration. CI verifies that changing only this stamp preserves the
+iOS fingerprint, so versioning alone cannot force a native build. Local source
+has an explicit `local` placeholder; a manually built unstamped release is shown
+as **Unversioned release** rather than implying it came from main.
+
 `apps/mobile/.eas/workflows/testflight-release.yml` compares the iOS native
 fingerprint against a successful store build on channel `testflight`. Compatible
 changes publish an OTA update; a new native runtime triggers a store build and

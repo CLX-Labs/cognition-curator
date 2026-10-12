@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useStore } from '../../src/store';
 import { dueCards } from '../../src/repository';
 import { Button, Empty, Panel, Screen, colors, s } from '../../src/ui';
+import { ReleaseStamp } from '../../src/release-panel';
 
 export default function Home() {
   const { session, data } = useStore();
@@ -39,6 +40,7 @@ export default function Home() {
         </Pressable>
       }
     >
+      <ReleaseStamp />
       <Panel tint>
         <View style={s.pill}>
           <Text style={s.pillText}>PRACTICE YOUR CARDS</Text>

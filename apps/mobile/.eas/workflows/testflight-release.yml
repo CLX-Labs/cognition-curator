@@ -18,6 +18,9 @@ on:
       release_id:
         type: string
         required: true
+      asc_app_id:
+        type: string
+        required: true
 
 defaults:
   tools:
@@ -48,6 +51,13 @@ jobs:
   submit_testflight:
     needs: [native_build]
     type: testflight
+    env:
+      ASC_APP_ID: ${{ inputs.asc_app_id }}
+    # eas.json is fingerprinted in full. Configure submission only after the
+    # native build, so submission metadata never changes the app's runtime.
+    hooks:
+      after_checkout:
+        - run: node ../../scripts/release-pipeline.mjs configure-app
     params:
       build_id: ${{ needs.native_build.outputs.build_id }}
       profile: testflight

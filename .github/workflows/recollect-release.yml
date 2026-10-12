@@ -45,6 +45,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Stamp the app release
+        id: metadata
+        run: node scripts/release-pipeline.mjs prepare-release
       - run: node scripts/release-pipeline.mjs validate
       - run: npm ci
       - run: npm install --global @railway/cli@5.64.2 eas-cli@24.12.1
@@ -61,4 +64,5 @@ jobs:
         run: |
           eas workflow:run .eas/workflows/testflight-release.yml \
             --input force_native="$FORCE_NATIVE" --input release_sha="$GITHUB_SHA" \
+            --input release_id="${{ steps.metadata.outputs.release_id }}" \
             --non-interactive --wait

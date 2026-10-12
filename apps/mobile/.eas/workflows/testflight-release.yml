@@ -11,6 +11,9 @@ on:
       release_sha:
         type: string
         required: true
+      release_id:
+        type: string
+        required: true
 
 defaults:
   tools:
@@ -37,14 +40,14 @@ jobs:
     params:
       platform: ios
       profile: testflight
-      message: ${{ inputs.release_sha }}
+      message: ${{ inputs.release_id }} · ${{ inputs.release_sha }}
   submit_testflight:
     needs: [native_build]
     type: testflight
     params:
       build_id: ${{ needs.native_build.outputs.build_id }}
       profile: testflight
-      changelog: ${{ inputs.release_sha }}
+      changelog: ${{ inputs.release_id }} · ${{ inputs.release_sha }}
       submit_beta_review: false
   ota_update:
     needs: [compatible_build]
@@ -54,4 +57,4 @@ jobs:
     params:
       platform: ios
       channel: testflight
-      message: ${{ inputs.release_sha }}
+      message: ${{ inputs.release_id }} · ${{ inputs.release_sha }}

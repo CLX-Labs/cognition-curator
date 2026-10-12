@@ -3,6 +3,7 @@ import { Platform, Text, View } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { api, developmentAuthEnabled } from './api';
 import { Button, Field, Panel, Screen, colors, reportError, s } from './ui';
+import { ReleaseStamp } from './release-panel';
 
 export default function Login() {
   const [available, setAvailable] = useState(false);
@@ -24,6 +25,7 @@ export default function Login() {
   }
   return (
     <Screen>
+      <ReleaseStamp />
       <View style={{ paddingTop: 36, gap: 18 }}>
         <View
           style={{

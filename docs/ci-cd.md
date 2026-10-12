@@ -5,10 +5,39 @@ existing checks, deploys the API and AI worker, waits for the exact deployment I
 to become healthy, checks `/health`, then starts the Expo release workflow.
 Release runs are serialized so a new push does not interrupt a database migration.
 
+## Branch names choose the release
+
+Merge a pull request into `main` using one of these source branch names:
+
+| Source branch | Delivery | Version example |
+| --- | --- | --- |
+| `enhancement/*` | OTA to the current compatible TestFlight binary | `2.0.0` → `2.1.0` → `2.2.0` |
+| `feature/*` | Fresh native build and TestFlight submission | `2.2.0` → `3.0.0` |
+
+The workflow resolves the merged PR from the exact main commit through GitHub's
+API, including squash/rebase merges; commit messages and deleted branch refs are
+not needed. Direct pushes and other branch prefixes stop with an actionable error.
+For these, manually dispatch on main with `release_type=ota` or `native`.
+
+The version starts from `2.0.0`. After successful delivery, CI creates an annotated
+`recollect/v<version>` Git tag on that main commit. Its JSON records the release
+version, native version, delivery type, branch and commit. The latest successful
+tag determines the next version. Failed runs do not consume a version; reruns of
+an already successful commit skip delivery. Superseded commits cannot overwrite a
+newer release. Do not edit/delete these release tags.
+
+A native release always builds and submits, even if the code could use OTA. An
+OTA requires a matching TestFlight native fingerprint. If an enhancement changes
+native dependencies, permissions, widgets or SDKs, it fails explicitly; use a
+`feature/*` branch or dispatch a native release. It never silently publishes an
+incompatible OTA or switches the intended version bump.
+
 ## Identifying the version on your phone
 
-Each main release is stamped as `r<workflow run>.<attempt>-<short commit>`, for
-example `r14.1-80ce215`. Re-running that release produces `r14.2-80ce215`.
+Each main release shows its semantic version (for example `2.1.0`) and is also
+stamped as `r<workflow run>.<attempt>-<short commit>`, for example `r14.1-80ce215`.
+Retrying a failed release produces `r14.2-80ce215` with the same semantic version;
+completed deliveries are skipped.
 The label appears in the GitHub run summary, EAS build/update messages, TestFlight
 release notes, Home, the sign-in screen, and **You → App version**. A failed run
 does not make its label available on your phone; check the release job's result.
@@ -17,8 +46,11 @@ The App version panel shows the app version, the installed binary's build number
 the running release's commit and Expo update ID, and whether the code came from
 the built-in bundle or OTA. The build number increments only for a new native
 build. An OTA keeps that number and changes the release label after it is applied.
-App version `2.0.0` is the marketing version; change it deliberately for a new
-marketing release rather than bumping it for every OTA.
+The first line shows the running JavaScript release version. The Native line shows
+the binary's marketing version and build number. For example, release `2.2.0` can
+run on native `2.0.0` build 2. A major release changes the native marketing version
+as well, such as native `3.0.0` build 3. TestFlight's version changes only with a
+native release.
 
 In an installed release build, **Check for updates** checks and downloads a
 compatible OTA. **Restart to apply update** starts the downloaded code. Until
@@ -29,15 +61,19 @@ display their development status and do not offer OTA checks.
 
 CI overwrites the tracked `apps/mobile/src/release-info.json` before uploading
 the source to EAS. This JSON is imported into the JavaScript bundle, independently
-of native configuration. CI verifies that changing only this stamp preserves the
-iOS fingerprint, so versioning alone cannot force a native build. Local source
+of native configuration. CI verifies that changing only the minor release
+version/stamp preserves the iOS fingerprint, and that changing the native major version changes it.
+`apps/mobile/native-version.json` contains the checked-in `2.0.0` baseline; CI
+hydrates it from the release plan before EAS computes fingerprints or builds.
+For local/manual builds after a major release, use the native version recorded
+in the latest successful release tag. Local source
 has an explicit `local` placeholder; a manually built unstamped release is shown
 as **Unversioned release** rather than implying it came from main.
 
 `apps/mobile/.eas/workflows/testflight-release.yml` compares the iOS native
-fingerprint against a successful store build on channel `testflight`. Compatible
-changes publish an OTA update; a new native runtime triggers a store build and
-TestFlight submission. The first release needs a store build. The existing ad hoc
+fingerprint against a successful store build on channel `testflight`. The source
+branch selects OTA or native as described above.
+The first release needs a store build. The existing ad hoc
 `preview` installation cannot serve as the TestFlight baseline.
 
 OTA updates cover compatible JavaScript and assets. Native modules, SDK upgrades,
@@ -135,7 +171,8 @@ branches and PRs run checks; main runs deployment and app release.
 If a native submission fails, retry the submission in EAS before the next OTA
 release. A matching EAS binary alone does not prove TestFlight submission or
 installation. Alternatively, manually dispatch the GitHub release workflow on
-main with `force_native=true` to build and submit a fresh binary. Tests, migrations,
+main with `release_type=native` to bump the major version, build and submit a fresh
+binary. Tests, migrations,
 deployment failures and incorrect health responses prevent app release.
 
 The commit SHA appears in Railway, EAS build and OTA messages. Use GitHub Actions,
@@ -145,7 +182,7 @@ does not undo SQLite/PostgreSQL migrations or restore records.
 ## Validation
 
 ```sh
-node --test scripts/test-release-pipeline.mjs
+node --test scripts/test-release-pipeline.mjs scripts/test-release-metadata.mjs scripts/test-release-policy.mjs
 npm run typecheck
 cd apps/mobile
 npm exec --yes --package=node@24 --package=eas-cli@24.12.1 -- eas workflow:validate .eas/workflows/testflight-release.yml --non-interactive

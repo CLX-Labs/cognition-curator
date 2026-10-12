@@ -8,7 +8,7 @@ import { downloadCompatibleUpdate, release, releaseLabel } from './release';
 export function ReleaseStamp() {
   return (
     <Text selectable style={s.caption}>
-      Release · {releaseLabel(release.id, __DEV__)}
+      Release · {releaseLabel(release.id, __DEV__, release.version)}
     </Text>
   );
 }
@@ -75,10 +75,10 @@ export default function ReleasePanel() {
     <Panel>
       <Text style={s.sectionTitle}>App version</Text>
       <Text selectable style={s.label}>
-        {releaseLabel(release.id, development)}
+        {releaseLabel(release.id, development, release.version)}
       </Text>
       <Text style={s.body}>
-        App {Constants.expoConfig?.version ?? 'unknown'} ·{' '}
+        Native {Constants.expoConfig?.version ?? 'unknown'} ·{' '}
         {currentlyRunning.channel === 'testflight' ? 'TestFlight build' : 'Build'}{' '}
         {build ?? (development ? 'development' : 'unknown')}
       </Text>

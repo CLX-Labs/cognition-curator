@@ -1,4 +1,11 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
+import { readFileSync } from 'node:fs';
+
+// The evaluated version belongs in the fingerprint; importing this JSON as a
+// module would also fingerprint the new file and invalidate existing binaries.
+const nativeVersion = JSON.parse(readFileSync(`${__dirname}/native-version.json`, 'utf8')) as {
+  version: string;
+};
 
 const easProjectId =
   process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '2d6f42f7-8c17-4f27-9c69-7ce868abdb74';
@@ -8,7 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'Recollect AI',
   slug: 'recollect-ai',
   owner: 'collectsoftware',
-  version: '2.0.0',
+  version: nativeVersion.version,
   icon: './assets/icon.png',
   backgroundColor: '#F7F5F0',
   orientation: 'portrait',

@@ -6,6 +6,8 @@ describe('running release and manual OTA application', () => {
     expect(releaseLabel('local', true)).toBe('Local development');
     expect(releaseLabel('local', false)).toBe('Unversioned release');
     expect(releaseLabel('r14.1-80ce215', false)).toBe('r14.1-80ce215');
+    expect(releaseLabel('r14.1-80ce215', false, '2.1.0')).toBe('2.1.0 · r14.1-80ce215');
+    expect(releaseLabel('local', true, '2.1.0')).toBe('Local development');
   });
   it('does not download when there is no compatible update', async () => {
     const fetchUpdateAsync = vi.fn();

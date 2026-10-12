@@ -5,9 +5,13 @@ name: TestFlight release or OTA update
 on:
   workflow_dispatch:
     inputs:
-      force_native:
-        type: boolean
-        default: false
+      release_type:
+        type: choice
+        options: [ota, native]
+        required: true
+      release_version:
+        type: string
+        required: true
       release_sha:
         type: string
         required: true
@@ -35,26 +39,34 @@ jobs:
       wait_for_in_progress: true
   native_build:
     needs: [compatible_build]
-    if: ${{ inputs.force_native || !needs.compatible_build.outputs.build_id }}
+    if: ${{ inputs.release_type == 'native' }}
     type: build
     params:
       platform: ios
       profile: testflight
-      message: ${{ inputs.release_id }} · ${{ inputs.release_sha }}
+      message: ${{ inputs.release_version }} · ${{ inputs.release_id }} · ${{ inputs.release_sha }}
   submit_testflight:
     needs: [native_build]
     type: testflight
     params:
       build_id: ${{ needs.native_build.outputs.build_id }}
       profile: testflight
-      changelog: ${{ inputs.release_id }} · ${{ inputs.release_sha }}
+      changelog: ${{ inputs.release_version }} · ${{ inputs.release_id }} · ${{ inputs.release_sha }}
       submit_beta_review: false
+  incompatible_ota:
+    needs: [compatible_build]
+    if: ${{ inputs.release_type == 'ota' && !needs.compatible_build.outputs.build_id }}
+    runs_on: linux-medium
+    steps:
+      - run: |
+          echo "No matching TestFlight runtime. Native changes must merge from feature/*, or manually release as native."
+          exit 1
   ota_update:
     needs: [compatible_build]
-    if: ${{ !inputs.force_native && needs.compatible_build.outputs.build_id }}
+    if: ${{ inputs.release_type == 'ota' && needs.compatible_build.outputs.build_id }}
     type: update
     environment: preview
     params:
       platform: ios
       channel: testflight
-      message: ${{ inputs.release_id }} · ${{ inputs.release_sha }}
+      message: ${{ inputs.release_version }} · ${{ inputs.release_id }} · ${{ inputs.release_sha }}

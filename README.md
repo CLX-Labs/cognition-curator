@@ -59,6 +59,7 @@ The API and worker use the `recollect` PostgreSQL schema. pg-boss owns `recollec
 - Home, decks, manual cards, silence/delete, spaced repetition review, practice, and progress from actual records.
 - Separate Practice and Create tabs: generate 5–10 cards from a subject or deck title into a new or existing deck, review drafts, and save your selection. Manual card creation also offers a reviewed AI answer draft.
 - Main releases carry a visible release label, commit, native build number and OTA identity under You → App version, with manual update checking and restart.
+- Merge `enhancement/*` branches for OTA releases with a minor version bump; merge `feature/*` branches for native TestFlight releases with a major version bump. Successful release tags track versions automatically; see [CI/CD setup](docs/ci-cd.md).
 - Atomic offline edits and review events with a durable outbox, stable retry identities, and restart recovery.
 - Canonical schedules, commit-ordered sync revisions, tombstones, account partitioning, and explicit conflicts with retained recovery copies.
 - Durable AI jobs, editable candidate drafts, idempotent acceptance, bounded retries, and per-account quotas.

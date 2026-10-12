@@ -2,13 +2,20 @@ import metadata from './release-info.json';
 
 export const release = metadata as {
   id: string;
+  version: string | null;
   commit: string | null;
   createdAt: string | null;
   runUrl: string | null;
 };
 
-export function releaseLabel(id: string, development: boolean) {
-  return id === 'local' ? (development ? 'Local development' : 'Unversioned release') : id;
+export function releaseLabel(id: string, development: boolean, version?: string | null) {
+  return id === 'local'
+    ? development
+      ? 'Local development'
+      : 'Unversioned release'
+    : version
+      ? `${version} · ${id}`
+      : id;
 }
 
 type UpdateClient = {

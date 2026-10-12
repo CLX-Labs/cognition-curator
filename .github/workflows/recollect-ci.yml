@@ -2,7 +2,7 @@ name: Recollect checks
 
 on:
   push:
-    branches: ['feat/**']
+    branches: ['enhancement/**', 'feature/**', 'feat/**']
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -43,6 +43,7 @@ jobs:
       - run: npm test
       - run: node --test scripts/test-release-pipeline.mjs
       - run: node --test scripts/test-release-metadata.mjs
+      - run: node --test scripts/test-release-policy.mjs
 
   expo-bundle-and-native-config:
     runs-on: ubuntu-latest

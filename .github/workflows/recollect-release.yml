@@ -5,10 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      force_native:
-        description: Build a fresh TestFlight binary even if the native fingerprint matches
-        type: boolean
-        default: false
+      release_type:
+        description: Explicit release type for manual releases or direct main pushes
+        type: choice
+        options: [ota, native]
+        required: true
 
 permissions:
   contents: read
@@ -22,9 +23,37 @@ jobs:
   checks:
     uses: ./.github/workflows/recollect-ci.yml
 
-  release:
+  plan:
     if: github.ref == 'refs/heads/main'
-    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      plan: ${{ steps.policy.outputs.plan }}
+      release_type: ${{ steps.policy.outputs.release_type }}
+      release_version: ${{ steps.policy.outputs.release_version }}
+      already_released: ${{ steps.policy.outputs.already_released }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Resolve merged branch and next release version
+        id: policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_RELEASE_TYPE: ${{ inputs.release_type }}
+          RELEASE_PLAN_FILE: ${{ runner.temp }}/recollect-release-plan.json
+        run: node scripts/release-policy.mjs prepare
+
+  release:
+    if: github.ref == 'refs/heads/main' && needs.plan.outputs.already_released != 'true'
+    needs: [checks, plan]
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 180
     environment: staging
@@ -38,13 +67,20 @@ jobs:
       RAILWAY_WORKER_SERVICE_ID: ${{ vars.RAILWAY_WORKER_SERVICE_ID }}
       STAGING_API_URL: ${{ vars.STAGING_API_URL }}
       ASC_APP_ID: ${{ vars.ASC_APP_ID }}
-      FORCE_NATIVE: ${{ inputs.force_native || false }}
+      RELEASE_VERSION: ${{ needs.plan.outputs.release_version }}
+      RELEASE_TYPE: ${{ needs.plan.outputs.release_type }}
+      RELEASE_PLAN_JSON: ${{ needs.plan.outputs.plan }}
+      RELEASE_PLAN_FILE: ${{ runner.temp }}/recollect-release-plan.json
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Apply release and native versions
+        run: node scripts/release-policy.mjs hydrate
       - name: Stamp the app release
         id: metadata
         run: node scripts/release-pipeline.mjs prepare-release
@@ -63,6 +99,8 @@ jobs:
         working-directory: apps/mobile
         run: |
           eas workflow:run .eas/workflows/testflight-release.yml \
-            --input force_native="$FORCE_NATIVE" --input release_sha="$GITHUB_SHA" \
+            --input release_type="$RELEASE_TYPE" --input release_version="$RELEASE_VERSION" --input release_sha="$GITHUB_SHA" \
             --input release_id="${{ steps.metadata.outputs.release_id }}" \
             --non-interactive --wait
+      - name: Record the successfully delivered version
+        run: node scripts/release-policy.mjs record

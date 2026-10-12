@@ -6,8 +6,10 @@ export function createReleaseMetadata(env, now = new Date()) {
     if (!/^[1-9]\d*$/.test(env[name] ?? '')) throw new Error(`${name} must be a positive integer.`);
   }
   if (!/^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPOSITORY ?? '')) throw new Error('GITHUB_REPOSITORY is required.');
+  if (env.RELEASE_VERSION && !/^\d+\.\d+\.\d+$/.test(env.RELEASE_VERSION)) throw new Error('RELEASE_VERSION must be a semantic version.');
   return {
     id: `r${env.GITHUB_RUN_NUMBER}.${env.GITHUB_RUN_ATTEMPT}-${env.GITHUB_SHA.slice(0, 7)}`,
+    version: env.RELEASE_VERSION ?? null,
     commit: env.GITHUB_SHA,
     createdAt: now.toISOString(),
     runUrl: `https://github.com/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`,
@@ -22,7 +24,7 @@ export async function prepareRelease(env, file = new URL('../apps/mobile/src/rel
   await writeFile(file, JSON.stringify(metadata, null, 2) + '\n');
   if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `release_id=${metadata.id}\n`);
   if (env.GITHUB_STEP_SUMMARY) await appendFile(env.GITHUB_STEP_SUMMARY,
-    `## App release ${metadata.id}\n\nCommit: \`${metadata.commit}\`\n\n` +
+    `## App release ${metadata.version ? metadata.version + ' · ' : ''}${metadata.id}\n\nCommit: \`${metadata.commit}\`\n\n` +
     'After a successful release, compare this label with **You → App version**. ' +
     'An OTA keeps the TestFlight build number; a native release increments it. ' +
     'This label identifies the source, not deployment success.\n');

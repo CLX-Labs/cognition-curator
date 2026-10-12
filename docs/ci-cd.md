@@ -1,7 +1,14 @@
 # Main releases to TestFlight
 
-Railway already deploys the backend automatically on commits to main through its
-existing repository connection. That configuration remains unchanged.
+Railway deploys the backend automatically on commits to main through its existing
+repository connection. The service must use the repository root and root
+`railway.toml`, rather than the legacy `server/` Python source and watch filter.
+The root Docker image runs both the TypeScript API and the generation worker;
+either process failing restarts the service. Before deployment, it applies the
+additive `recollect` and `recollect_boss` schemas without changing legacy tables.
+Set `NODE_ENV=production`, `PORT=8080`, `APPLE_BUNDLE_ID`, a strong
+`ACCESS_TOKEN_SECRET`, and `ANTHROPIC_MODEL` on that service. It uses the existing
+database and Anthropic key. No Railway token or GitHub deployment job is needed.
 
 `.github/workflows/recollect-release.yml` handles only the app: main push → checks
 → version stamp → Expo OTA or native TestFlight release → tag and notifications.
@@ -105,8 +112,12 @@ Set the following variables in that same environment:
 | `API_URL` | Stable API HTTPS origin, without an `/api` suffix |
 | `ASC_APP_ID` | Numeric Apple ID of this app in App Store Connect |
 
-Missing Expo settings or a temporary API address stop app publication. CI adds the numeric Apple app ID to the uploaded submission
-profile and sets the public API URL and `EXPO_PUBLIC_ENABLE_DEV_AUTH=false` in
+Missing Expo settings or a temporary API address stop app publication. CI pins
+the API origin into each JavaScript release stamp, so a stale bundler environment
+cannot redirect installed releases to a temporary preview tunnel. The numeric
+Apple app ID is applied only in the native submission job after building; it must
+not change fingerprinted `eas.json` before a build or OTA. CI also sets the public
+API URL and `EXPO_PUBLIC_ENABLE_DEV_AUTH=false` in
 Expo's `preview` environment. Database and AI credentials stay in Railway.
 
 The app uses `@collectsoftware/recollect-ai`, project ID

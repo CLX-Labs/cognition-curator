@@ -1,11 +1,12 @@
-# Configure this root Dockerfile for a NEW staging API service first.
-# Existing server/railway.json remains the legacy service configuration.
+# The existing service follows main from the repository root. The schemas below
+# are additive and do not import, rewrite, or remove the legacy public tables.
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "npm run start --workspace @recollect/api"
+preDeployCommand = ["CONFIRM_DATABASE_MIGRATION=yes npm run db:migrate && CONFIRM_QUEUE_SETUP=yes npm run db:queue:setup"]
+startCommand = "node scripts/start-backend.mjs"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"

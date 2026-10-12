@@ -3,6 +3,7 @@ import metadata from './release-info.json';
 export const release = metadata as {
   id: string;
   version: string | null;
+  apiUrl: string | null;
   commit: string | null;
   createdAt: string | null;
   runUrl: string | null;

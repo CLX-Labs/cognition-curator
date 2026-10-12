@@ -13,6 +13,8 @@ test('release identity pins the commit and distinguishes re-runs', () => {
   assert.equal(first.id, 'r14.1-aaaaaaa');
   assert.equal(first.commit, env.GITHUB_SHA);
   assert.equal(first.version, null);
+  assert.equal(first.apiUrl, null);
+  assert.equal(createReleaseMetadata({ ...env, API_URL: 'https://api.example.com' }).apiUrl, 'https://api.example.com');
   assert.equal(createReleaseMetadata({ ...env, RELEASE_VERSION: '2.1.0' }).version, '2.1.0');
   assert.throws(() => createReleaseMetadata({ ...env, RELEASE_VERSION: '2.1.0\nother=bad' }));
   assert.equal(first.createdAt, '2026-10-11T12:00:00.000Z');

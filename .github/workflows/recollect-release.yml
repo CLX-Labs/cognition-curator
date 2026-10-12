@@ -70,7 +70,7 @@ jobs:
       RELEASE_VERSION: ${{ needs.plan.outputs.release_version }}
       RELEASE_TYPE: ${{ needs.plan.outputs.release_type }}
       RELEASE_PLAN_JSON: ${{ needs.plan.outputs.plan }}
-      RELEASE_PLAN_FILE: ${{ runner.temp }}/recollect-release-plan.json
+      RELEASE_PLAN_FILE: /tmp/recollect-release-plan.json
     steps:
       - uses: actions/checkout@v4
         with:

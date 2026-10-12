@@ -1,9 +1,12 @@
 # Main releases to TestFlight
 
-`.github/workflows/recollect-release.yml` runs on pushes to `main`. It runs the
-existing checks, deploys the main API and AI worker, waits for the exact deployment IDs
-to become healthy, checks `/health`, then starts the Expo release workflow.
-Release runs are serialized so a new push does not interrupt a database migration.
+Railway already deploys the backend automatically on commits to main through its
+existing repository connection. That configuration remains unchanged.
+
+`.github/workflows/recollect-release.yml` handles only the app: main push → checks
+→ version stamp → Expo OTA or native TestFlight release → tag and notifications.
+It does not deploy Railway services, poll their status, check API health, or require
+Railway tokens/service IDs. App release runs are serialized.
 
 ## Branch names choose the release
 
@@ -87,63 +90,22 @@ default Expo Updates behavior, updates download on launch and apply on a later
 launch; OTA does not create a new TestFlight build number. Native builds must finish
 Apple's processing. Keep API changes compatible with older installed runtimes.
 
-## Railway setup
-
-Create one Recollect backend project with fresh PostgreSQL, an API service and
-a separate AI worker. This is the backend for main; no staging branch or second
-release environment is required. Use the repository root as both services' build context and
-the root `Dockerfile`. Configure the following in Railway service settings:
-
-| Setting | API | Worker |
-| --- | --- | --- |
-| Start command | `npm run start --workspace @recollect/api` | `npm run start --workspace @recollect/worker` |
-| Pre-deploy commands, in order | `npm run db:migrate`, then `npm run db:queue:setup` | None |
-| Healthcheck | `/health`, timeout 300 seconds | None; no HTTP server |
-| Restart policy | On failure | On failure |
-| Public domain | Stable HTTPS origin | None |
-| Independent GitHub autodeploy | Disabled | Disabled |
-
-Railway's per-service `railway.toml` configuration is deprecated and unavailable
-to new services. Use service settings or its current Infrastructure as Code
-interface for this new environment. The old checked-in configuration remains a
-reference for legacy deployments.
-
-Both services use a private Railway `DATABASE_URL` reference to the new PostgreSQL
-service and `NODE_ENV=production`. The API needs `HOST=0.0.0.0`,
-`APPLE_BUNDLE_ID=collect.software.cognition-curator`, `ENABLE_DEV_AUTH=false` and a
-new `ACCESS_TOKEN_SECRET` of at least 32 characters. After reviewing the fresh
-Recollect database, set `CONFIRM_DATABASE_MIGRATION=yes` and `CONFIRM_QUEUE_SETUP=yes`
-on the API for the pre-deploy steps. Ordinary startup never migrates the database.
-The worker needs `ANTHROPIC_API_KEY` and an explicitly selected available
-`ANTHROPIC_MODEL`; without these it cannot start, and the app release stops.
-
-Do not change the legacy Python service, import legacy data or reuse its database
-as part of this setup. API and worker upload the same checked-out source. An old
-healthy deployment cannot satisfy the gate: the pipeline polls the IDs returned
-by the two uploads.
-
 ## GitHub and Expo setup
 
 Create a GitHub environment named `main` with these secrets:
 
 | Secret | Purpose |
 | --- | --- |
-| `RAILWAY_TOKEN` | Project token scoped to the Recollect backend environment |
 | `EXPO_TOKEN` | CI token for the personal `collectsoftware` Expo account |
 
 Set the following variables in that same environment:
 
 | Variable | Value |
 | --- | --- |
-| `RAILWAY_PROJECT_ID` | Recollect project's ID |
-| `RAILWAY_ENVIRONMENT_ID` | Target environment's ID |
-| `RAILWAY_API_SERVICE_ID` | API service's ID |
-| `RAILWAY_WORKER_SERVICE_ID` | Separate worker service's ID |
 | `API_URL` | Stable API HTTPS origin, without an `/api` suffix |
 | `ASC_APP_ID` | Numeric Apple ID of this app in App Store Connect |
 
-Missing targets, duplicate API/worker IDs and temporary tunnel addresses fail
-before deployment. CI adds the numeric Apple app ID to the uploaded submission
+Missing Expo settings or a temporary API address stop app publication. CI adds the numeric Apple app ID to the uploaded submission
 profile and sets the public API URL and `EXPO_PUBLIC_ENABLE_DEV_AUTH=false` in
 Expo's `preview` environment. Database and AI credentials stay in Railway.
 
@@ -153,7 +115,7 @@ distribution, automatic build-number increments, the `testflight` channel, the
 `preview` environment, SDK 57 and Node 24.21.0. Production remains a separate
 channel. GitHub uploads the checked-out source using `eas workflow:run`; an Expo
 GitHub integration is optional. Do not add a second direct EAS push trigger,
-which would bypass the API deployment gate.
+which would duplicate the app release workflow.
 
 ## Release notifications
 
@@ -199,11 +161,10 @@ If a native submission fails, retry the submission in EAS before the next OTA
 release. A matching EAS binary alone does not prove TestFlight submission or
 installation. Alternatively, manually dispatch the GitHub release workflow on
 main with `release_type=native` to bump the major version, build and submit a fresh
-binary. Tests, migrations,
-deployment failures and incorrect health responses prevent app release.
+binary. Failed app checks or Expo build/update/submission steps prevent release.
 
-The commit SHA appears in Railway, EAS build and OTA messages. Use GitHub Actions,
-Railway deployments and EAS workflow logs to diagnose failed releases. OTA rollback
+The commit SHA appears in Railway, EAS build and OTA messages. Use GitHub Actions and
+EAS workflow logs to diagnose failed releases. OTA rollback
 does not undo SQLite/PostgreSQL migrations or restore records.
 
 ## Validation
@@ -216,8 +177,6 @@ npm exec --yes --package=node@24 --package=eas-cli@24.12.1 -- eas workflow:valid
 ```
 
 References: [Expo release workflows](https://docs.expo.dev/eas/workflows/examples/deploy-to-production/),
-[EAS Updates](https://docs.expo.dev/eas-update/how-it-works/),
-[Railway CLI deployments](https://docs.railway.com/cli/deploying), and
-[Railway Infrastructure as Code](https://docs.railway.com/infrastructure-as-code).
+[EAS Updates](https://docs.expo.dev/eas-update/how-it-works/).
 
 The notification and update-prompt design is adapted from [Somethings’ release pipeline](https://blog.somethings.com/blog/release-pipeline), while preserving this app’s enhancement/minor and feature/major rules and single main-to-TestFlight flow.

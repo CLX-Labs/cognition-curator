@@ -22,7 +22,7 @@ export function releaseReport(env, phase = 'complete') {
   const runUrl = `https://github.com/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`;
   const commitUrl = `https://github.com/${env.GITHUB_REPOSITORY}/commit/${env.GITHUB_SHA}`;
   return { title, runUrl, commitUrl, commit: env.GITHUB_SHA.slice(0, 7),
-    detail: phase === 'start' ? 'API and worker deployment must pass before the app ships.' :
+    detail: phase === 'start' ? 'App checks passed. Publishing through Expo.' :
       success ? env.RELEASE_TYPE === 'native' ? 'Install through TestFlight after Apple processing. Check You → App version.' :
         'Reopen the app or use Restart when the update prompt appears. Check You → App version.' :
       env.DELIVERY_RESULT === 'success' ? 'Delivery succeeded, but the release tag was not recorded. Inspect the run before releasing again.' :

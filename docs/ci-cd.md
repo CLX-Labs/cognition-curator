@@ -1,7 +1,7 @@
-# Main releases to staging and TestFlight
+# Main releases to TestFlight
 
 `.github/workflows/recollect-release.yml` runs on pushes to `main`. It runs the
-existing checks, deploys the API and AI worker, waits for the exact deployment IDs
+existing checks, deploys the main API and AI worker, waits for the exact deployment IDs
 to become healthy, checks `/health`, then starts the Expo release workflow.
 Release runs are serialized so a new push does not interrupt a database migration.
 
@@ -52,8 +52,13 @@ run on native `2.0.0` build 2. A major release changes the native marketing vers
 as well, such as native `3.0.0` build 3. TestFlight's version changes only with a
 native release.
 
-In an installed release build, **Check for updates** checks and downloads a
-compatible OTA. **Restart to apply update** starts the downloaded code. Until
+In an installed release build, the app checks for compatible updates when you
+return to it and every minute during an active session. Automatic checks share
+one request with manual checks and back off while offline. Once downloaded, a
+banner offers **Restart** and **Later** on any screen. Restart is always explicit;
+save edits first. Choosing Later keeps the running version until a later restart.
+
+**You → App version → Check for updates** also checks and downloads a compatible OTA. **Restart to apply update** starts the downloaded code. Until
 restart, the displayed release still identifies the currently running code.
 A check with no compatible OTA does not prove there is no newer native build;
 install that through TestFlight and compare its release notes. Development builds
@@ -84,8 +89,9 @@ Apple's processing. Keep API changes compatible with older installed runtimes.
 
 ## Railway setup
 
-Create an isolated staging environment with fresh PostgreSQL, an API service and
-a separate AI worker. Use the repository root as both services' build context and
+Create one Recollect backend project with fresh PostgreSQL, an API service and
+a separate AI worker. This is the backend for main; no staging branch or second
+release environment is required. Use the repository root as both services' build context and
 the root `Dockerfile`. Configure the following in Railway service settings:
 
 | Setting | API | Worker |
@@ -106,7 +112,7 @@ Both services use a private Railway `DATABASE_URL` reference to the new PostgreS
 service and `NODE_ENV=production`. The API needs `HOST=0.0.0.0`,
 `APPLE_BUNDLE_ID=collect.software.cognition-curator`, `ENABLE_DEV_AUTH=false` and a
 new `ACCESS_TOKEN_SECRET` of at least 32 characters. After reviewing the fresh
-staging database, set `CONFIRM_DATABASE_MIGRATION=yes` and `CONFIRM_QUEUE_SETUP=yes`
+Recollect database, set `CONFIRM_DATABASE_MIGRATION=yes` and `CONFIRM_QUEUE_SETUP=yes`
 on the API for the pre-deploy steps. Ordinary startup never migrates the database.
 The worker needs `ANTHROPIC_API_KEY` and an explicitly selected available
 `ANTHROPIC_MODEL`; without these it cannot start, and the app release stops.
@@ -118,22 +124,22 @@ by the two uploads.
 
 ## GitHub and Expo setup
 
-Create a GitHub environment named `staging` with these secrets:
+Create a GitHub environment named `main` with these secrets:
 
 | Secret | Purpose |
 | --- | --- |
-| `RAILWAY_TOKEN` | Project token scoped to the new staging environment |
+| `RAILWAY_TOKEN` | Project token scoped to the Recollect backend environment |
 | `EXPO_TOKEN` | CI token for the personal `collectsoftware` Expo account |
 
 Set the following variables in that same environment:
 
 | Variable | Value |
 | --- | --- |
-| `RAILWAY_PROJECT_ID` | Staging project's ID |
+| `RAILWAY_PROJECT_ID` | Recollect project's ID |
 | `RAILWAY_ENVIRONMENT_ID` | Target environment's ID |
 | `RAILWAY_API_SERVICE_ID` | API service's ID |
 | `RAILWAY_WORKER_SERVICE_ID` | Separate worker service's ID |
-| `STAGING_API_URL` | Stable API HTTPS origin, without an `/api` suffix |
+| `API_URL` | Stable API HTTPS origin, without an `/api` suffix |
 | `ASC_APP_ID` | Numeric Apple ID of this app in App Store Connect |
 
 Missing targets, duplicate API/worker IDs and temporary tunnel addresses fail
@@ -148,6 +154,27 @@ distribution, automatic build-number increments, the `testflight` channel, the
 channel. GitHub uploads the checked-out source using `eas workflow:run`; an Expo
 GitHub integration is optional. Do not add a second direct EAS push trigger,
 which would bypass the API deployment gate.
+
+## Release notifications
+
+Use one private Slack incoming webhook connected to the chosen workspace/channel.
+Store its URL as the **repository secret** `SLACK_RELEASE_WEBHOOK`, so reporting
+also works when checks fail before the main deployment job starts. Do not put the
+URL in source, variables, release notes or chat. The webhook is channel-bound;
+change the Slack app's connection if the destination changes.
+
+The pipeline announces the release start after checks pass, then reports the final
+result with version, source commit, GitHub run and Expo project links. A native
+success says submitted to TestFlight; an OTA success says published. Failures in
+checks, planning, delivery or tag recording are distinguished. An always-running
+report job writes the result to GitHub's run summary as well. Missing Slack
+configuration or a notification failure does not block deployment.
+
+GitHub continues to wait for EAS to finish before recording a successful release
+tag. This avoids announcing success when a queued build or Apple submission later
+fails. The existing EAS TestFlight workflow handles both build and submission;
+no one needs to download/upload the binary manually. The app's update prompt uses
+Expo's native download state, so no backend notification service is required.
 
 ## Apple setup and activation
 
@@ -182,7 +209,7 @@ does not undo SQLite/PostgreSQL migrations or restore records.
 ## Validation
 
 ```sh
-node --test scripts/test-release-pipeline.mjs scripts/test-release-metadata.mjs scripts/test-release-policy.mjs
+node --test scripts/test-release-pipeline.mjs scripts/test-release-metadata.mjs scripts/test-release-policy.mjs scripts/test-release-notifications.mjs
 npm run typecheck
 cd apps/mobile
 npm exec --yes --package=node@24 --package=eas-cli@24.12.1 -- eas workflow:validate .eas/workflows/testflight-release.yml --non-interactive
@@ -192,3 +219,5 @@ References: [Expo release workflows](https://docs.expo.dev/eas/workflows/example
 [EAS Updates](https://docs.expo.dev/eas-update/how-it-works/),
 [Railway CLI deployments](https://docs.railway.com/cli/deploying), and
 [Railway Infrastructure as Code](https://docs.railway.com/infrastructure-as-code).
+
+The notification and update-prompt design is adapted from [Somethings’ release pipeline](https://blog.somethings.com/blog/release-pipeline), while preserving this app’s enhancement/minor and feature/major rules and single main-to-TestFlight flow.

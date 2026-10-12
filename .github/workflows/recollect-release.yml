@@ -1,4 +1,4 @@
-name: Recollect staging and TestFlight
+name: Recollect main and TestFlight
 
 on:
   push:
@@ -56,7 +56,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 180
-    environment: staging
+    environment: main
     env:
       CI: '1'
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -65,12 +65,13 @@ jobs:
       RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
       RAILWAY_API_SERVICE_ID: ${{ vars.RAILWAY_API_SERVICE_ID }}
       RAILWAY_WORKER_SERVICE_ID: ${{ vars.RAILWAY_WORKER_SERVICE_ID }}
-      STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+      API_URL: ${{ vars.API_URL }}
       ASC_APP_ID: ${{ vars.ASC_APP_ID }}
       RELEASE_VERSION: ${{ needs.plan.outputs.release_version }}
       RELEASE_TYPE: ${{ needs.plan.outputs.release_type }}
       RELEASE_PLAN_JSON: ${{ needs.plan.outputs.plan }}
       RELEASE_PLAN_FILE: /tmp/recollect-release-plan.json
+      SLACK_RELEASE_WEBHOOK: ${{ secrets.SLACK_RELEASE_WEBHOOK }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -84,6 +85,9 @@ jobs:
       - name: Stamp the app release
         id: metadata
         run: node scripts/release-pipeline.mjs prepare-release
+      - name: Announce the release start
+        continue-on-error: true
+        run: node scripts/release-notifications.mjs start
       - run: node scripts/release-pipeline.mjs validate
       - run: npm ci
       - run: npm install --global @railway/cli@5.64.2 eas-cli@24.12.1
@@ -93,9 +97,10 @@ jobs:
         working-directory: apps/mobile
         run: |
           node ../../scripts/release-pipeline.mjs configure-app
-          eas env:set preview --name EXPO_PUBLIC_API_URL --value "$STAGING_API_URL" --visibility plaintext --scope project --non-interactive
+          eas env:set preview --name EXPO_PUBLIC_API_URL --value "$API_URL" --visibility plaintext --scope project --non-interactive
           eas env:set preview --name EXPO_PUBLIC_ENABLE_DEV_AUTH --value false --visibility plaintext --scope project --non-interactive
       - name: Release OTA or build and submit to TestFlight
+        id: delivery
         working-directory: apps/mobile
         run: |
           eas workflow:run .eas/workflows/testflight-release.yml \
@@ -104,3 +109,27 @@ jobs:
             --non-interactive --wait
       - name: Record the successfully delivered version
         run: node scripts/release-policy.mjs record
+    outputs:
+      delivery_result: ${{ steps.delivery.outcome }}
+
+  report:
+    if: always() && github.ref == 'refs/heads/main' && needs.plan.outputs.already_released != 'true'
+    needs: [plan, checks, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Report the final release status
+        continue-on-error: true
+        env:
+          RELEASE_VERSION: ${{ needs.plan.outputs.release_version }}
+          RELEASE_TYPE: ${{ needs.plan.outputs.release_type }}
+          RELEASE_RESULT: ${{ needs.release.result }}
+          DELIVERY_RESULT: ${{ needs.release.outputs.delivery_result }}
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          PLAN_RESULT: ${{ needs.plan.result }}
+          SLACK_RELEASE_WEBHOOK: ${{ secrets.SLACK_RELEASE_WEBHOOK }}
+        run: node scripts/release-notifications.mjs complete

@@ -8,17 +8,17 @@ import { prepareRelease } from './release-metadata.mjs';
 export function validateConfig(env) {
   for (const name of ['RAILWAY_TOKEN', 'EXPO_TOKEN', 'RAILWAY_PROJECT_ID',
     'RAILWAY_ENVIRONMENT_ID', 'RAILWAY_API_SERVICE_ID', 'RAILWAY_WORKER_SERVICE_ID',
-    'STAGING_API_URL', 'GITHUB_SHA', 'ASC_APP_ID']) {
-    if (!env[name]) throw new Error(`Configure ${name} in the GitHub staging environment.`);
+    'API_URL', 'GITHUB_SHA', 'ASC_APP_ID']) {
+    if (!env[name]) throw new Error(`Configure ${name} in the GitHub main environment.`);
   }
   if (env.RAILWAY_API_SERVICE_ID === env.RAILWAY_WORKER_SERVICE_ID)
     throw new Error('The API and worker must use separate Railway services.');
   if (!/^[a-f0-9]{40}$/.test(env.GITHUB_SHA)) throw new Error('GITHUB_SHA must be a commit SHA.');
   if (!/^\d+$/.test(env.ASC_APP_ID)) throw new Error('ASC_APP_ID must be the numeric App Store Connect app ID.');
-  const url = new URL(env.STAGING_API_URL);
+  const url = new URL(env.API_URL);
   if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
     url.pathname !== '/' || /(^localhost$|\.localhost$|\.trycloudflare\.com$|\.ngrok(-free)?\.(app|io)$)/i.test(url.hostname))
-    throw new Error('STAGING_API_URL must be a stable HTTPS API origin, without credentials or a temporary tunnel.');
+    throw new Error('API_URL must be a stable HTTPS API origin, without credentials or a temporary tunnel.');
   return url.origin;
 }
 
@@ -66,7 +66,7 @@ export async function checkHealth(origin, fetcher = fetch) {
   if (!response.ok) throw new Error(`API health check failed (${response.status}).`);
   const body = await response.json();
   if (body.status !== 'ok' || body.service !== 'recollect-api')
-    throw new Error('The staging URL does not serve the Recollect API.');
+    throw new Error('The configured URL does not serve the Recollect API.');
 }
 
 export async function deploy(env, run = command, options = {}) {

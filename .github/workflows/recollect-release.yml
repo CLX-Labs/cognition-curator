@@ -14,7 +14,7 @@ on:
 permissions:
   contents: read
 
-# Keep deployments ordered. Do not cancel a run while it is changing the database.
+# Keep deployments ordered. Do not cancel a run while an app release is in progress.
 concurrency:
   group: recollect-main-release
   cancel-in-progress: false
@@ -59,12 +59,7 @@ jobs:
     environment: main
     env:
       CI: '1'
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
-      RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
-      RAILWAY_API_SERVICE_ID: ${{ vars.RAILWAY_API_SERVICE_ID }}
-      RAILWAY_WORKER_SERVICE_ID: ${{ vars.RAILWAY_WORKER_SERVICE_ID }}
       API_URL: ${{ vars.API_URL }}
       ASC_APP_ID: ${{ vars.ASC_APP_ID }}
       RELEASE_VERSION: ${{ needs.plan.outputs.release_version }}
@@ -90,9 +85,7 @@ jobs:
         run: node scripts/release-notifications.mjs start
       - run: node scripts/release-pipeline.mjs validate
       - run: npm ci
-      - run: npm install --global @railway/cli@5.64.2 eas-cli@24.12.1
-      - name: Deploy API and worker, then verify API health
-        run: node scripts/release-pipeline.mjs deploy
+      - run: npm install --global eas-cli@24.12.1
       - name: Set the stable API address for the app
         working-directory: apps/mobile
         run: |

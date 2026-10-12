@@ -1,7 +1,7 @@
 name: TestFlight release or OTA update
 
-# GitHub invokes this only after tests and backend deployment succeed.
-# No direct push trigger: that would bypass the backend deployment gate.
+# GitHub invokes this after the app checks succeed.
+# No direct push trigger: that would duplicate the GitHub app release trigger.
 on:
   workflow_dispatch:
     inputs:

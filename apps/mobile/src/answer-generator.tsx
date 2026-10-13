@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Text } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { generationRequestSchema } from '@recollect/contracts';
 import { useStore } from './store';
 import {
   answerForQuestion,
-  answerRequestLabel,
   fetchGeneration,
   prepareGeneration,
   type GenerationWorkflow,
@@ -19,12 +18,14 @@ export default function AnswerGenerator({
   question,
   onUse,
   onRestoreQuestion,
+  onPendingChange,
 }: {
   cardId: string;
   deckId: string;
   question: string;
   onUse(answer: string): void;
   onRestoreQuestion(question: string): void;
+  onPendingChange?(pending: boolean): void;
 }) {
   const focused = useIsFocused();
   const active = useAppActive();
@@ -143,6 +144,10 @@ export default function AnswerGenerator({
   }
   const pending = !!state && (!state.job || ['queued', 'running'].includes(state.job.status));
   const answer = answerForQuestion(state, question);
+  const changedQuestion = !!state?.sourceQuestion && state.sourceQuestion !== question.trim();
+  useEffect(() => {
+    onPendingChange?.(busy || pending);
+  }, [busy, pending, onPendingChange]);
   async function setAside() {
     if (!repository || !state || inFlight.current) return;
     inFlight.current = true;
@@ -167,30 +172,26 @@ export default function AnswerGenerator({
     }
   }
   return (
-    <>
-      <Button
-        title={answerRequestLabel(pending, busy, error)}
-        variant="secondary"
-        disabled={!loaded || !question.trim() || pending}
-        loading={busy}
-        onPress={generate}
-      />
-      <Text style={s.caption}>
-        Write a question to draft an answer with AI. Review it before saving your card.
-      </Text>
-      {state?.sourceQuestion && !question.trim() && (
+    <View style={{ gap: 10 }}>
+      {!pending && state?.job?.status !== 'succeeded' && (
         <Button
-          title="Restore saved question"
+          title={
+            state?.job?.status === 'failed' ? 'Try generating again' : '✦ Generate answer'
+          }
+          size="compact"
           variant="secondary"
-          onPress={() => onRestoreQuestion(state.sourceQuestion!)}
+          disabled={!loaded || !question.trim()}
+          loading={busy}
+          onPress={generate}
         />
       )}
       {error && (
-        <Panel>
-          <Text style={{ color: colors.danger }}>{error}</Text>
+        <Panel style={{ padding: 14, borderColor: colors.danger }}>
+          <Text style={[s.caption, { color: colors.danger }]}>{error}</Text>
           {state && (
             <Button
-              title="Retry saved answer request"
+              title="Retry answer request"
+              size="compact"
               variant="secondary"
               disabled={busy}
               onPress={() => void run(state)}
@@ -198,40 +199,71 @@ export default function AnswerGenerator({
           )}
         </Panel>
       )}
-      {pending && !busy && !error && !state?.job && (
-        <Button
-          title="Resume answer request"
-          variant="secondary"
-          onPress={() => void run(state!)}
-        />
+      {pending && !error && (
+        <Panel tint style={{ padding: 14 }}>
+          <View style={s.row}>
+            {(busy || state?.job) && <ActivityIndicator color={colors.ink} />}
+            <Text style={s.label}>
+              {busy || state?.job ? 'Generating answer…' : 'Your answer request is saved'}
+            </Text>
+          </View>
+          {!busy && !state?.job && (
+            <Button
+              title="Continue answer request"
+              size="compact"
+              variant="secondary"
+              onPress={() => void run(state!)}
+            />
+          )}
+        </Panel>
       )}
       {state?.job?.status === 'failed' && (
-        <Text style={{ color: colors.danger }}>
+        <Text style={[s.caption, { color: colors.danger }]}>
           {state.job.error?.message ?? 'The answer could not be generated. Try again.'}
         </Text>
       )}
       {state?.job?.status === 'succeeded' && (
-        <Panel tint>
-          <Text style={s.label}>Suggested answer</Text>
-          <Text style={s.caption}>{state.sourceQuestion}</Text>
-          <Text style={s.body}>{state.job.candidates[0]?.back}</Text>
+        <Panel tint style={{ padding: 16 }}>
+          <Text style={s.label}>✦ Suggested answer</Text>
+          {changedQuestion && <Text style={s.caption}>For: {state.sourceQuestion}</Text>}
+          <Text style={[s.body, { color: colors.ink }]}>{state.job.candidates[0]?.back}</Text>
           {answer ? (
-            <Button title="Use this answer" onPress={() => onUse(answer)} />
+            <Button title="Use this answer" size="compact" onPress={() => onUse(answer)} />
           ) : (
             <Text style={s.caption}>
-              Your question has changed. Generate an answer for the updated question.
+              Your question changed. Restore it or generate a fresh answer.
             </Text>
           )}
+          <Button
+            title={changedQuestion ? 'Generate for updated question' : 'Try another answer'}
+            size="compact"
+            variant="ghost"
+            disabled={!question.trim()}
+            loading={busy}
+            onPress={generate}
+          />
         </Panel>
       )}
       {state && (
-        <Button
-          title="Set answer draft aside"
-          variant="secondary"
-          disabled={busy}
-          onPress={() => void setAside()}
-        />
+        <View style={s.between}>
+          {changedQuestion && (
+            <Button
+              title="Restore saved question"
+              size="compact"
+              variant="ghost"
+              disabled={busy}
+              onPress={() => onRestoreQuestion(state.sourceQuestion!)}
+            />
+          )}
+          <Button
+            title={pending ? 'Set request aside' : 'Dismiss suggestion'}
+            size="compact"
+            variant="ghost"
+            disabled={busy}
+            onPress={() => void setAside()}
+          />
+        </View>
       )}
-    </>
+    </View>
   );
 }

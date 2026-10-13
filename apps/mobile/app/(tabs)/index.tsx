@@ -22,8 +22,11 @@ export default function Home() {
         month: 'long',
         day: 'numeric',
       })}
+      subtitle="A few minutes for what matters."
       action={
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open your account"
           onPress={() => router.navigate('/profile')}
           style={{
             width: 44,
@@ -40,35 +43,40 @@ export default function Home() {
         </Pressable>
       }
     >
-      <ReleaseStamp />
       <Panel tint>
         <View style={s.pill}>
-          <Text style={s.pillText}>PRACTICE YOUR CARDS</Text>
+          <Text style={s.pillText}>DAILY PRACTICE</Text>
         </View>
-        <Text style={[s.title, { fontSize: 34 }]}>
+        <Text style={[s.title, { fontSize: 29, lineHeight: 35 }]}>
           {due.length
-            ? 'Keep it fresh.'
-            : todayReviews.length
-              ? 'Nice work today.'
-              : 'Make room for\nwhat matters.'}
+            ? 'Ready when you are.'
+            : data.cards.length
+              ? 'All caught up.'
+              : 'Start with a little curiosity.'}
         </Text>
-        <View style={[s.row, { alignItems: 'baseline' }]}>
-          <Text style={[s.metric, { fontSize: 64 }]}>{due.length}</Text>
-          <Text style={s.body}>cards ready to review</Text>
-        </View>
+        {!!data.cards.length && (
+          <View style={[s.row, { alignItems: 'center', gap: 16 }]}>
+            <Text style={[s.metric, { fontSize: 64, lineHeight: 72 }]}>
+              {due.length || todayReviews.length}
+            </Text>
+            <Text style={[s.body, { flex: 1, color: colors.ink }]}>
+              {due.length ? 'cards ready\nto review' : 'reviews\ncompleted today'}
+            </Text>
+          </View>
+        )}
         <Text style={s.body}>
           {due.length
-            ? 'A few focused minutes now will make your next recall easier.'
+            ? 'Bring these ideas back to mind, one card at a time.'
             : data.cards.length
               ? 'You are up to date. Practice anytime, or add something new.'
-              : 'Your next good idea deserves a place to stay.'}
+              : 'Choose a subject. Create a few cards. Give what you learn a place to stay.'}
         </Text>
         <Button
           title={
             due.length
-              ? 'Start a review  →'
+              ? 'Review ' + due.length + (due.length === 1 ? ' card' : ' cards') + '  →'
               : data.cards.length
-                ? 'Practice your cards  →'
+                ? 'Practice anytime  →'
                 : 'Create your first deck  →'
           }
           onPress={() => {
@@ -79,39 +87,62 @@ export default function Home() {
           }}
         />
       </Panel>
-      <Pressable onPress={() => router.navigate('/generate')}>
-        <Panel>
-          <Text style={s.eyebrow}>CREATE CARDS & DECKS</Text>
-          <Text style={s.sectionTitle}>Turn a subject into a deck.</Text>
-          <Text style={s.body}>
-            Generate 5–10 cards, or write a card and generate its answer. →
-          </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Create cards or a deck"
+        onPress={() => router.navigate('/generate')}
+        style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+      >
+        <Panel style={{ gap: 12 }}>
+          <View style={s.between}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={s.sectionTitle}>Learn something new</Text>
+              <Text style={s.body}>Write a card or let AI get you started.</Text>
+            </View>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 15,
+                backgroundColor: colors.pale,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 26, color: colors.accent }}>+</Text>
+            </View>
+          </View>
         </Panel>
       </Pressable>
       <View style={s.row}>
         <View style={{ flex: 1 }}>
           <Panel>
             <Text style={s.metric}>{todayReviews.length}</Text>
-            <Text style={s.caption}>REVIEWS TODAY</Text>
+            <Text style={s.caption}>Reviews today</Text>
           </Panel>
         </View>
         <View style={{ flex: 1 }}>
           <Panel>
             <Text style={s.metric}>{data.cards.length}</Text>
-            <Text style={s.caption}>CARDS IN YOUR LIBRARY</Text>
+            <Text style={s.caption}>Cards in your library</Text>
           </Panel>
         </View>
       </View>
       <View style={s.between}>
-        <Text style={s.sectionTitle}>Your collection</Text>
-        <Pressable onPress={() => router.navigate('/decks')}>
-          <Text style={{ color: colors.accent, fontWeight: '700' }}>View all →</Text>
-        </Pressable>
+        <Text style={[s.sectionTitle, { flex: 1 }]}>Your decks</Text>
+        <Button
+          title="View all →"
+          size="compact"
+          variant="ghost"
+          onPress={() => router.navigate('/decks')}
+        />
       </View>
       {data.decks.length ? (
         data.decks.slice(0, 3).map((deck) => (
           <Pressable
             key={deck.id}
+            accessibilityRole="button"
+            accessibilityLabel={'Open ' + deck.name}
             onPress={() => router.push({ pathname: '/decks/[id]', params: { id: deck.id } })}
           >
             <Panel>
@@ -129,7 +160,7 @@ export default function Home() {
                   <Text style={{ fontSize: 22 }}>{deck.icon || '▤'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.label}>{deck.name}</Text>
+                  <Text style={[s.label, { fontSize: 17, lineHeight: 23 }]}>{deck.name}</Text>
                   <Text style={s.caption}>
                     {data.cards.filter((c) => c.deckId === deck.id).length} cards ·{' '}
                     {due.filter((c) => c.deckId === deck.id).length} due
@@ -153,6 +184,7 @@ export default function Home() {
           }
         />
       )}
+      <ReleaseStamp />
     </Screen>
   );
 }

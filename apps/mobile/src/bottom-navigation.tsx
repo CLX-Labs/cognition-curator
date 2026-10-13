@@ -35,10 +35,14 @@ export default function BottomNavigation({ state, navigation }: BottomTabBarProp
                 if (!active && !event.defaultPrevented) navigation.navigate(route.name);
               }}
               onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
-              style={s.tab}
+              style={({ pressed }) => [s.tab, pressed && { opacity: 0.65 }]}
             >
-              <Text style={[s.tabIcon, active && { color: colors.accent }]}>{tab.icon}</Text>
-              <Text style={[s.tabLabel, active && { color: colors.accent }]}>{tab.label}</Text>
+              <View style={[s.tabIconWell, active && { backgroundColor: colors.pale }]}>
+                <Text style={[s.tabIcon, active && { color: colors.accent }]}>{tab.icon}</Text>
+              </View>
+              <Text style={[s.tabLabel, active && { color: colors.ink, fontWeight: '800' }]}>
+                {tab.label}
+              </Text>
             </Pressable>
           );
         })}

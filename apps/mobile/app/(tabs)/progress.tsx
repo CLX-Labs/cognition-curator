@@ -1,7 +1,8 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { useStore } from '../../src/store';
-import { Panel, Screen, colors, s } from '../../src/ui';
+import { Button, Panel, Screen, colors, s } from '../../src/ui';
 export default function Progress() {
   const { data } = useStore();
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -20,41 +21,78 @@ export default function Progress() {
   );
   const recalled = recent.filter((r) => r.rating === 'good' || r.rating === 'easy').length;
   const percent = recent.length ? Math.round((recalled / recent.length) * 100) : null;
+  const activeDays = values.filter((value) => value > 0).length;
+  const highest = Math.max(1, ...values);
   return (
-    <Screen title="Little by little." eyebrow="YOUR PROGRESS">
+    <Screen
+      title="Your progress"
+      eyebrow="LITTLE BY LITTLE"
+      subtitle="Small sessions add up to lasting knowledge."
+    >
       <Panel tint>
-        <Text style={s.eyebrow}>THE LAST SEVEN DAYS</Text>
-        <Text style={[s.metric, { fontSize: 64 }]}>{total}</Text>
-        <Text style={s.body}>reviews completed</Text>
+        <View style={s.between}>
+          <Text style={s.label}>This week</Text>
+          <Text style={s.caption}>{activeDays} of 7 days active</Text>
+        </View>
+        <View style={[s.row, { alignItems: 'baseline' }]}>
+          <Text style={[s.metric, { fontSize: 58 }]}>{total}</Text>
+          <Text style={[s.body, { flex: 1, color: colors.ink }]}>reviews completed</Text>
+        </View>
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'flex-end',
             height: 130,
-            gap: 10,
-            marginTop: 12,
+            gap: 8,
+            marginTop: 4,
           }}
         >
           {days.map((day, index) => (
-            <View key={day.toDateString()} style={{ flex: 1, alignItems: 'center', gap: 8 }}>
+            <View
+              key={day.toDateString()}
+              accessible
+              accessibilityLabel={
+                day.toLocaleDateString(undefined, {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                }) +
+                ': ' +
+                values[index] +
+                ' reviews'
+              }
+              style={{ flex: 1, alignItems: 'center', gap: 8 }}
+            >
               <Text style={s.caption}>{values[index]}</Text>
               <View
                 style={{
                   width: '100%',
-                  height: Math.max(4, ((values[index] ?? 0) / Math.max(1, ...values)) * 80),
-                  backgroundColor: colors.ink,
+                  maxWidth: 28,
+                  height: Math.max(4, ((values[index] ?? 0) / highest) * 80),
+                  backgroundColor: values[index]
+                    ? index === 6
+                      ? colors.accent
+                      : colors.ink
+                    : '#C4D0BE',
                   borderRadius: 6,
                 }}
               />
-              <Text style={s.caption}>
-                {day.toLocaleDateString(undefined, { weekday: 'narrow' })}
+              <Text style={[s.caption, { fontSize: 11 }]}>
+                {day.toLocaleDateString(undefined, { weekday: 'short' })}
               </Text>
             </View>
           ))}
         </View>
+        {!total && (
+          <Button
+            title="Start practicing"
+            variant="secondary"
+            onPress={() => router.navigate('/decks')}
+          />
+        )}
       </Panel>
       <Panel>
-        <Text style={s.eyebrow}>SELF-RATED RECALL</Text>
+        <Text style={s.label}>How well it is sticking</Text>
         <Text style={s.metric}>{percent === null ? '—' : percent + '%'}</Text>
         <Text style={s.body}>
           {recent.length
@@ -62,33 +100,32 @@ export default function Progress() {
             : 'Complete a few reviews to see your recall trend.'}
         </Text>
         <Text style={s.caption}>
-          Based on your own ratings, not a test of answer accuracy. Practice mode does not change
-          these totals.
+          Based on your Good and Easy ratings during scheduled reviews. Practice mode does not
+          change these totals.
         </Text>
       </Panel>
       <View style={s.row}>
         <View style={{ flex: 1 }}>
           <Panel>
             <Text style={s.metric}>{data.decks.length}</Text>
-            <Text style={s.caption}>DECKS</Text>
+            <Text style={s.caption}>Decks</Text>
           </Panel>
         </View>
         <View style={{ flex: 1 }}>
           <Panel>
             <Text style={s.metric}>{data.reviews.length}</Text>
-            <Text style={s.caption}>RECORDED REVIEWS</Text>
+            <Text style={s.caption}>Reviews all time</Text>
           </Panel>
         </View>
       </View>
       <Panel>
-        <Text style={s.sectionTitle}>Showing up adds up.</Text>
+        <Text style={s.sectionTitle}>Keep a little momentum</Text>
         <Text style={s.body}>
-          Your review history stays available offline and synchronizes with your account when you
-          reconnect.
+          A few cards each day is a good place to start. Review the cards that are due, or
+          practice a favorite deck whenever you like.
         </Text>
         <Text style={s.caption}>
-          These totals reflect review events in this version. Original-app review records remain in
-          your migration archive and are not counted again as new reviews.
+          Your history stays available offline and syncs with your account when you reconnect.
         </Text>
       </Panel>
     </Screen>

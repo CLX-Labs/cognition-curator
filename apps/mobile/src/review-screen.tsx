@@ -21,7 +21,7 @@ export default function ReviewScreen() {
   const { data, mutate } = useStore();
   const practice = params.practice === 'true';
   const specific = params.cardId ?? params.id;
-  const [queue] = useState(() =>
+  const [queue, setQueue] = useState(() =>
     (specific
       ? data.cards.filter((c) => c.id.toLowerCase() === specific.toLowerCase())
       : practice
@@ -33,6 +33,7 @@ export default function ReviewScreen() {
   );
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [confidence, setConfidence] = useState<'unsure' | 'known' | null>(null);
   const [showHint, setShowHint] = useState(false);
   const [busy, setBusy] = useState(false);
   const scroll = useRef<ScrollView>(null);
@@ -40,16 +41,29 @@ export default function ReviewScreen() {
   const card = data.cards.find((c) => c.id === queue[index]);
   useEffect(() => {
     started.current = Date.now();
-    setRevealed(false);
-    setShowHint(false);
     scroll.current?.scrollTo({ y: 0, animated: false });
   }, [index]);
+  function chooseConfidence(choice: 'unsure' | 'known') {
+    setConfidence(choice);
+    setRevealed(true);
+  }
+  function advance() {
+    setConfidence(null);
+    setRevealed(false);
+    setShowHint(false);
+    setIndex((i) => i + 1);
+  }
+  function practiceAgain() {
+    if (!practice || !card) return;
+    setQueue((items) => [...items, card.id]);
+    advance();
+  }
   async function rate(rating: Rating) {
     if (!card || busy) return;
     setBusy(true);
     try {
       await mutate((repo) => repo.rateCard(card.id, rating, Date.now() - started.current));
-      setIndex((i) => i + 1);
+      advance();
     } catch (error) {
       reportError(error);
     } finally {
@@ -113,26 +127,51 @@ export default function ReviewScreen() {
     Math.max(Date.now(), Date.parse(card.schedule.lastReviewedAt ?? '') || 0),
   ).toISOString();
   const intervals = previewIntervals(card.schedule, previewAt);
-  const controls = !revealed ? (
-    <Button title="Reveal answer" onPress={() => setRevealed(true)} />
-  ) : practice ? (
+  const ratings =
+    confidence === 'unsure' ? (['again', 'hard'] as const) : (['good', 'easy'] as const);
+  const changeChoice = (
     <Button
-      title={index + 1 === queue.length ? 'Finish practice' : 'Next card  →'}
-      onPress={() => setIndex((i) => i + 1)}
+      title="Change choice"
+      variant="ghost"
+      size="compact"
+      disabled={busy}
+      onPress={() => setConfidence(null)}
     />
-  ) : (
-    <>
-      <Text style={[s.caption, { textAlign: 'center', color: colors.ink }]}>
-        How well did you remember?
-      </Text>
-      {(
-        [
-          ['again', 'hard'],
-          ['good', 'easy'],
-        ] as const
-      ).map((row, rowIndex) => (
-        <View key={rowIndex} style={s.row}>
-          {row.map((rating) => (
+  );
+  const controls =
+    confidence === null ? (
+      <View style={s.row}>
+        <View style={{ flex: 1 }}>
+          <Button title="Not sure" variant="secondary" onPress={() => chooseConfidence('unsure')} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button title="I know it" onPress={() => chooseConfidence('known')} />
+        </View>
+      </View>
+    ) : practice ? (
+      <>
+        {confidence === 'unsure' && (
+          <>
+            <Text style={[s.caption, { textAlign: 'center' }]}>
+              Another pass at the end of this session?
+            </Text>
+            <Button title="Practice again later" onPress={practiceAgain} />
+          </>
+        )}
+        <Button
+          title={index + 1 === queue.length ? 'Finish practice' : 'Next card  →'}
+          variant={confidence === 'unsure' ? 'secondary' : 'primary'}
+          onPress={advance}
+        />
+        {changeChoice}
+      </>
+    ) : (
+      <>
+        <Text style={[s.caption, { textAlign: 'center', color: colors.ink }]}>
+          How well did you remember?
+        </Text>
+        <View style={s.row}>
+          {ratings.map((rating) => (
             <View key={rating} style={{ flex: 1 }}>
               <Button
                 title={
@@ -149,9 +188,9 @@ export default function ReviewScreen() {
             </View>
           ))}
         </View>
-      ))}
-    </>
-  );
+        {changeChoice}
+      </>
+    );
   return (
     <Screen
       scrollRef={scroll}

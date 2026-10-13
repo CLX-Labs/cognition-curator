@@ -5,7 +5,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-preDeployCommand = ["CONFIRM_DATABASE_MIGRATION=yes npm run db:migrate && CONFIRM_QUEUE_SETUP=yes npm run db:queue:setup"]
+preDeployCommand = ["node --import=tsx scripts/setup-backend.mjs"]
 startCommand = "node scripts/start-backend.mjs"
 healthcheckPath = "/health"
 healthcheckTimeout = 30

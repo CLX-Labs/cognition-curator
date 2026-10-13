@@ -6,6 +6,10 @@ repository connection. The service must use the repository root and root
 The root Docker image runs both the TypeScript API and the generation worker;
 either process failing restarts the service. Before deployment, it applies the
 additive `recollect` and `recollect_boss` schemas without changing legacy tables.
+The explicit pre-deploy entrypoint is `node --import=tsx scripts/setup-backend.mjs`.
+It logs configuration, migration, and queue stages, with sanitized error codes and
+messages on failure. It does not depend on shell environment assignments or npm
+workspace working directories, and stops queue setup if migrations fail.
 Set `NODE_ENV=production`, `PORT=8080`, `APPLE_BUNDLE_ID`, a strong
 `ACCESS_TOKEN_SECRET`, and `ANTHROPIC_MODEL` on that service. It uses the existing
 database and Anthropic key. No Railway token or GitHub deployment job is needed.

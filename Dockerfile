@@ -19,6 +19,7 @@ COPY apps/api apps/api
 COPY apps/worker apps/worker
 COPY packages packages
 COPY scripts/start-backend.mjs scripts/start-backend.mjs
+COPY scripts/setup-backend.mjs scripts/setup-backend.mjs
 USER node
 ENV NODE_ENV=production
 EXPOSE 3001

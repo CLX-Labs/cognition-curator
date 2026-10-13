@@ -60,6 +60,7 @@ jobs:
       - run: node --test scripts/test-release-policy.mjs
       - run: node --test scripts/test-release-notifications.mjs
       - run: node --test scripts/test-start-backend.mjs
+      - run: node --test scripts/test-setup-backend.mjs
 
   expo-bundle-and-native-config:
     runs-on: ubuntu-latest
@@ -76,6 +77,10 @@ jobs:
       - run: npm ci
       - run: npx expo install --check
         working-directory: apps/mobile
+        env:
+          # Check the locked SDK's bundled compatibility matrix; newer online
+          # recommendations must not force native upgrades on backend-only PRs.
+          EXPO_OFFLINE: '1'
       - run: npx expo export --platform ios
         working-directory: apps/mobile
       - run: npx expo prebuild --platform ios --no-install

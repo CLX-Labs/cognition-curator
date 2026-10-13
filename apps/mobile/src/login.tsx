@@ -10,7 +10,18 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState('');
   useEffect(() => {
-    if (Platform.OS === 'ios') void AppleAuthentication.isAvailableAsync().then(setAvailable);
+    let active = true;
+    if (Platform.OS === 'ios')
+      void AppleAuthentication.isAvailableAsync()
+        .then((value) => {
+          if (active) setAvailable(value);
+        })
+        .catch(() => {
+          if (active) setAvailable(false);
+        });
+    return () => {
+      active = false;
+    };
   }, []);
   async function signIn(development = false) {
     setBusy(true);

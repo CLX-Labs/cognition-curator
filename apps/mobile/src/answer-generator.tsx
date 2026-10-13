@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Text } from 'react-native';
+import { useIsFocused } from 'expo-router/react-navigation';
 import { generationRequestSchema } from '@recollect/contracts';
 import { useStore } from './store';
 import {
@@ -10,6 +11,7 @@ import {
   type GenerationWorkflow,
 } from './generation';
 import { Button, Panel, colors, s } from './ui';
+import { useAppActive, usePolling } from './polling';
 
 export default function AnswerGenerator({
   cardId,
@@ -24,6 +26,8 @@ export default function AnswerGenerator({
   onUse(answer: string): void;
   onRestoreQuestion(question: string): void;
 }) {
+  const focused = useIsFocused();
+  const active = useAppActive();
   const { repository, sync, refresh } = useStore();
   const key = 'answer:' + deckId + ':' + cardId;
   const [state, setState] = useState<GenerationWorkflow | null>(null);
@@ -32,14 +36,21 @@ export default function AnswerGenerator({
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(false);
   const inFlight = useRef(false);
+  const scope = useRef(0);
   useEffect(() => {
+    const epoch = ++scope.current;
     alive.current = true;
+    inFlight.current = false;
+    setLoaded(false);
+    setState(null);
+    setBusy(false);
+    setError(null);
     let active = true;
     if (repository)
       void repository
         .getState<GenerationWorkflow>(key)
         .then((saved) => {
-          if (!active) return;
+          if (!active || scope.current !== epoch) return;
           setState(saved);
           setLoaded(true);
         })
@@ -48,46 +59,57 @@ export default function AnswerGenerator({
         });
     return () => {
       active = false;
+      ++scope.current;
       alive.current = false;
     };
   }, [repository, key]);
 
   const run = useCallback(
-    async (pending: GenerationWorkflow) => {
+    async (pending: GenerationWorkflow, poll = false) => {
       if (!repository || inFlight.current) return;
       inFlight.current = true;
-      setBusy(true);
+      const epoch = scope.current;
+      const current = () => alive.current && scope.current === epoch;
+      if (!poll) setBusy(true);
       setError(null);
       try {
-        await repository.setState(key, pending);
-        if (alive.current) setState(pending);
+        if (!poll) await repository.setState(key, pending);
+        if (current()) setState(pending);
         if (!pending.job) {
           await prepareGeneration(repository, pending, sync);
           await refresh();
         }
         const next = await fetchGeneration(repository, pending, key);
-        if (alive.current) setState(next);
+        if (current()) setState(next);
       } catch (cause) {
-        if (alive.current)
+        if (current())
           setError(
             cause instanceof Error
               ? cause.message
               : 'Your request is saved. Retry when connected.',
           );
       } finally {
-        inFlight.current = false;
-        if (alive.current) setBusy(false);
+        if (current()) {
+          inFlight.current = false;
+          if (!poll) setBusy(false);
+        }
       }
     },
     [repository, key, sync, refresh],
   );
 
-  useEffect(() => {
-    if (!state?.job || !['queued', 'running'].includes(state.job.status) || busy || error)
-      return;
-    const timer = setTimeout(() => void run(state), 2500);
-    return () => clearTimeout(timer);
-  }, [state, busy, error, run]);
+  usePolling(
+    focused &&
+      active &&
+      loaded &&
+      !!state?.job &&
+      ['queued', 'running'].includes(state.job.status) &&
+      !busy &&
+      !error,
+    async () => {
+      if (state) await run(state, true);
+    },
+  );
 
   function generate() {
     if (!repository || !question.trim()) return;
@@ -124,16 +146,24 @@ export default function AnswerGenerator({
   async function setAside() {
     if (!repository || !state || inFlight.current) return;
     inFlight.current = true;
+    const epoch = scope.current;
+    const current = () => alive.current && scope.current === epoch;
     setBusy(true);
     try {
       await repository.archive({ answerGeneration: state });
       await repository.setState(key, null);
-      if (alive.current) { setState(null); setError(null); }
+      if (current()) {
+        setState(null);
+        setError(null);
+      }
     } catch (cause) {
-      if (alive.current) setError(cause instanceof Error ? cause.message : 'The draft could not be set aside.');
+      if (current())
+        setError(cause instanceof Error ? cause.message : 'The draft could not be set aside.');
     } finally {
-      inFlight.current = false;
-      if (alive.current) setBusy(false);
+      if (current()) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
   return (
@@ -148,8 +178,13 @@ export default function AnswerGenerator({
       <Text style={s.caption}>
         Write a question to draft an answer with AI. Review it before saving your card.
       </Text>
-      {state?.sourceQuestion && !question.trim() && <Button title="Restore saved question"
-        variant="secondary" onPress={() => onRestoreQuestion(state.sourceQuestion!)} />}
+      {state?.sourceQuestion && !question.trim() && (
+        <Button
+          title="Restore saved question"
+          variant="secondary"
+          onPress={() => onRestoreQuestion(state.sourceQuestion!)}
+        />
+      )}
       {error && (
         <Panel>
           <Text style={{ color: colors.danger }}>{error}</Text>
@@ -189,8 +224,14 @@ export default function AnswerGenerator({
           )}
         </Panel>
       )}
-      {state && <Button title="Set answer draft aside" variant="secondary" disabled={busy}
-        onPress={() => void setAside()} />}
+      {state && (
+        <Button
+          title="Set answer draft aside"
+          variant="secondary"
+          disabled={busy}
+          onPress={() => void setAside()}
+        />
+      )}
     </>
   );
 }

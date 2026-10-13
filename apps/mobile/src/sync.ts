@@ -18,11 +18,11 @@ export class SyncEngine {
   run() {
     if (this.stopped) return Promise.resolve();
     if (this.flight) return this.flight;
-    const task = this.synchronize();
-    this.flight = task;
-    return task.finally(() => {
+    const task = this.synchronize().finally(() => {
       if (this.flight === task) this.flight = null;
     });
+    this.flight = task;
+    return task;
   }
   private async synchronize() {
     // Push one durable command at a time so acknowledgements can rebase the next
@@ -70,8 +70,9 @@ export class SyncEngine {
       if (page.hasMore && page.cursor === cursor)
         throw new Error('The server returned an empty synchronization page.');
       await this.repository.applyChanges(page.changes, page.cursor);
+      const changed = page.changes.length > 0 || page.cursor !== cursor;
       cursor = page.cursor;
-      this.changed();
+      if (changed) this.changed();
       if (!page.hasMore) return;
     }
   }

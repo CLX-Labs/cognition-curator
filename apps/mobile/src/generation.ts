@@ -83,6 +83,7 @@ export async function fetchGeneration(
     ? state.selectedIds
     : job.candidates.filter((c) => !job.acceptedCandidateIds.includes(c.id)).map((c) => c.id);
   const next = { ...state, job, drafts, selectedIds };
+  if (JSON.stringify(next) === JSON.stringify(state)) return state;
   await repo.setState(storageKey, next);
   return next;
 }

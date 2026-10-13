@@ -12,9 +12,11 @@ import {
   type GenerationWorkflow,
 } from '../../src/generation';
 import { Button, Field, Panel, Screen, colors, reportError, s } from '../../src/ui';
+import { useAppActive, usePolling } from '../../src/polling';
 
 export default function GenerateScreen() {
   const focused = useIsFocused();
+  const active = useAppActive();
   const params = useLocalSearchParams<{ deckId?: string }>();
   const { repository, data, sync, refresh } = useStore();
   const [deckId, setDeckId] = useState(params.deckId ?? '');
@@ -65,7 +67,9 @@ export default function GenerateScreen() {
           if (saved) setDeckId(saved.request.deckId);
           setLoaded(true);
         })
-        .catch(reportError);
+        .catch((cause) => {
+          if (active) reportError(cause);
+        });
     return () => {
       active = false;
       mounted.current = false;
@@ -82,48 +86,49 @@ export default function GenerateScreen() {
     // Consume an explicit destination once; returning to this tab keeps draft edits.
     router.setParams({ deckId: undefined });
   }, [loaded, params.deckId, data.decks]);
-  const resume = useCallback(async () => {
-    if (!repository || !current.current || inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError(null);
-    try {
-      await writes.current;
-      if (!current.current.job) {
-        await prepareGeneration(repository, current.current, sync);
-        await refresh();
+  const resume = useCallback(
+    async (poll = false) => {
+      if (!repository || !current.current || inFlight.current) return;
+      inFlight.current = true;
+      if (!poll) setBusy(true);
+      setError(null);
+      try {
+        await writes.current;
+        if (!current.current.job) {
+          await prepareGeneration(repository, current.current, sync);
+          await refresh();
+        }
+        const next = await fetchGeneration(repository, current.current);
+        if (mounted.current) {
+          current.current = next;
+          setState(next);
+        }
+      } catch (cause) {
+        if (mounted.current)
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : 'Connection interrupted. Your request is saved.',
+          );
+      } finally {
+        inFlight.current = false;
+        if (mounted.current && !poll) setBusy(false);
       }
-      const next = await fetchGeneration(repository, current.current);
-      if (mounted.current) {
-        current.current = next;
-        setState(next);
-      }
-    } catch (cause) {
-      if (mounted.current)
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : 'Connection interrupted. Your request is saved.',
-        );
-    } finally {
-      inFlight.current = false;
-      if (mounted.current) setBusy(false);
-    }
-  }, [repository, sync, refresh]);
-  useEffect(() => {
-    if (
-      !focused ||
-      !state?.job ||
-      !['queued', 'running'].includes(state.job.status) ||
-      busy ||
-      error
-    )
-      return;
-    const timer = setTimeout(() => {
-      void resume();
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [focused, state, busy, error, resume]);
+    },
+    [repository, sync, refresh],
+  );
+  usePolling(
+    focused &&
+      active &&
+      loaded &&
+      !!state?.job &&
+      ['queued', 'running'].includes(state.job.status) &&
+      !busy &&
+      !error,
+    async () => {
+      await resume(true);
+    },
+  );
 
   async function create() {
     if (!repository || inFlight.current) return;

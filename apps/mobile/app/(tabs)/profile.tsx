@@ -51,14 +51,18 @@ export default function ProfileScreen() {
       .then((result) => {
         if (active) setInspection(result);
       })
-      .catch(reportError);
+      .catch((cause) => {
+        if (active) reportError(cause);
+      });
     if (repository)
       void repository
         .getState<ImportWorkflow>(IMPORT_KEY)
         .then((saved) => {
           if (active) setWorkflow(saved);
         })
-        .catch(reportError);
+        .catch((cause) => {
+          if (active) reportError(cause);
+        });
     return () => {
       active = false;
     };

@@ -60,6 +60,7 @@ export default function ReviewScreen() {
     return (
       <Screen
         scrollRef={scroll}
+        syncFeedback="errors"
         title={queue.length ? 'Nicely done.' : 'All caught up.'}
         eyebrow={practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE'}
         subtitle={
@@ -122,7 +123,7 @@ export default function ReviewScreen() {
   ) : (
     <>
       <Text style={[s.caption, { textAlign: 'center', color: colors.ink }]}>
-        {busy ? 'Saving your review…' : 'How well did you remember?'}
+        How well did you remember?
       </Text>
       {(
         [
@@ -154,6 +155,7 @@ export default function ReviewScreen() {
   return (
     <Screen
       scrollRef={scroll}
+      syncFeedback="errors"
       title={deck?.name ?? 'Your review'}
       eyebrow={practice ? 'PRACTICE AT YOUR OWN PACE' : 'REVIEW SESSION'}
       leading={<Back label="Finish later" />}

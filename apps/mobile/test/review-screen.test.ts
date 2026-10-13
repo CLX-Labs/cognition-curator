@@ -17,9 +17,15 @@ const rig = vi.hoisted(() => ({
   rate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   scrollTo: vi.fn(),
   alert: vi.fn(),
+  syncState: 'idle' as 'idle' | 'syncing' | 'offline',
 }));
 vi.mock('../src/store', () => ({
-  useStore: () => ({ data: rig.data, mutate: rig.mutate, syncState: 'idle', sync: vi.fn() }),
+  useStore: () => ({
+    data: rig.data,
+    mutate: rig.mutate,
+    syncState: rig.syncState,
+    sync: vi.fn(),
+  }),
 }));
 vi.mock('expo-router', () => ({
   useLocalSearchParams: () => rig.params,
@@ -60,7 +66,7 @@ vi.mock('react-native-safe-area-context', () => ({
     React.createElement('safe-area', props, children),
 }));
 import ReviewScreen from '../src/review-screen';
-import { Button } from '../src/ui';
+import { Button, Screen } from '../src/ui';
 
 const timestamp = '2026-10-13T12:00:00.000Z';
 const deck: Deck = {
@@ -142,6 +148,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date(timestamp));
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   rig.params = { deckId: deck.id };
+  rig.syncState = 'idle';
   rig.data = { decks: [deck], cards: [first, second], reviews: [], pending: 0, issues: [] };
   rig.rate.mockResolvedValue(undefined);
   rig.mutate.mockImplementation(async (work) =>
@@ -201,6 +208,8 @@ it('scheduled Good saves once, disables all ratings while saving, and advances t
   await press(/^Good · /);
   expect(rig.mutate).toHaveBeenCalledTimes(1);
   expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'good', 5000);
+  expect(text()).toContain('How well did you remember?');
+  expect(text()).not.toContain('Saving your review');
   expect(
     footer()
       .findAllByType(Button)
@@ -271,4 +280,64 @@ it('a failed save keeps the current answer and makes ratings available to retry'
       .findAllByType(Button)
       .every((node) => !node.props.disabled),
   ).toBe(true);
+});
+
+it('saving ratings and synchronizing never inserts routine feedback into the next card or completion', async () => {
+  rig.mutate.mockImplementation(async (work) => {
+    await work({ rateCard: rig.rate } as unknown as Repository);
+    rig.data = { ...rig.data!, pending: rig.data!.pending + 1 };
+  });
+  await mount();
+  await press('Reveal answer');
+  await press(/^Good · /);
+  expect(rig.rate).toHaveBeenCalledTimes(1);
+  expect(rig.data!.pending).toBe(1);
+  expect(text()).toContain(second.front);
+  const nextCard = text();
+  for (const state of ['syncing', 'idle'] as const) {
+    rig.syncState = state;
+    rig.data = { ...rig.data!, pending: state === 'syncing' ? 1 : 0 };
+    await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+    expect(text()).toBe(nextCard);
+    expect(
+      renderer!.root
+        .findAllByType('pressable')
+        .some((node) => node.props.accessibilityLabel === 'Synchronize library'),
+    ).toBe(false);
+  }
+  await press('Reveal answer');
+  await press(/^Good · /);
+  expect(rig.rate).toHaveBeenCalledTimes(2);
+  expect(rig.data!.pending).toBe(1);
+  expect(text()).toContain('SESSION COMPLETE');
+  expect(text()).not.toContain('changes saved on this device');
+  const completion = text();
+  rig.data = { ...rig.data!, pending: 0 };
+  await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+  expect(text()).toBe(completion);
+});
+
+it('keeps practice quiet during background synchronization without saving ratings', async () => {
+  rig.params.practice = 'true';
+  rig.data = { ...rig.data!, pending: 1 };
+  rig.syncState = 'syncing';
+  await mount();
+  expect(text()).not.toContain('Synchronizing your library');
+  await press('Reveal answer');
+  const answer = text();
+  rig.syncState = 'idle';
+  rig.data = { ...rig.data!, pending: 0 };
+  await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+  expect(text()).toBe(answer);
+  expect(rig.mutate).not.toHaveBeenCalled();
+});
+
+it('still reports offline status during review and pending changes outside the session', async () => {
+  rig.syncState = 'offline';
+  rig.data = { ...rig.data!, pending: 1 };
+  await mount();
+  expect(text()).toContain('Offline · your library is available');
+  rig.syncState = 'idle';
+  await act(async () => renderer!.update(React.createElement(Screen, { children: null })));
+  expect(text()).toContain('1 changes saved on this device');
 });

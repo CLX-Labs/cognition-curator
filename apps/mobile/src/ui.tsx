@@ -44,6 +44,7 @@ export function Screen({
   subtitle,
   footer,
   scrollRef,
+  syncFeedback = 'all',
 }: {
   children: React.ReactNode;
   title?: string;
@@ -53,9 +54,14 @@ export function Screen({
   subtitle?: string;
   footer?: React.ReactNode;
   scrollRef?: React.Ref<ScrollView>;
+  syncFeedback?: 'all' | 'errors';
 }) {
   const { data, syncState, sync } = useStore();
   const segments = useSegments();
+  const showSyncFeedback =
+    data.issues.length > 0 ||
+    syncState === 'offline' ||
+    (syncFeedback === 'all' && (data.pending > 0 || syncState === 'syncing'));
   return (
     <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
@@ -80,7 +86,7 @@ export function Screen({
               {action}
             </View>
           )}
-          {(data.pending > 0 || data.issues.length > 0 || syncState !== 'idle') && (
+          {showSyncFeedback && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={
@@ -96,11 +102,11 @@ export function Screen({
               <Text style={s.syncText}>
                 {data.issues.length
                   ? data.issues.length + ' changes need attention'
-                  : syncState === 'syncing'
-                    ? 'Synchronizing your library…'
-                    : data.pending
-                      ? data.pending + ' changes saved on this device'
-                      : 'Offline · your library is available'}
+                  : syncState === 'offline'
+                    ? 'Offline · your library is available'
+                    : syncState === 'syncing'
+                      ? 'Synchronizing your library…'
+                      : data.pending + ' changes saved on this device'}
               </Text>
               <Text style={s.syncText}>↗</Text>
             </Pressable>

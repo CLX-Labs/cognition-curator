@@ -254,7 +254,7 @@ it('preserves the reviewed selection and exact acceptance receipt across a lost 
   await act(async () => {
     renderer!.root
       .findAllByType('field')
-      .find((node) => node.props.label === 'Question')!
+      .find((node) => node.props.label === 'Title')!
       .props.onChangeText('Reviewed question');
   });
   rig.request.mockRejectedValueOnce(new Error('Connection lost after saving'));

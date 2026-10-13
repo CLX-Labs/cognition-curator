@@ -182,7 +182,7 @@ export default function ReviewScreen() {
       </View>
       <Panel>
         <View style={{ minHeight: 220, justifyContent: 'center', gap: 18 }}>
-          <Text style={s.eyebrow}>QUESTION</Text>
+          <Text style={s.eyebrow}>{card.aiGenerated ? 'CONCEPT' : 'QUESTION'}</Text>
           <Text
             selectable
             style={{ fontSize: 26, lineHeight: 36, fontWeight: '600', color: colors.ink }}

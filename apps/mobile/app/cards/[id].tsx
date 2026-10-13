@@ -177,7 +177,7 @@ export default function CardEditor() {
         </View>
       )}
       <Field
-        label="Question"
+        label={baseline?.aiGenerated ? 'Title' : 'Question'}
         placeholder="What do you want to remember?"
         value={front}
         multiline

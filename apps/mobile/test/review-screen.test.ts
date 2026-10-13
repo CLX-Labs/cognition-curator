@@ -171,8 +171,9 @@ it('practice reveals and advances without saving a rating or changing the schedu
     footer()
       .findAllByType(Button)
       .map((node) => node.props.title),
-  ).toEqual(['Reveal answer']);
-  await press('Reveal answer');
+  ).toEqual(['Not sure', 'I know it']);
+  expect(text()).not.toContain(first.back);
+  await press('I know it');
   expect(text()).toContain('Jane Austen.');
   await press('Next card  →');
   expect(text()).toContain(second.front);
@@ -181,8 +182,8 @@ it('practice reveals and advances without saving a rating or changing the schedu
     footer()
       .findAllByType(Button)
       .map((node) => node.props.title),
-  ).toEqual(['Reveal answer']);
-  await press('Reveal answer');
+  ).toEqual(['Not sure', 'I know it']);
+  await press('Not sure');
   await press('Finish practice');
   expect(text()).toContain('PRACTICE COMPLETE');
   expect(rig.mutate).not.toHaveBeenCalled();
@@ -203,7 +204,7 @@ it('scheduled Good saves once, disables all ratings while saving, and advances t
       }),
   );
   await mount();
-  await press('Reveal answer');
+  await press('I know it');
   vi.setSystemTime(new Date(Date.parse(timestamp) + 5000));
   await press(/^Good · /);
   expect(rig.mutate).toHaveBeenCalledTimes(1);
@@ -227,21 +228,21 @@ it('scheduled Good saves once, disables all ratings while saving, and advances t
     footer()
       .findAllByType(Button)
       .map((node) => node.props.title),
-  ).toEqual(['Reveal answer']);
+  ).toEqual(['Not sure', 'I know it']);
 });
 
-it('keeps reveal and rating actions outside scroll content and preserves the answer across a library rerender', async () => {
+it('keeps confidence and rating actions outside scroll content and preserves the answer and choice across a library rerender', async () => {
   await mount();
   const scroll = renderer!.root.findByType('scroll');
   expect(scroll.findAllByType(Button).map((node) => node.props.title)).not.toContain(
-    'Reveal answer',
+    'I know it',
   );
   expect(
     footer()
       .findAllByType(Button)
       .map((node) => node.props.title),
-  ).toEqual(['Reveal answer']);
-  await press('Reveal answer');
+  ).toEqual(['Not sure', 'I know it']);
+  await press('I know it');
   rig.data = {
     ...structuredClone(rig.data!),
     cards: [
@@ -262,7 +263,7 @@ it('keeps reveal and rating actions outside scroll content and preserves the ans
     footer()
       .findAllByType(Button)
       .map((node) => node.props.title),
-  ).toEqual(['Again · 1m', 'Hard · 1m', 'Good · 10m', 'Easy · 4d']);
+  ).toEqual(['Good · 10m', 'Easy · 4d', 'Change choice']);
   expect(renderer!.root.findByType('scroll').findAllByType(Button)).toHaveLength(0);
   expect(rig.mutate).not.toHaveBeenCalled();
 });
@@ -270,7 +271,7 @@ it('keeps reveal and rating actions outside scroll content and preserves the ans
 it('a failed save keeps the current answer and makes ratings available to retry', async () => {
   rig.rate.mockRejectedValueOnce(new Error('Storage is full'));
   await mount();
-  await press('Reveal answer');
+  await press('I know it');
   await press(/^Good · /);
   expect(rig.alert).toHaveBeenCalledWith('Could not finish', 'Storage is full');
   expect(text()).toContain('Card 1 of 2');
@@ -280,6 +281,14 @@ it('a failed save keeps the current answer and makes ratings available to retry'
       .findAllByType(Button)
       .every((node) => !node.props.disabled),
   ).toBe(true);
+  expect(footer().findAllByType(Button).map((node) => node.props.title)).toEqual([
+    'Good · 10m',
+    'Easy · 4d',
+    'Change choice',
+  ]);
+  await press(/^Good · /);
+  expect(rig.rate).toHaveBeenCalledTimes(2);
+  expect(text()).toContain('Card 2 of 2');
 });
 
 it('saving ratings and synchronizing never inserts routine feedback into the next card or completion', async () => {
@@ -288,7 +297,7 @@ it('saving ratings and synchronizing never inserts routine feedback into the nex
     rig.data = { ...rig.data!, pending: rig.data!.pending + 1 };
   });
   await mount();
-  await press('Reveal answer');
+  await press('I know it');
   await press(/^Good · /);
   expect(rig.rate).toHaveBeenCalledTimes(1);
   expect(rig.data!.pending).toBe(1);
@@ -305,7 +314,7 @@ it('saving ratings and synchronizing never inserts routine feedback into the nex
         .some((node) => node.props.accessibilityLabel === 'Synchronize library'),
     ).toBe(false);
   }
-  await press('Reveal answer');
+  await press('I know it');
   await press(/^Good · /);
   expect(rig.rate).toHaveBeenCalledTimes(2);
   expect(rig.data!.pending).toBe(1);
@@ -323,7 +332,7 @@ it('keeps practice quiet during background synchronization without saving rating
   rig.syncState = 'syncing';
   await mount();
   expect(text()).not.toContain('Synchronizing your library');
-  await press('Reveal answer');
+  await press('I know it');
   const answer = text();
   rig.syncState = 'idle';
   rig.data = { ...rig.data!, pending: 0 };
@@ -340,4 +349,108 @@ it('still reports offline status during review and pending changes outside the s
   rig.syncState = 'idle';
   await act(async () => renderer!.update(React.createElement(Screen, { children: null })));
   expect(text()).toContain('1 changes saved on this device');
+});
+
+it.each([
+  { choice: 'Not sure', rating: 'again', options: ['Again · 1m', 'Hard · 1m'] },
+  { choice: 'Not sure', rating: 'hard', options: ['Again · 1m', 'Hard · 1m'] },
+  { choice: 'I know it', rating: 'good', options: ['Good · 10m', 'Easy · 4d'] },
+  { choice: 'I know it', rating: 'easy', options: ['Good · 10m', 'Easy · 4d'] },
+] as const)(
+  '$choice offers the matching options and saves $rating only when selected',
+  async ({ choice, rating, options }) => {
+    await mount();
+    await press(choice);
+    expect(text()).toContain(first.back);
+    expect(
+      footer()
+        .findAllByType(Button)
+        .map((node) => node.props.title),
+    ).toEqual([...options, 'Change choice']);
+    expect(rig.mutate).not.toHaveBeenCalled();
+    await press(options[rating === 'again' || rating === 'good' ? 0 : 1]);
+    expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, rating, 0);
+    expect(text()).toContain(second.front);
+    expect(text()).not.toContain(first.back);
+    expect(text()).not.toContain(second.back);
+    expect(
+      footer()
+        .findAllByType(Button)
+        .map((node) => node.props.title),
+    ).toEqual(['Not sure', 'I know it']);
+  },
+);
+
+it('lets you change confidence after seeing the answer without saving or hiding it', async () => {
+  await mount();
+  await press('I know it');
+  await press('Change choice');
+  expect(text()).toContain(first.back);
+  expect(
+    footer()
+      .findAllByType(Button)
+      .map((node) => node.props.title),
+  ).toEqual(['Not sure', 'I know it']);
+  await press('Not sure');
+  expect(text()).toContain(first.back);
+  expect(
+    footer()
+      .findAllByType(Button)
+      .map((node) => node.props.title),
+  ).toEqual(['Again · 1m', 'Hard · 1m', 'Change choice']);
+  expect(rig.mutate).not.toHaveBeenCalled();
+  await press(/^Hard · /);
+  expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'hard', 0);
+});
+
+it('can revisit an uncertain card at the end of practice without changing the review schedule', async () => {
+  rig.params.practice = 'true';
+  await mount();
+  await press('Not sure');
+  expect(text()).toContain(first.back);
+  expect(
+    footer()
+      .findAllByType(Button)
+      .map((node) => node.props.title),
+  ).toEqual(['Practice again later', 'Next card  →', 'Change choice']);
+  await press('Practice again later');
+  expect(text()).toContain('Card 2 of 3');
+  expect(text()).toContain(second.front);
+  expect(text()).not.toContain(second.back);
+  await press('I know it');
+  expect(
+    footer()
+      .findAllByType(Button)
+      .map((node) => node.props.title),
+  ).toEqual(['Next card  →', 'Change choice']);
+  await press('Next card  →');
+  expect(text()).toContain('Card 3 of 3');
+  expect(text()).toContain(first.front);
+  expect(text()).not.toContain(first.back);
+  await press('I know it');
+  await press('Finish practice');
+  expect(text()).toContain('PRACTICE COMPLETE');
+  expect(rig.mutate).not.toHaveBeenCalled();
+  expect(rig.rate).not.toHaveBeenCalled();
+  expect(rig.data!.cards.map((item) => item.schedule)).toEqual([first.schedule, second.schedule]);
+});
+
+it('can practice the last card again with its answer and confidence reset', async () => {
+  rig.params.practice = 'true';
+  rig.data = { ...rig.data!, cards: [first] };
+  await mount();
+  await press('Not sure');
+  await press('Practice again later');
+  expect(text()).toContain('Card 2 of 2');
+  expect(text()).toContain(first.front);
+  expect(text()).not.toContain(first.back);
+  expect(
+    footer()
+      .findAllByType(Button)
+      .map((node) => node.props.title),
+  ).toEqual(['Not sure', 'I know it']);
+  await press('I know it');
+  await press('Finish practice');
+  expect(text()).toContain('PRACTICE COMPLETE');
+  expect(rig.mutate).not.toHaveBeenCalled();
 });

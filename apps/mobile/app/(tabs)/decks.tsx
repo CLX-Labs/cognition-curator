@@ -4,91 +4,108 @@ import { router } from 'expo-router';
 import { useStore } from '../../src/store';
 import { activeDeck, dueCards } from '../../src/repository';
 import { Button, Empty, Field, Panel, Screen, colors, s } from '../../src/ui';
+
 export default function Decks() {
   const { data } = useStore();
   const [search, setSearch] = useState('');
   const due = dueCards(data);
-  const decks = data.decks.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()));
+  const query = search.trim().toLocaleLowerCase();
+  const decks = data.decks.filter((deck) =>
+    [deck.name, deck.description].some((value) => value.toLocaleLowerCase().includes(query)),
+  );
+  const create = () => router.push('/decks/new');
   return (
-    <Screen title="Practice your decks." eyebrow="PRACTICE">
+    <Screen
+      title="Your decks"
+      eyebrow="LIBRARY"
+      subtitle={data.decks.length + (data.decks.length === 1 ? ' deck' : ' decks')}
+      action={<Button title="+ New deck" size="compact" onPress={create} />}
+    >
       <Field
-        label="Find a deck"
-        placeholder="Search your collection"
+        label="Search decks"
+        placeholder="Name or subject"
         value={search}
         onChangeText={setSearch}
+        autoCorrect={false}
+        returnKeyType="search"
+        clearButtonMode="while-editing"
       />
-      <Text style={s.body}>Choose a deck to practice, or review the cards due today.</Text>
-      <Button
-        title={'Review due cards (' + due.length + ')'}
-        disabled={!due.length}
-        onPress={() => router.push('/review')}
-      />
-      {decks.map((deck) => {
-        const cards = data.cards.filter((c) => c.deckId === deck.id);
-        return (
-          <View key={deck.id}>
-            <Panel>
-              <View style={s.between}>
-                <View
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 16,
-                    backgroundColor: deck.color,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ fontSize: 25 }}>{deck.icon || '▤'}</Text>
-                </View>
-                {!activeDeck(deck) ? (
-                  <Text style={s.caption}>PAUSED</Text>
-                ) : (
-                  <View style={s.pill}>
-                    <Text style={s.pillText}>
-                      {due.filter((c) => c.deckId === deck.id).length} DUE
+      {due.length > 0 && (
+        <Panel tint>
+          <View style={s.between}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={s.label}>Ready to review</Text>
+              <Text style={s.caption}>{due.length} cards due across your decks</Text>
+            </View>
+            <Button title="Review" size="compact" onPress={() => router.push('/review')} />
+          </View>
+        </Panel>
+      )}
+      <View style={{ gap: 12 }}>
+        {decks.map((deck) => {
+          const count = data.cards.filter((card) => card.deckId === deck.id).length;
+          const dueCount = due.filter((card) => card.deckId === deck.id).length;
+          const paused = !activeDeck(deck);
+          return (
+            <Pressable
+              key={deck.id}
+              accessibilityRole="button"
+              accessibilityLabel={'Open ' + deck.name + ', ' + count + ' cards'}
+              onPress={() => router.push({ pathname: '/decks/[id]', params: { id: deck.id } })}
+              style={({ pressed }) => ({ opacity: pressed ? 0.76 : 1 })}
+            >
+              <Panel style={{ padding: 18 }}>
+                <View style={[s.row, { alignItems: 'flex-start' }]}>
+                  <View
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 14,
+                      backgroundColor: deck.color,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 23 }}>{deck.icon || '▤'}</Text>
+                  </View>
+                  <View style={{ flex: 1, gap: 5 }}>
+                    <Text style={[s.sectionTitle, { fontSize: 18 }]}>{deck.name}</Text>
+                    {!!deck.description && (
+                      <Text numberOfLines={2} style={s.caption}>
+                        {deck.description}
+                      </Text>
+                    )}
+                    <Text style={s.caption}>
+                      {count} {count === 1 ? 'card' : 'cards'}
+                      {paused
+                        ? ' · Reviews paused'
+                        : dueCount
+                          ? ' · ' + dueCount + ' due'
+                          : ''}
+                      {deck.version === 0 ? ' · On this device' : ''}
                     </Text>
                   </View>
-                )}
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={'Open ' + deck.name}
-                onPress={() =>
-                  router.push({ pathname: '/decks/[id]', params: { id: deck.id } })
-                }
-              >
-                <Text style={s.sectionTitle}>{deck.name} →</Text>
-              </Pressable>
-              {!!deck.description && (
-                <Text numberOfLines={2} style={s.body}>
-                  {deck.description}
-                </Text>
-              )}
-              <Button
-                title="Practice this deck"
-                disabled={!cards.length}
-                onPress={() =>
-                  router.push({
-                    pathname: '/review',
-                    params: { deckId: deck.id, practice: 'true' },
-                  })
-                }
-              />
-              <Text style={s.caption}>
-                {cards.length} cards{deck.version === 0 ? ' · saved on this device' : ''}
-              </Text>
-            </Panel>
-          </View>
-        );
-      })}
+                  <Text style={{ color: colors.muted, fontSize: 24 }}>›</Text>
+                </View>
+              </Panel>
+            </Pressable>
+          );
+        })}
+      </View>
       {!decks.length && (
         <Empty
-          title={search ? 'No matching decks.' : 'An open shelf.'}
+          title={query ? 'No decks found' : 'Create your first deck'}
           detail={
-            search
-              ? 'Try a different name.'
-              : 'Use Create to generate your first deck, then come here to practice.'
+            query
+              ? 'Try another name or subject.'
+              : 'Give it a name, then add your own cards or generate a few suggestions.'
+          }
+          action={
+            query ? (
+              <Button title="Clear search" variant="secondary" onPress={() => setSearch('')} />
+            ) : (
+              <Button title="Create deck" onPress={create} />
+            )
           }
         />
       )}

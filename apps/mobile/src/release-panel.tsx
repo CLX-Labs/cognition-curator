@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Platform, Text } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 import { Button, Panel, colors, s } from './ui';
@@ -28,6 +28,7 @@ export default function ReleasePanel() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const inFlight = useRef(false);
   const development = Platform.OS === 'web' || __DEV__;
   // The installed binary's number is independent of the changeable OTA manifest.
@@ -43,10 +44,10 @@ export default function ReleasePanel() {
       const result = await checkUpdate();
       setMessage(
         result === 'ready'
-          ? 'Update downloaded. Restart to run it; the release label changes after restart.'
+          ? 'Your update is ready. Restart to use the new version.'
           : result === 'none'
-            ? 'No OTA update is available for this build. For a newer native release, update through TestFlight.'
-            : 'The update was not downloaded. Your running version is unchanged; try again.',
+            ? 'You’re up to date for this build. New native releases appear in TestFlight.'
+            : 'The update could not be downloaded. Try again when connected.',
       );
     } catch (cause) {
       setError(
@@ -78,31 +79,20 @@ export default function ReleasePanel() {
   }
   return (
     <Panel>
-      <Text style={s.sectionTitle}>App version</Text>
-      <Text selectable style={s.label}>
+      <View style={s.between}>
+        <Text style={s.sectionTitle}>App version</Text>
+        {pending && (
+          <View style={s.pill}>
+            <Text style={s.pillText}>Update ready</Text>
+          </View>
+        )}
+      </View>
+      <Text selectable style={[s.label, { fontSize: 18, lineHeight: 26 }]}>
         {releaseLabel(release.id, development, release.version)}
-      </Text>
-      <Text style={s.body}>
-        Native {Constants.expoConfig?.version ?? 'unknown'} ·{' '}
-        {currentlyRunning.channel === 'testflight' ? 'TestFlight build' : 'Build'}{' '}
-        {build ?? (development ? 'development' : 'unknown')}
-      </Text>
-      <Text style={s.caption}>
-        {development
-          ? 'Development preview'
-          : !Updates.isEnabled || currentlyRunning.isEmbeddedLaunch
-            ? 'Running the version included in this build'
-            : 'Running an OTA update'}
-        {currentlyRunning.channel ? ' · ' + currentlyRunning.channel : ''}
       </Text>
       {release.commit && (
         <Text selectable style={s.caption}>
           Commit {release.commit.slice(0, 7)}
-        </Text>
-      )}
-      {currentlyRunning.updateId && (
-        <Text selectable style={s.caption}>
-          Update {currentlyRunning.updateId}
         </Text>
       )}
       {currentlyRunning.isEmergencyLaunch && (
@@ -116,6 +106,7 @@ export default function ReleasePanel() {
         pending ? (
           <Button
             title="Restart to apply update"
+            size="compact"
             loading={busy || restarting}
             onPress={() => void restart()}
           />
@@ -123,12 +114,47 @@ export default function ReleasePanel() {
           <Button
             title="Check for updates"
             variant="secondary"
+            size="compact"
             loading={busy || isChecking || isDownloading}
             onPress={() => void check()}
           />
         )
       ) : (
-        <Text style={s.caption}>OTA checks are available in installed release builds.</Text>
+        <Text style={s.caption}>
+          App updates are available in your installed TestFlight build.
+        </Text>
+      )}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: detailsOpen }}
+        accessibilityLabel="Build details"
+        onPress={() => setDetailsOpen((open) => !open)}
+        style={[s.between, { minHeight: 44 }]}
+      >
+        <Text style={s.caption}>Build details</Text>
+        <Text style={{ color: colors.muted }}>{detailsOpen ? '−' : '+'}</Text>
+      </Pressable>
+      {detailsOpen && (
+        <View style={{ gap: 6 }}>
+          <Text style={s.caption}>
+            Native {Constants.expoConfig?.version ?? 'unknown'} ·{' '}
+            {currentlyRunning.channel === 'testflight' ? 'TestFlight build' : 'Build'}{' '}
+            {build ?? (development ? 'development' : 'unknown')}
+          </Text>
+          <Text style={s.caption}>
+            {development
+              ? 'Development preview'
+              : !Updates.isEnabled || currentlyRunning.isEmbeddedLaunch
+                ? 'Included in this build'
+                : 'Running an OTA update'}
+            {currentlyRunning.channel ? ' · ' + currentlyRunning.channel : ''}
+          </Text>
+          {currentlyRunning.updateId && (
+            <Text selectable style={s.caption}>
+              Update {currentlyRunning.updateId}
+            </Text>
+          )}
+        </View>
       )}
     </Panel>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import {
   importResponseSchema,
   type ImportRequest,
@@ -45,6 +45,7 @@ export default function ProfileScreen() {
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [recoveryBackup, setRecoveryBackup] = useState<string | null>(null);
   const [freshAuthRequired, setFreshAuthRequired] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
   useEffect(() => {
     let active = true;
     void inspectLegacyStore()
@@ -59,6 +60,7 @@ export default function ProfileScreen() {
         .getState<ImportWorkflow>(IMPORT_KEY)
         .then((saved) => {
           if (active) setWorkflow(saved);
+          if (active && saved) setRecoveryOpen(true);
         })
         .catch((cause) => {
           if (active) reportError(cause);
@@ -96,7 +98,10 @@ export default function ProfileScreen() {
     setBusy('import');
     setMigrationError(null);
     try {
-      const request = workflow.request ?? { ...workflow.plan.request, ownershipConfirmed: true };
+      const request = workflow.request ?? {
+        ...workflow.plan.request,
+        ownershipConfirmed: true,
+      };
       const pending = { ...workflow, request };
       await repository.setState(IMPORT_KEY, pending);
       setWorkflow(pending);
@@ -145,7 +150,8 @@ export default function ProfileScreen() {
     );
   }
   function resolve(issue: LocalIssue, action: 'server' | 'retry') {
-    const title = action === 'server' ? 'Use the server version?' : 'Submit your version again?';
+    const title =
+      action === 'server' ? 'Use the server version?' : 'Submit your version again?';
     const detail =
       action === 'server'
         ? 'This replaces the visible local version and its queued edits with the server version. A recovery copy of every replaced change remains in your export.'
@@ -160,69 +166,113 @@ export default function ProfileScreen() {
     ]);
   }
   return (
-    <Screen title="Your learning, kept yours." eyebrow="YOUR SPACE">
-      <ReleasePanel />
-      <Panel tint>
+    <Screen title="You" subtitle="Your account, library, and app updates.">
+      <Panel>
         <View style={s.row}>
           <View
             style={{
               width: 54,
               height: 54,
               borderRadius: 27,
-              backgroundColor: colors.ink,
+              backgroundColor: colors.green,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontSize: 25, color: '#fff' }}>
+            <Text style={{ fontSize: 23, fontWeight: '700', color: colors.ink }}>
               {(session?.user.name || session?.user.email || 'R').charAt(0).toUpperCase()}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.sectionTitle}>{session?.user.name || 'Your Recollect account'}</Text>
+            <Text style={s.sectionTitle}>
+              {session?.user.name || 'Your Recollect account'}
+            </Text>
             <Text style={s.body}>{session?.user.email ?? 'Signed in with Apple'}</Text>
           </View>
         </View>
-        <Text style={s.caption}>
-          Your library is stored on this device and partitioned by your signed-in account. Signing
-          out clears the widget; it preserves your local cards and pending changes for this account.
-        </Text>
+        <View style={s.divider} />
+        <View style={s.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.sectionTitle, { fontSize: 26 }]}>{data.decks.length}</Text>
+            <Text style={s.caption}>Decks in your library</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.sectionTitle, { fontSize: 26 }]}>{data.cards.length}</Text>
+            <Text style={s.caption}>Cards to remember</Text>
+          </View>
+        </View>
       </Panel>
+      <ReleasePanel />
       <Panel>
-        <Text style={s.sectionTitle}>Sync & portability</Text>
+        <View style={s.between}>
+          <Text style={s.sectionTitle}>Your library</Text>
+          <View
+            style={[
+              s.pill,
+              {
+                backgroundColor: syncError || data.issues.length ? colors.pale : colors.green,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                s.pillText,
+                { color: syncError || data.issues.length ? colors.accent : colors.ink },
+              ]}
+            >
+              {data.issues.length
+                ? 'Needs attention'
+                : syncState === 'offline'
+                  ? 'Saved offline'
+                  : data.pending
+                    ? 'Sync pending'
+                    : 'Up to date'}
+            </Text>
+          </View>
+        </View>
         <Text style={s.body}>
           {data.pending
             ? data.pending + ' changes waiting to synchronize.'
             : syncState === 'idle'
-              ? 'Your local library is ready.'
-              : 'Your library remains available on this device.'}
+              ? 'Your cards and reviews are saved on this device.'
+              : 'Your cards remain available on this device.'}
         </Text>
         {!!widgetError && (
           <Text style={{ color: colors.danger, lineHeight: 22 }}>
             Widget refresh unavailable: {widgetError}
           </Text>
         )}
-        {!!syncError && <Text style={{ color: colors.danger, lineHeight: 22 }}>{syncError}</Text>}
-        <Button
-          title="Synchronize now"
-          variant="secondary"
-          loading={syncState === 'syncing'}
-          onPress={() => void sync()}
-        />
-        <Button
-          title="Export my library"
-          variant="secondary"
-          loading={busy === 'export'}
-          onPress={() =>
-            void run('export', async () => {
-              if (repository) await shareJSON('recollect-library', await repository.exportData());
-            })
-          }
-        />
-        <Text style={s.caption}>
-          The export includes cards, review events, pending changes, workflow recovery data, and
-          conflict copies. Authentication tokens are excluded.
-        </Text>
+        {!!syncError && (
+          <Text style={{ color: colors.danger, lineHeight: 22 }}>{syncError}</Text>
+        )}
+        <View style={[s.row, { alignItems: 'stretch' }]}>
+          <View style={{ flex: 1 }}>
+            <Button
+              title="Sync now"
+              size="compact"
+              variant="secondary"
+              loading={syncState === 'syncing'}
+              disabled={busy !== null}
+              onPress={() => void sync()}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              title="Export library"
+              size="compact"
+              variant="secondary"
+              loading={busy === 'export'}
+              disabled={busy !== null}
+              onPress={() =>
+                void run('export', async () => {
+                  if (repository)
+                    await shareJSON('recollect-library', await repository.exportData());
+                })
+              }
+            />
+          </View>
+        </View>
+        <Text style={s.caption}>Export a copy of your cards, reviews, and saved drafts.</Text>
       </Panel>
       {data.issues.length > 0 && (
         <>
@@ -254,7 +304,9 @@ export default function ProfileScreen() {
                   >
                     <Text style={s.label}>Server version</Text>
                     <Text style={s.body}>
-                      {'name' in issue.canonical ? issue.canonical.name : issue.canonical.front}
+                      {'name' in issue.canonical
+                        ? issue.canonical.name
+                        : issue.canonical.front}
                     </Text>
                     {'back' in issue.canonical && (
                       <Text style={s.body}>{issue.canonical.back}</Text>
@@ -281,156 +333,181 @@ export default function ProfileScreen() {
         </>
       )}
       <Panel>
-        <Text style={s.sectionTitle}>Bring your original library</Text>
-        <Text style={s.body}>
-          {inspection?.message ?? 'Checking for the original iOS library…'}
-        </Text>
-        <Text style={s.caption}>
-          Recovery reads a protected copy of the original SwiftData store. It does not erase the
-          original. You can export the copy and review ownership before any upload.
-        </Text>
-        <Text style={s.caption}>
-          An approved import sends the cards and their non-secret recovery archive, including
-          original reviews, preferences, and pending sync records, to your configured server.
-        </Text>
-        {(inspection?.status === 'found' || inspection?.status === 'needs_recovery') &&
-          !workflow && (
-            <Button
-              title="Prepare a local recovery copy"
-              loading={busy === 'recovery'}
-              onPress={() => void run('recovery', inspectAndExport)}
-            />
-          )}
-        {!!migrationError && (
-          <Text style={{ color: colors.danger, lineHeight: 22 }}>{migrationError}</Text>
-        )}
-        {!!recoveryBackup && (
-          <Button
-            title="Export preserved database snapshot"
-            variant="secondary"
-            onPress={() => void run('backup', () => shareExistingFile(recoveryBackup))}
-          />
-        )}
-        {!!workflow && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: recoveryOpen }}
+          accessibilityLabel="Recover your original library"
+          onPress={() => setRecoveryOpen((open) => !open)}
+          style={[s.between, { minHeight: 44 }]}
+        >
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={s.sectionTitle}>Recover an old library</Text>
+            <Text style={s.caption}>
+              {workflow
+                ? 'Your saved import is ready to review'
+                : inspection?.status === 'found' || inspection?.status === 'needs_recovery'
+                  ? 'An original iOS library was found'
+                  : 'Bring cards over from the original app'}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 21, color: colors.muted }}>{recoveryOpen ? '−' : '+'}</Text>
+        </Pressable>
+        {recoveryOpen && (
           <>
-            <View style={s.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.metric}>{workflow.legacy.decks.length}</Text>
-                <Text style={s.caption}>ORIGINAL DECKS</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.metric}>{workflow.legacy.cards.length}</Text>
-                <Text style={s.caption}>ORIGINAL CARDS</Text>
-              </View>
-            </View>
-            <Button
-              title="Export original library as JSON"
-              variant="secondary"
-              onPress={() =>
-                void run('legacy-export', () =>
-                  shareExistingFile(workflow.legacy.manifest.exportFileUri),
-                )
-              }
-            />
-            <Button
-              title="Export protected database snapshot"
-              variant="secondary"
-              onPress={() =>
-                void run('legacy-backup', () =>
-                  shareExistingFile(workflow.legacy.manifest.backupFileUri),
-                )
-              }
-            />
-            {workflow.plan.notes.map((note, index) => (
-              <Text key={index} style={s.caption}>
-                • {note}
-              </Text>
-            ))}
-            {workflow.plan.problems.map((problem, index) => (
-              <Text key={index} style={{ color: colors.danger, lineHeight: 21 }}>
-                • {problem}
-              </Text>
-            ))}
-            {!workflow.result && workflow.plan.request && (
-              <Button
-                title={workflow.request ? 'Retry the saved import' : 'Review ownership & import'}
-                loading={busy === 'import'}
-                disabled={busy !== null && busy !== 'import'}
-                onPress={() => (workflow.request ? void submitImport() : confirmImport())}
-              />
+            <Text style={s.body}>
+              {inspection?.message ?? 'Checking for the original iOS library…'}
+            </Text>
+            <Text style={s.caption}>
+              Recovery reads a protected copy of the original SwiftData store. It does not
+              erase the original. You can export the copy and review ownership before any
+              upload.
+            </Text>
+            <Text style={s.caption}>
+              An approved import sends the cards and their non-secret recovery archive,
+              including original reviews, preferences, and pending sync records, to your
+              configured server.
+            </Text>
+            {(inspection?.status === 'found' || inspection?.status === 'needs_recovery') &&
+              !workflow && (
+                <Button
+                  title="Prepare a local recovery copy"
+                  loading={busy === 'recovery'}
+                  onPress={() => void run('recovery', inspectAndExport)}
+                />
+              )}
+            {!!migrationError && (
+              <Text style={{ color: colors.danger, lineHeight: 22 }}>{migrationError}</Text>
             )}
-            {!workflow.plan.request && (
-              <Text style={s.body}>
-                The source is preserved. Resolve these account or data issues before importing; this
-                screen will not guess, discard records, or clamp your schedule.
-              </Text>
-            )}
-            {!workflow.request && !workflow.result && (
+            {!!recoveryBackup && (
               <Button
-                title="Recheck the original library"
+                title="Export preserved database snapshot"
                 variant="secondary"
-                disabled={busy !== null}
-                onPress={() =>
-                  void run('recheck', async () => {
-                    if (repository) await repository.archive({ previousMigrationPlan: workflow });
-                    await inspectAndExport();
-                  })
-                }
+                onPress={() => void run('backup', () => shareExistingFile(recoveryBackup))}
               />
             )}
-            {freshAuthRequired && (
-              <Button
-                title="Confirm your Apple sign-in again"
-                variant="secondary"
-                onPress={() =>
-                  void run('reauth', async () => {
-                    await api.signInApple();
-                    setFreshAuthRequired(false);
-                  })
-                }
-              />
-            )}
-            {!!workflow.result && (
+            {!!workflow && (
               <>
-                <Text style={s.sectionTitle}>
-                  {workflow.result.conflicts.length
-                    ? 'Imported with records to reconcile'
-                    : 'Import recorded by the server'}
-                </Text>
-                <Text style={s.body}>
-                  {workflow.result.importedDeckIds.length} decks and{' '}
-                  {workflow.result.importedCardIds.length} cards imported.{' '}
-                  {workflow.result.conflicts.length} existing records were preserved without
-                  overwrite.
-                </Text>
-                {workflow.result.conflicts.map((conflict) => (
-                  <Text
-                    key={conflict.entity + conflict.id}
-                    style={{ color: colors.danger, lineHeight: 21 }}
-                  >
-                    {conflict.entity} {conflict.id}: {conflict.reason}
+                <View style={s.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.metric}>{workflow.legacy.decks.length}</Text>
+                    <Text style={s.caption}>ORIGINAL DECKS</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.metric}>{workflow.legacy.cards.length}</Text>
+                    <Text style={s.caption}>ORIGINAL CARDS</Text>
+                  </View>
+                </View>
+                <Button
+                  title="Export original library as JSON"
+                  variant="secondary"
+                  onPress={() =>
+                    void run('legacy-export', () =>
+                      shareExistingFile(workflow.legacy.manifest.exportFileUri),
+                    )
+                  }
+                />
+                <Button
+                  title="Export protected database snapshot"
+                  variant="secondary"
+                  onPress={() =>
+                    void run('legacy-backup', () =>
+                      shareExistingFile(workflow.legacy.manifest.backupFileUri),
+                    )
+                  }
+                />
+                {workflow.plan.notes.map((note, index) => (
+                  <Text key={index} style={s.caption}>
+                    • {note}
                   </Text>
                 ))}
-                <Text style={s.caption}>
-                  Your original files and complete migration receipt remain available here and in
-                  your export. Synchronize to load the imported cards.
-                </Text>
+                {workflow.plan.problems.map((problem, index) => (
+                  <Text key={index} style={{ color: colors.danger, lineHeight: 21 }}>
+                    • {problem}
+                  </Text>
+                ))}
+                {!workflow.result && workflow.plan.request && (
+                  <Button
+                    title={
+                      workflow.request ? 'Retry the saved import' : 'Review ownership & import'
+                    }
+                    loading={busy === 'import'}
+                    disabled={busy !== null && busy !== 'import'}
+                    onPress={() => (workflow.request ? void submitImport() : confirmImport())}
+                  />
+                )}
+                {!workflow.plan.request && (
+                  <Text style={s.body}>
+                    The source is preserved. Resolve these account or data issues before
+                    importing; this screen will not guess, discard records, or clamp your
+                    schedule.
+                  </Text>
+                )}
+                {!workflow.request && !workflow.result && (
+                  <Button
+                    title="Recheck the original library"
+                    variant="secondary"
+                    disabled={busy !== null}
+                    onPress={() =>
+                      void run('recheck', async () => {
+                        if (repository)
+                          await repository.archive({ previousMigrationPlan: workflow });
+                        await inspectAndExport();
+                      })
+                    }
+                  />
+                )}
+                {freshAuthRequired && (
+                  <Button
+                    title="Confirm your Apple sign-in again"
+                    variant="secondary"
+                    onPress={() =>
+                      void run('reauth', async () => {
+                        await api.signInApple();
+                        setFreshAuthRequired(false);
+                      })
+                    }
+                  />
+                )}
+                {!!workflow.result && (
+                  <>
+                    <Text style={s.sectionTitle}>
+                      {workflow.result.conflicts.length
+                        ? 'Imported with records to reconcile'
+                        : 'Import recorded by the server'}
+                    </Text>
+                    <Text style={s.body}>
+                      {workflow.result.importedDeckIds.length} decks and{' '}
+                      {workflow.result.importedCardIds.length} cards imported.{' '}
+                      {workflow.result.conflicts.length} existing records were preserved
+                      without overwrite.
+                    </Text>
+                    {workflow.result.conflicts.map((conflict) => (
+                      <Text
+                        key={conflict.entity + conflict.id}
+                        style={{ color: colors.danger, lineHeight: 21 }}
+                      >
+                        {conflict.entity} {conflict.id}: {conflict.reason}
+                      </Text>
+                    ))}
+                    <Text style={s.caption}>
+                      Your original files and complete migration receipt remain available here
+                      and in your export. Synchronize to load the imported cards.
+                    </Text>
+                  </>
+                )}
               </>
             )}
           </>
         )}
       </Panel>
-      <Panel>
-        <Text style={s.sectionTitle}>A quieter kind of practice.</Text>
-        <Text style={s.body}>
-          Manual cards and reviews work offline. Generation, account verification, and cross-device
-          synchronization use your configured server.
-        </Text>
-        <Text style={s.caption}>Recollect AI</Text>
-      </Panel>
+      <Text style={s.caption}>
+        Cards and practice work offline. Connect to generate suggestions and sync between
+        devices.
+      </Text>
       <Button
         title="Sign out"
-        variant="secondary"
+        size="compact"
+        variant="ghost"
         disabled={busy !== null}
         onPress={() =>
           Alert.alert(

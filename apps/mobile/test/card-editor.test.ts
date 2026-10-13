@@ -269,6 +269,32 @@ const renderedCards = () =>
   renderer!.root
     .findAllByType('pressable')
     .filter((node) => String(node.props.accessibilityLabel).startsWith('Edit card:'));
+it('offers both due review and all-card practice for the same deck with due cards', async () => {
+  rig.params = { id: 'deck-id' };
+  populateDeck(3);
+  rig.extraCards = rig.extraCards.map((card) => ({
+    ...card,
+    schedule: { ...card.schedule, dueAt: '2020-01-01T00:00:00.000Z' },
+  }));
+  await act(async () => {
+    renderer = create(React.createElement(DeckDetail));
+  });
+  expect(button('Review 3 due')).toBeDefined();
+  expect(button('Practice all')).toBeDefined();
+  await act(async () => button('Review 3 due').props.onPress());
+  expect(rig.push).toHaveBeenLastCalledWith({
+    pathname: '/review',
+    params: { deckId: 'deck-id', practice: 'false' },
+  });
+  await act(async () => button('Practice all').props.onPress());
+  expect(rig.push).toHaveBeenLastCalledWith({
+    pathname: '/review',
+    params: { deckId: 'deck-id', practice: 'true' },
+  });
+  expect(renderer!.root.findByType('back').props.label).toBe('Decks');
+  await act(async () => renderer!.root.findByType('back').props.onPress());
+  expect(rig.dismissTo).toHaveBeenLastCalledWith('/decks');
+});
 it('bounds a large deck to 20 card rows while searching all cards and resetting pagination', async () => {
   rig.params = { id: 'deck-id' };
   populateDeck(45);

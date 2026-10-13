@@ -36,7 +36,7 @@ export default function DeckDetail() {
   const deck = data.decks.find((item) => item.id === id);
   if (!deck)
     return (
-      <Screen leading={<Back label="Decks" />}>
+      <Screen leading={<Back label="Decks" onPress={() => router.dismissTo('/decks')} />}>
         <Empty
           title="This deck is unavailable"
           detail="It may have been removed on another device."
@@ -81,7 +81,7 @@ export default function DeckDetail() {
       eyebrow="DECK"
       leading={
         <View style={s.between}>
-          <Back label="Decks" />
+          <Back label="Decks" onPress={() => router.dismissTo('/decks')} />
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ expanded: settingsOpen }}
@@ -155,17 +155,36 @@ export default function DeckDetail() {
         </View>
       </Panel>
       {cards.length > 0 && (
-        <Button
-          title={due.length ? 'Review ' + due.length + ' due cards' : 'Practice this deck'}
-          variant="secondary"
-          size="compact"
-          onPress={() =>
-            router.push({
-              pathname: '/review',
-              params: { deckId: deck.id, practice: due.length ? 'false' : 'true' },
-            })
-          }
-        />
+        <View style={s.row}>
+          {due.length > 0 && (
+            <View style={{ flex: 1 }}>
+              <Button
+                title={'Review ' + due.length + ' due'}
+                variant="secondary"
+                size="compact"
+                onPress={() =>
+                  router.push({
+                    pathname: '/review',
+                    params: { deckId: deck.id, practice: 'false' },
+                  })
+                }
+              />
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Button
+              title={due.length ? 'Practice all' : 'Practice this deck'}
+              variant="secondary"
+              size="compact"
+              onPress={() =>
+                router.push({
+                  pathname: '/review',
+                  params: { deckId: deck.id, practice: 'true' },
+                })
+              }
+            />
+          </View>
+        </View>
       )}
       {settingsOpen && (
         <Panel style={{ padding: 18 }}>

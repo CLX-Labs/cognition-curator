@@ -102,7 +102,7 @@ describe('subject decks and answer drafts', () => {
       candidates: [
         {
           id: randomUUID(),
-          front: 'What is ATP?',
+          front: 'ATP',
           back: 'An energy-carrying molecule.',
           hint: '',
           explanation: '',

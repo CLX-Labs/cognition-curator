@@ -271,7 +271,7 @@ export default function GenerateScreen() {
       for (const id of before.acceptance?.candidateIds ?? before.selectedIds) {
         const candidate = before.acceptance?.edits[id] ?? before.drafts[id];
         if (!candidate?.front.trim() || !candidate.back.trim())
-          throw new Error('Each selected card needs a question and an answer.');
+          throw new Error('Each selected card needs a title and an answer.');
       }
       const pending = before.acceptance
         ? before
@@ -768,7 +768,7 @@ export default function GenerateScreen() {
                 {editing ? (
                   <>
                     <Field
-                      label="Question"
+                      label="Title"
                       multiline
                       value={candidate.front}
                       editable={!locked}

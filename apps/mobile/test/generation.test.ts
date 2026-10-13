@@ -127,7 +127,9 @@ describe('subject decks and answer drafts', () => {
     expect(answerForQuestion(result, 'What is DNA?')).toBeNull();
     expect((await repo.snapshot()).cards).toHaveLength(0);
     request.mockResolvedValue(job);
-    await fetchGeneration(repo, result, 'answer:new');
+    const save = vi.spyOn(repo, 'setState');
+    expect(await fetchGeneration(repo, result, 'answer:new')).toBe(result);
+    expect(save).not.toHaveBeenCalled();
     expect(request).toHaveBeenLastCalledWith('/v1/generations/' + job.id, {
       ownerId: repo.ownerId,
     });

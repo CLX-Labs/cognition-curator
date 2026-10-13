@@ -16,6 +16,30 @@ const snapshot = (ownerId: string) => ({
 });
 
 describe('widget owner lifecycle', () => {
+  it('does not reload native widgets for timestamp-only background refreshes', async () => {
+    const native = {
+      setWidgetOwner: vi.fn(async () => {}),
+      publishWidget: vi.fn(async () => {}),
+    };
+    const coordinator = new WidgetCoordinator(native);
+    await coordinator.setOwner('owner-a');
+    await coordinator.publish(snapshot('owner-a'));
+    await coordinator.publish({ ...snapshot('owner-a'), updatedAt: '2026-10-13T00:00:00Z' });
+    expect(native.publishWidget).toHaveBeenCalledTimes(1);
+    await coordinator.publish({ ...snapshot('owner-a'), dueCount: 3 });
+    expect(native.publishWidget).toHaveBeenCalledTimes(2);
+  });
+  it('retries unchanged widget content after a failed publish', async () => {
+    const native = {
+      setWidgetOwner: vi.fn(async () => {}),
+      publishWidget: vi.fn(async () => {}).mockRejectedValueOnce(new Error('Native failure')),
+    };
+    const coordinator = new WidgetCoordinator(native);
+    await coordinator.setOwner('owner-a');
+    await expect(coordinator.publish(snapshot('owner-a'))).rejects.toThrow('Native failure');
+    await coordinator.publish(snapshot('owner-a'));
+    expect(native.publishWidget).toHaveBeenCalledTimes(2);
+  });
   it('drops queued old-owner content before sign-out and finishes by clearing native state', async () => {
     const pending = deferred();
     const native = {

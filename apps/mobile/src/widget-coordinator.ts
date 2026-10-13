@@ -9,6 +9,7 @@ export class WidgetCoordinator {
   private desiredOwner: string | null = null;
   private epoch = 0;
   private tail: Promise<unknown> = Promise.resolve();
+  private publishedContent: string | null = null;
   constructor(private readonly adapter: WidgetAdapter) {}
   private queue(work: () => Promise<void>) {
     const next = this.tail.catch(() => undefined).then(work);
@@ -17,6 +18,7 @@ export class WidgetCoordinator {
   }
   setOwner(ownerId: string | null) {
     this.desiredOwner = ownerId;
+    this.publishedContent = null;
     const epoch = ++this.epoch;
     return this.queue(async () => {
       if (epoch !== this.epoch) return;
@@ -28,7 +30,11 @@ export class WidgetCoordinator {
     const epoch = this.epoch;
     return this.queue(async () => {
       if (epoch !== this.epoch || snapshot.ownerId !== this.desiredOwner) return;
+      const { updatedAt: _timestamp, ...content } = snapshot;
+      const signature = JSON.stringify(content);
+      if (this.publishedContent === signature) return;
       await this.adapter.publishWidget(snapshot);
+      if (epoch === this.epoch) this.publishedContent = signature;
     });
   }
 }

@@ -168,8 +168,9 @@ export default function GenerateScreen() {
     focused &&
       active &&
       loaded &&
-      !!state?.job &&
-      ['queued', 'running'].includes(state.job.status) &&
+      !!state &&
+      !state.accepted &&
+      (!state.job || ['queued', 'running'].includes(state.job.status)) &&
       !busy &&
       !error,
     async () => {
@@ -662,6 +663,15 @@ export default function GenerateScreen() {
           <Text style={s.caption}>
             You can leave this screen. Your request and suggestions stay saved.
           </Text>
+          {state.job && !error && (
+            <Button
+              title="Check status"
+              size="compact"
+              variant="secondary"
+              loading={busy}
+              onPress={() => void resume()}
+            />
+          )}
           {!state.job && !busy && !error && (
             <Button
               title="Continue saved request"

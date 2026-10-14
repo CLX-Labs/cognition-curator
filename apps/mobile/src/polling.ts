@@ -7,6 +7,8 @@ export function useAppActive() {
     const subscription = AppState.addEventListener('change', (state) =>
       setActive(state === 'active'),
     );
+    // Activation can arrive after render but before the listener is installed.
+    setActive(AppState.currentState === 'active');
     return () => subscription.remove();
   }, []);
   return active;

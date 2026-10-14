@@ -517,6 +517,42 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL backend integration'
     expect(r.statusCode, r.body).toBe(202);
     return { job: r.json(), payload };
   }
+  it('logs generation outcomes without prompts, candidates, credentials, or provider messages', async () => {
+    const info = vi.spyOn(app.log, 'info');
+    const s = await login(),
+      ids = await setup(s),
+      { job, payload } = await generate(s, ids.deckId);
+    const privateMessage = 'Private provider details';
+    await db.query("UPDATE recollect.generation_jobs SET status='failed',error=$2 WHERE id=$1", [
+      job.id,
+      { code: 'provider_http_429', message: privateMessage },
+    ]);
+    const response = await app.inject({ url: '/v1/generations/' + job.id, headers: headers(s) });
+    expect(response.statusCode).toBe(200);
+    expect(info).toHaveBeenCalledWith(
+      {
+        component: 'generation',
+        jobId: job.id,
+        status: 'failed',
+        candidateCount: 0,
+        errorCode: 'provider_http_429',
+      },
+      'Generation status checked',
+    );
+    const logged = JSON.stringify(
+      info.mock.calls.filter(
+        ([fields]) =>
+          typeof fields === 'object' &&
+          fields !== null &&
+          'component' in fields &&
+          fields.component === 'generation',
+      ),
+    );
+    expect(logged).not.toContain(payload.prompt);
+    expect(logged).not.toContain(privateMessage);
+    expect(logged).not.toContain(s.accessToken);
+    expect(logged).not.toContain(s.refreshToken);
+  });
   it('reserves generation quota once and accepts stable candidate IDs only once across new request IDs', async () => {
     const s = await login(),
       ids = await setup(s),

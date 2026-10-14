@@ -7,6 +7,7 @@ import {
   pushRequestSchema,
   revisionSchema,
   syncOperationSchema,
+  type GenerationJob,
 } from '@recollect/contracts';
 import { DomainError, type Database } from '@recollect/db';
 import { AuthService, type AppleVerifier } from './auth.js';
@@ -14,6 +15,16 @@ import type { ApiConfig } from './config.js';
 import { SyncService } from './sync.js';
 import { GenerationService } from './generations.js';
 import { importDevice } from './imports.js';
+
+function generationLog(job: GenerationJob) {
+  return {
+    component: 'generation',
+    jobId: job.id,
+    status: job.status,
+    candidateCount: job.candidates.length,
+    errorCode: job.error?.code ?? null,
+  };
+}
 
 export async function buildApp(options: {
   db: Database;
@@ -184,22 +195,22 @@ export async function buildApp(options: {
         historyIncludesImportedCheckpoints: true,
       };
     });
-    secured.post('/v1/generations', async (request, reply) =>
-      reply
-        .code(202)
-        .send(
-          await generation.create(
-            request.identity!.ownerId,
-            generationRequestSchema.parse(request.body),
-          ),
-        ),
-    );
-    secured.get('/v1/generations/:id', (request) =>
-      generation.get(
+    secured.post('/v1/generations', async (request, reply) => {
+      const job = await generation.create(
+        request.identity!.ownerId,
+        generationRequestSchema.parse(request.body),
+      );
+      request.log.info(generationLog(job), 'Generation request accepted');
+      return reply.code(202).send(job);
+    });
+    secured.get('/v1/generations/:id', async (request) => {
+      const job = await generation.get(
         request.identity!.ownerId,
         z.object({ id: z.uuid() }).parse(request.params).id,
-      ),
-    );
+      );
+      request.log.info(generationLog(job), 'Generation status checked');
+      return job;
+    });
     secured.delete('/v1/generations/:id', (request) =>
       generation.cancel(
         request.identity!.ownerId,

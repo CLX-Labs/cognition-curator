@@ -15,6 +15,8 @@ const rig = vi.hoisted(() => ({
   request: vi.fn(),
   alert: vi.fn(),
   dismissTo: vi.fn(),
+  focused: true,
+  active: true,
 }));
 vi.mock('react-native', () => ({
   Text: ({ children }: { children: React.ReactNode }) =>
@@ -36,8 +38,11 @@ vi.mock('expo-router', () => ({
     push: vi.fn(),
   },
 }));
-vi.mock('expo-router/react-navigation', () => ({ useIsFocused: () => true }));
-vi.mock('../src/polling', () => ({ useAppActive: () => true, usePolling: () => {} }));
+vi.mock('expo-router/react-navigation', () => ({ useIsFocused: () => rig.focused }));
+vi.mock('../src/polling', async () => ({
+  ...(await vi.importActual<typeof import('../src/polling')>('../src/polling')),
+  useAppActive: () => rig.active,
+}));
 vi.mock('../src/store', () => ({
   useStore: () => ({
     repository: rig.repo,
@@ -138,7 +143,11 @@ async function mount() {
   });
 }
 beforeEach(async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(timestamp));
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  rig.focused = true;
+  rig.active = true;
   db = new TestDatabase();
   rig.repo = new Repository(db, randomUUID(), randomUUID(), randomUUID);
   await rig.repo.initialize();
@@ -189,6 +198,7 @@ afterEach(async () => {
   });
   renderer = null;
   db.close();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -382,4 +392,83 @@ it('can set an unfinished answer aside to unlock manual saving while retaining a
   expect(archive).toHaveBeenCalledWith({ answerGeneration: saved });
   expect(await rig.repo!.getState(key)).toBeNull();
   expect(pendingChanged).toHaveBeenLastCalledWith(false);
+});
+
+it('automatically checks an interrupted saved request using its original operation ID', async () => {
+  const generated = job(decks[0]!.id);
+  const saved = { ...workflow(generated), job: null, drafts: {}, selectedIds: [] };
+  await rig.repo!.setState('generation', saved);
+  rig.request.mockResolvedValue(generated);
+  await mount();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2500);
+  });
+  expect(rig.request).toHaveBeenCalledExactlyOnceWith('/v1/generations', {
+    method: 'POST',
+    body: saved.request,
+    ownerId: rig.repo!.ownerId,
+  });
+  expect(content()).toContain('Add 5 cards to deck');
+  expect((await rig.repo!.getState<GenerationWorkflow>('generation'))!.job!.id).toBe(generated.id);
+});
+
+it('keeps checking a queued job after unchanged responses until saved suggestions are ready', async () => {
+  const generated = job(decks[0]!.id);
+  const queued = { ...generated, status: 'queued' as const, candidates: [] };
+  await rig.repo!.setState('generation', { ...workflow(queued), drafts: {}, selectedIds: [] });
+  rig.request.mockResolvedValueOnce(queued).mockResolvedValueOnce(generated);
+  await mount();
+  expect(content()).toContain('Your cards are in the queue');
+  for (let i = 0; i < 2; i++)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+  expect(rig.request).toHaveBeenCalledTimes(2);
+  expect(
+    rig.request.mock.calls.every(
+      ([route, options]) => route === '/v1/generations/' + generated.id && !options.method,
+    ),
+  ).toBe(true);
+  expect(content()).toContain('Add 5 cards to deck');
+});
+
+it('can explicitly check a queued request even when automatic polling is paused', async () => {
+  rig.focused = false;
+  const generated = job(decks[0]!.id);
+  const queued = { ...generated, status: 'queued' as const, candidates: [] };
+  await rig.repo!.setState('generation', { ...workflow(queued), drafts: {}, selectedIds: [] });
+  rig.request.mockResolvedValue(generated);
+  await mount();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(7500);
+  });
+  expect(rig.request).not.toHaveBeenCalled();
+  await press('Check status');
+  expect(rig.request).toHaveBeenCalledExactlyOnceWith('/v1/generations/' + generated.id, {
+    ownerId: rig.repo!.ownerId,
+  });
+  expect(content()).toContain('Add 5 cards to deck');
+});
+
+it('does not send a second status check while an automatic check is still running', async () => {
+  const generated = job(decks[0]!.id);
+  const queued = { ...generated, status: 'queued' as const, candidates: [] };
+  await rig.repo!.setState('generation', { ...workflow(queued), drafts: {}, selectedIds: [] });
+  let finish!: (value: GenerationJob) => void;
+  rig.request.mockImplementationOnce(
+    () =>
+      new Promise<GenerationJob>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await mount();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2500);
+  });
+  await press('Check status');
+  expect(rig.request).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    finish(generated);
+  });
+  expect(content()).toContain('Add 5 cards to deck');
 });

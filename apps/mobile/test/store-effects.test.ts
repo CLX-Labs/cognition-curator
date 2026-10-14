@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { Card, Deck, Session } from '@recollect/contracts';
@@ -333,6 +333,23 @@ function Poller({ enabled, work }: { enabled: boolean; work: () => Promise<void>
   usePolling(enabled && active, work);
   return null;
 }
+it('starts generation polling when activation arrives between render and the effect subscription', async () => {
+  rig.appState = 'inactive';
+  const work = vi.fn(async () => {});
+  function ActivatingScreen() {
+    useLayoutEffect(() => {
+      rig.appState = 'active';
+    }, []);
+    return React.createElement(Poller, { enabled: true, work });
+  }
+  await act(async () => {
+    renderer = create(React.createElement(ActivatingScreen));
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2500);
+  });
+  expect(work).toHaveBeenCalledTimes(1);
+});
 it('generation polling continues after unchanged responses and pauses when hidden or backgrounded', async () => {
   const work = vi.fn(async () => {});
   await act(async () => {

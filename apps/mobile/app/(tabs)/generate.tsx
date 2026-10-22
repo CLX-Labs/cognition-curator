@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { generationRequestSchema, type GenerationCandidate } from '@recollect/contracts';
@@ -12,7 +12,7 @@ import {
   GENERATION_KEY,
   type GenerationWorkflow,
 } from '../../src/generation';
-import { Back, Button, Field, Panel, Screen, colors, s } from '../../src/ui';
+import { Back, Button, Field, Panel, Screen, colors, s, Text } from '../../src/ui';
 import { useAppActive, usePolling } from '../../src/polling';
 
 export default function GenerateScreen() {
@@ -41,8 +41,7 @@ export default function GenerateScreen() {
   const live = (epoch: number) => mounted.current && scope.current === epoch;
   const destination = data.decks.find((deck) => deck.id === (state?.request.deckId ?? deckId));
   const destinationName = destination?.name ?? state?.newDeck?.name ?? 'your deck';
-  const incomingName =
-    data.decks.find((deck) => deck.id === requestedDeck)?.name ?? 'this deck';
+  const incomingName = data.decks.find((deck) => deck.id === requestedDeck)?.name ?? 'this deck';
 
   const update = useCallback(
     (next: GenerationWorkflow) => {
@@ -57,9 +56,7 @@ export default function GenerateScreen() {
           .then(() => repo.setState(GENERATION_KEY, next));
         void writes.current.catch((cause) => {
           if (live(epoch))
-            setError(
-              cause instanceof Error ? cause.message : 'Your edits could not be saved.',
-            );
+            setError(cause instanceof Error ? cause.message : 'Your edits could not be saved.');
         });
       }
     },
@@ -151,9 +148,7 @@ export default function GenerateScreen() {
       } catch (cause) {
         if (live(epoch))
           setError(
-            cause instanceof Error
-              ? cause.message
-              : 'Your request is saved. Retry when connected.',
+            cause instanceof Error ? cause.message : 'Your request is saved. Retry when connected.',
           );
       } finally {
         if (live(epoch)) {
@@ -191,8 +186,7 @@ export default function GenerateScreen() {
     setError(null);
     try {
       const creatingDeck = !replacement && newDeck;
-      const destinationId =
-        replacement?.deckId ?? (creatingDeck ? repository.newId() : deckId);
+      const destinationId = replacement?.deckId ?? (creatingDeck ? repository.newId() : deckId);
       const topic = (replacement?.topic ?? prompt).trim();
       const request = generationRequestSchema.parse({
         operationId: repository.newId(),
@@ -201,9 +195,7 @@ export default function GenerateScreen() {
           topic,
           creatingDeck
             ? []
-            : data.cards
-                .filter((card) => card.deckId === destinationId)
-                .map((card) => card.front),
+            : data.cards.filter((card) => card.deckId === destinationId).map((card) => card.front),
         ),
         count: replacement?.count ?? count,
       });
@@ -216,7 +208,7 @@ export default function GenerateScreen() {
                 id: destinationId,
                 name: topic.slice(0, 200),
                 description: '',
-                color: '#DDE8D9',
+                color: colors.yellow,
                 icon: '📚',
                 isSilenced: false,
                 silencedUntil: null,
@@ -230,8 +222,7 @@ export default function GenerateScreen() {
         accepted: false,
       };
       await writes.current;
-      if (replacement && current.current)
-        await repository.archive({ generation: current.current });
+      if (replacement && current.current) await repository.archive({ generation: current.current });
       await repository.setState(GENERATION_KEY, pending);
       if (!live(epoch)) return;
       current.current = pending;
@@ -248,9 +239,7 @@ export default function GenerateScreen() {
       }
     } catch (cause) {
       if (live(epoch))
-        setError(
-          cause instanceof Error ? cause.message : 'Your request could not be started.',
-        );
+        setError(cause instanceof Error ? cause.message : 'Your request could not be started.');
     } finally {
       if (live(epoch)) {
         inFlight.current = false;
@@ -364,8 +353,7 @@ export default function GenerateScreen() {
     });
   }
   const ready = state?.job?.status === 'succeeded' && !state.accepted;
-  const selectedCount =
-    state?.acceptance?.candidateIds.length ?? state?.selectedIds.length ?? 0;
+  const selectedCount = state?.acceptance?.candidateIds.length ?? state?.selectedIds.length ?? 0;
   const selectionLabel = selectedCount + (selectedCount === 1 ? ' card' : ' cards');
   const selectableIds =
     state?.job?.candidates
@@ -383,7 +371,7 @@ export default function GenerateScreen() {
               ? 'Create a deck'
               : 'Grow your deck'
       }
-      eyebrow="GENERATE"
+      eyebrow="02 / FOLLOW YOUR CURIOSITY"
       subtitle={
         state
           ? destinationName
@@ -447,9 +435,7 @@ export default function GenerateScreen() {
             </>
           ) : (
             <Button
-              title={
-                state.accepted ? 'Generate for ' + incomingName : 'Set aside & switch decks'
-              }
+              title={state.accepted ? 'Generate for ' + incomingName : 'Set aside & switch decks'}
               loading={busy}
               onPress={() =>
                 state.accepted
@@ -515,8 +501,7 @@ export default function GenerateScreen() {
                   onPress={() => {
                     setNewDeck(false);
                     setChoosingDeck(true);
-                    const first =
-                      data.decks.find((deck) => deck.id === deckId) ?? data.decks[0];
+                    const first = data.decks.find((deck) => deck.id === deckId) ?? data.decks[0];
                     if (first) {
                       setDeckId(first.id);
                       setPrompt(first.name);
@@ -561,7 +546,7 @@ export default function GenerateScreen() {
                         paddingVertical: 10,
                         paddingHorizontal: 12,
                         borderRadius: 10,
-                        backgroundColor: deckId === deck.id ? colors.green : colors.background,
+                        backgroundColor: deckId === deck.id ? colors.yellow : colors.background,
                       }}
                     >
                       <Text style={s.label}>
@@ -575,9 +560,7 @@ export default function GenerateScreen() {
             </Panel>
           )}
           <Field
-            label={
-              newDeck ? 'What would you like to learn?' : 'What should the new cards cover?'
-            }
+            label={newDeck ? 'What would you like to learn?' : 'What should the new cards cover?'}
             hint={
               newDeck
                 ? 'This becomes your deck title.'
@@ -587,9 +570,7 @@ export default function GenerateScreen() {
             editable={!busy}
             onChangeText={setPrompt}
             placeholder={
-              newDeck
-                ? 'e.g. French verbs, World history'
-                : (destination?.name ?? 'Choose a topic')
+              newDeck ? 'e.g. French verbs, World history' : (destination?.name ?? 'Choose a topic')
             }
             maxLength={newDeck ? 200 : 20000}
             multiline={!newDeck}
@@ -673,20 +654,14 @@ export default function GenerateScreen() {
             />
           )}
           {!state.job && !busy && !error && (
-            <Button
-              title="Continue saved request"
-              size="compact"
-              onPress={() => void resume()}
-            />
+            <Button title="Continue saved request" size="compact" onPress={() => void resume()} />
           )}
         </Panel>
       )}
       {(state?.job?.status === 'failed' || state?.job?.status === 'canceled') && (
         <Panel>
           <Text style={s.sectionTitle}>Let’s try another set</Text>
-          <Text style={s.body}>
-            {state.job.error?.message ?? 'This request was canceled.'}
-          </Text>
+          <Text style={s.body}>{state.job.error?.message ?? 'This request was canceled.'}</Text>
           <Button
             title="Try this topic again"
             loading={busy}
@@ -735,7 +710,7 @@ export default function GenerateScreen() {
                 key={candidate.id}
                 style={{
                   padding: 18,
-                  borderColor: selected ? '#A9BCA3' : colors.line,
+                  borderColor: selected ? colors.accent : colors.line,
                   backgroundColor: selected ? colors.paper : colors.background,
                 }}
               >
@@ -770,9 +745,7 @@ export default function GenerateScreen() {
                       borderColor: selected ? colors.ink : colors.muted,
                     }}
                   >
-                    <Text style={{ color: '#fff', fontWeight: '800' }}>
-                      {selected ? '✓' : ''}
-                    </Text>
+                    <Text style={{ color: '#fff', fontWeight: '800' }}>{selected ? '✓' : ''}</Text>
                   </View>
                 </Pressable>
                 {editing ? (
@@ -814,9 +787,7 @@ export default function GenerateScreen() {
                     )}
                     <View style={s.between}>
                       <Button
-                        title={
-                          detailsId === candidate.id ? 'Hide details' : 'Hint & explanation'
-                        }
+                        title={detailsId === candidate.id ? 'Hide details' : 'Hint & explanation'}
                         size="compact"
                         variant="ghost"
                         onPress={() =>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { generationRequestSchema } from '@recollect/contracts';
 import { useStore } from './store';
@@ -9,7 +9,7 @@ import {
   prepareGeneration,
   type GenerationWorkflow,
 } from './generation';
-import { Button, Panel, colors, s } from './ui';
+import { Button, Panel, colors, s, Text } from './ui';
 import { useAppActive, usePolling } from './polling';
 
 export default function AnswerGenerator({
@@ -85,9 +85,7 @@ export default function AnswerGenerator({
       } catch (cause) {
         if (current())
           setError(
-            cause instanceof Error
-              ? cause.message
-              : 'Your request is saved. Retry when connected.',
+            cause instanceof Error ? cause.message : 'Your request is saved. Retry when connected.',
           );
       } finally {
         if (current()) {
@@ -175,9 +173,7 @@ export default function AnswerGenerator({
     <View style={{ gap: 10 }}>
       {!pending && state?.job?.status !== 'succeeded' && (
         <Button
-          title={
-            state?.job?.status === 'failed' ? 'Try generating again' : '✦ Generate answer'
-          }
+          title={state?.job?.status === 'failed' ? 'Try generating again' : '✦ Generate answer'}
           size="compact"
           variant="secondary"
           disabled={!loaded || !question.trim()}

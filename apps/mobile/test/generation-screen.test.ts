@@ -19,10 +19,8 @@ const rig = vi.hoisted(() => ({
   active: true,
 }));
 vi.mock('react-native', () => ({
-  Text: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('text', {}, children),
-  View: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('view', {}, children),
+  Text: ({ children }: { children: React.ReactNode }) => React.createElement('text', {}, children),
+  View: ({ children }: { children: React.ReactNode }) => React.createElement('view', {}, children),
   Pressable: ({ children, ...props }: { children: React.ReactNode }) =>
     React.createElement('pressable', props, children),
   ActivityIndicator: () => React.createElement('spinner'),
@@ -55,6 +53,8 @@ vi.mock('../src/store', () => ({
 }));
 vi.mock('../src/api', () => ({ api: { request: rig.request } }));
 vi.mock('../src/ui', () => ({
+  Text: ({ children, ...props }: { children: React.ReactNode }) =>
+    React.createElement('text', props, children),
   Screen: ({
     children,
     footer,
@@ -64,18 +64,13 @@ vi.mock('../src/ui', () => ({
     footer: React.ReactNode;
     title: string;
   }) =>
-    React.createElement(
-      'screen',
-      { title },
-      children,
-      React.createElement('footer', {}, footer),
-    ),
+    React.createElement('screen', { title }, children, React.createElement('footer', {}, footer)),
   Panel: ({ children }: { children: React.ReactNode }) =>
     React.createElement('panel', {}, children),
   Button: (props: object) => React.createElement('button', props),
   Back: (props: object) => React.createElement('back', props),
   Field: (props: object) => React.createElement('field', props),
-  colors: {},
+  colors: { yellow: '#E7ED9B' },
   s: {},
 }));
 import GenerateScreen from '../app/(tabs)/generate';
@@ -117,9 +112,7 @@ function workflow(generated: GenerationJob): GenerationWorkflow {
       count: 5,
     },
     job: generated,
-    drafts: Object.fromEntries(
-      generated.candidates.map((candidate) => [candidate.id, candidate]),
-    ),
+    drafts: Object.fromEntries(generated.candidates.map((candidate) => [candidate.id, candidate])),
     selectedIds: generated.candidates.map((candidate) => candidate.id),
     acceptance: null,
     accepted: false,
@@ -285,12 +278,12 @@ it('preserves the reviewed selection and exact acceptance receipt across a lost 
   rig.request.mockResolvedValueOnce({ cards: [acceptedCard], revision: '4' });
   await press('Finish adding saved cards');
   expect(rig.request.mock.calls[1]![1].body).toEqual(receipt);
-  expect(
-    (await rig.repo!.snapshot()).cards.filter((item) => item.id === original.id),
-  ).toHaveLength(1);
-  expect(
-    (await rig.repo!.snapshot()).cards.find((item) => item.id === original.id)!.front,
-  ).toBe('Reviewed question');
+  expect((await rig.repo!.snapshot()).cards.filter((item) => item.id === original.id)).toHaveLength(
+    1,
+  );
+  expect((await rig.repo!.snapshot()).cards.find((item) => item.id === original.id)!.front).toBe(
+    'Reviewed question',
+  );
   await press('Generate for World history');
   expect(renderer!.root.findByType('field').props.value).toBe('World history');
 });
@@ -303,9 +296,7 @@ it('generates more with one tap in the same deck and includes cards just added i
     acceptance: {
       operationId: randomUUID(),
       candidateIds: generated.candidates.map((candidate) => candidate.id),
-      edits: Object.fromEntries(
-        generated.candidates.map((candidate) => [candidate.id, candidate]),
-      ),
+      edits: Object.fromEntries(generated.candidates.map((candidate) => [candidate.id, candidate])),
     },
   };
   const added = { ...card, ...generated.candidates[0]!, aiGenerated: true };

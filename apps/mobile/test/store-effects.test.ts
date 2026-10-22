@@ -15,6 +15,8 @@ const rig = vi.hoisted(() => ({
   initialized: vi.fn(),
   publishWidget: vi.fn(async () => {}),
   setWidgetOwner: vi.fn(async () => {}),
+  fontsLoaded: true,
+  fontError: null as Error | null,
 }));
 vi.mock('react-native', () => ({
   AppState: {
@@ -26,12 +28,12 @@ vi.mock('react-native', () => ({
       return { remove: () => rig.listeners.delete(listener) };
     },
   },
-  View: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('view', {}, children),
-  Text: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('text', {}, children),
+  View: ({ children }: { children: React.ReactNode }) => React.createElement('view', {}, children),
+  Text: ({ children }: { children: React.ReactNode }) => React.createElement('text', {}, children),
   ActivityIndicator: () => null,
+  Platform: { OS: 'ios' },
 }));
+vi.mock('expo-font', () => ({ useFonts: () => [rig.fontsLoaded, rig.fontError] }));
 vi.mock('expo-crypto', () => ({ randomUUID: () => 'device-id' }));
 vi.mock('../src/database', () => ({ openDatabase: async () => ({}) }));
 vi.mock('../src/api', () => ({
@@ -85,7 +87,11 @@ vi.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock('../src/login', () => ({ default: () => React.createElement('signed-out') }));
-vi.mock('../src/ui', () => ({ colors: {}, s: {} }));
+vi.mock('../src/ui', () => ({
+  colors: {},
+  s: {},
+  Text: ({ children }: { children: React.ReactNode }) => React.createElement('text', {}, children),
+}));
 vi.mock('../src/app-updates', () => ({
   AppUpdateProvider: ({ children }: { children: React.ReactNode }) => children,
   UpdateNotice: () => null,
@@ -158,6 +164,8 @@ beforeEach(() => {
   renders = 0;
   statuses = [];
   rig.appState = 'active';
+  rig.fontsLoaded = true;
+  rig.fontError = null;
   rig.session = session();
   rig.snapshots.clear();
   rig.request.mockImplementation(async () => page());
@@ -193,6 +201,25 @@ it('three empty background syncs do not render, remount, shift loading state, or
   expect(renderer!.root.findByType('input').props.value).toBe('unsaved question');
   expect(renderer!.root.findByType('input').props.revealed).toBe(true);
   expect(rig.publishWidget).toHaveBeenCalledTimes(widgetWrites);
+});
+
+it('loads the library while fonts prepare and mounts navigation once fonts are ready', async () => {
+  rig.fontsLoaded = false;
+  await mount();
+  expect(rig.initialized).toHaveBeenCalledTimes(1);
+  expect(renderer!.root.findAllByType('input')).toHaveLength(0);
+  rig.fontsLoaded = true;
+  await act(async () => renderer!.update(React.createElement(RootLayout)));
+  expect(renderer!.root.findAllByType('input')).toHaveLength(1);
+  expect(mounts).toBe(1);
+});
+
+it('opens the library with fallback typography if bundled fonts fail to load', async () => {
+  rig.fontsLoaded = false;
+  rig.fontError = new Error('Font load failed');
+  await mount();
+  expect(renderer!.root.findAllByType('input')).toHaveLength(1);
+  expect(mounts).toBe(1);
 });
 
 it('same-account token rotation preserves the repository and mounted navigation', async () => {

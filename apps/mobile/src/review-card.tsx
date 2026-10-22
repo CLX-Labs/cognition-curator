@@ -1,0 +1,230 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  Animated,
+  PanResponder,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
+import type { Card } from '@recollect/contracts';
+import { Text, colors, s } from './ui';
+import { isHorizontalReviewDrag, reviewSwipe } from './review-gesture';
+
+export default function ReviewCard({
+  card,
+  revealed,
+  disabled,
+  onFlip,
+  onAnswer,
+}: {
+  card: Card;
+  revealed: boolean;
+  disabled: boolean;
+  onFlip(): void;
+  onAnswer(remembered: boolean): void;
+}) {
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const [width, setWidth] = useState(320);
+  const drag = useRef(new Animated.Value(0)).current;
+  const flip = useRef(new Animated.Value(1)).current;
+  const previousFace = useRef(revealed);
+  const dragged = useRef(false);
+  const cancelled = useRef(false);
+  const latest = useRef({ disabled, onAnswer, width, reduceMotion });
+  latest.current = { disabled, onAnswer, width, reduceMotion };
+
+  useEffect(() => {
+    let active = true;
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((value) => {
+        if (active) setReduceMotion(value);
+      })
+      .catch(() => undefined);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+  useEffect(() => {
+    const changed = previousFace.current !== revealed;
+    previousFace.current = revealed;
+    if (reduceMotion || !changed) {
+      flip.setValue(1);
+      return;
+    }
+    flip.setValue(0);
+    const animation = Animated.timing(flip, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: Platform.OS !== 'web',
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [revealed, reduceMotion, flip]);
+  useEffect(
+    () => () => {
+      drag.stopAnimation();
+      flip.stopAnimation();
+    },
+    [drag, flip],
+  );
+
+  const [responder] = useState(() =>
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        !latest.current.disabled && isHorizontalReviewDrag(gesture),
+      onMoveShouldSetPanResponderCapture: (_, gesture) =>
+        !latest.current.disabled && isHorizontalReviewDrag(gesture),
+      onPanResponderGrant: () => {
+        dragged.current = true;
+        cancelled.current = false;
+        drag.stopAnimation();
+      },
+      onPanResponderStart: (_, gesture) => {
+        if (gesture.numberActiveTouches > 1) {
+          cancelled.current = true;
+          resetDrag();
+        }
+      },
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.numberActiveTouches !== 1) {
+          cancelled.current = true;
+          resetDrag();
+          return;
+        }
+        if (!latest.current.disabled && !cancelled.current) drag.setValue(gesture.dx);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        const answer = reviewSwipe(gesture, latest.current.width);
+        if (!latest.current.disabled && !cancelled.current && answer)
+          latest.current.onAnswer(answer === 'remembered');
+        resetDrag();
+      },
+      onPanResponderTerminationRequest: () => true,
+      onPanResponderTerminate: () => {
+        cancelled.current = true;
+        resetDrag();
+      },
+    }),
+  );
+
+  function resetDrag() {
+    if (latest.current.reduceMotion) drag.setValue(0);
+    else
+      Animated.spring(drag, {
+        toValue: 0,
+        speed: 24,
+        bounciness: 0,
+        useNativeDriver: Platform.OS !== 'web',
+      }).start();
+  }
+
+  const turn = drag.interpolate({
+    inputRange: [-240, 0, 240],
+    outputRange: ['-9deg', '0deg', '9deg'],
+    extrapolate: 'clamp',
+  });
+  const faceTurn = flip.interpolate({ inputRange: [0, 1], outputRange: ['-85deg', '0deg'] });
+  return (
+    <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={styles.stage}>
+      <Animated.View
+        testID="review-gesture"
+        {...responder.panHandlers}
+        style={{
+          transform: [
+            { perspective: 1000 },
+            { translateX: drag },
+            { rotate: reduceMotion ? '0deg' : turn },
+            { rotateY: faceTurn },
+          ],
+        }}
+      >
+        <Pressable
+          testID="review-card"
+          accessibilityRole="button"
+          accessibilityLabel={
+            revealed
+              ? 'Answer: ' + card.back
+              : (card.aiGenerated ? 'Concept: ' : 'Question: ') + card.front
+          }
+          accessibilityHint={
+            revealed
+              ? 'Tap to show the question. Swipe right if you remember, or left if you do not.'
+              : 'Tap to show the answer. Swipe right if you remember, or left if you do not.'
+          }
+          accessibilityState={{ disabled, busy: disabled }}
+          accessibilityActions={[
+            { name: 'remembered', label: 'I remember' },
+            { name: 'missed', label: 'I do not remember' },
+          ]}
+          onAccessibilityAction={(event) => {
+            if (disabled) return;
+            if (event.nativeEvent.actionName === 'remembered') onAnswer(true);
+            if (event.nativeEvent.actionName === 'missed') onAnswer(false);
+          }}
+          disabled={disabled}
+          onPressIn={() => {
+            dragged.current = false;
+          }}
+          onPress={() => {
+            if (!dragged.current && !disabled) onFlip();
+          }}
+          style={[styles.card, revealed && { backgroundColor: colors.yellow }]}
+        >
+          <View style={s.between}>
+            <Text style={[s.eyebrow, { marginBottom: 0, color: colors.ink }]}>
+              {revealed ? '02 / ANSWER' : card.aiGenerated ? '01 / CONCEPT' : '01 / QUESTION'}
+            </Text>
+            <Text style={[s.caption, { color: colors.ink }]}>↻</Text>
+          </View>
+          <View style={styles.face}>
+            <Text style={revealed ? styles.answer : styles.question}>
+              {revealed ? card.back : card.front}
+            </Text>
+          </View>
+          <View style={styles.cardFooter}>
+            <Text style={[s.caption, { color: colors.ink }]}>
+              {revealed ? 'Tap to see the question' : 'Tap to reveal the answer'}
+            </Text>
+            <Text style={{ fontSize: 22, color: colors.accent }}>↗</Text>
+          </View>
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  stage: { paddingBottom: 6 },
+  card: {
+    borderRadius: 10,
+    backgroundColor: colors.paper,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.line,
+    gap: 22,
+    minHeight: 340,
+  },
+  face: { minHeight: 176, flex: 1, justifyContent: 'center', paddingVertical: 12 },
+  question: {
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: '800',
+    letterSpacing: -1.2,
+    color: colors.ink,
+  },
+  answer: { fontSize: 23, lineHeight: 33, fontWeight: '600', color: colors.ink },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#20221E30',
+    paddingTop: 14,
+  },
+});

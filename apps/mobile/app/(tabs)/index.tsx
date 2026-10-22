@@ -1,21 +1,20 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { useStore } from '../../src/store';
 import { dueCards } from '../../src/repository';
-import { Button, Empty, Panel, Screen, colors, s } from '../../src/ui';
+import { BrandHeader, Button, Empty, Panel, Screen, colors, s, Text } from '../../src/ui';
 import { ReleaseStamp } from '../../src/release-panel';
 
 export default function Home() {
   const { session, data } = useStore();
   const due = dueCards(data);
   const today = new Date().toDateString();
-  const todayReviews = data.reviews.filter(
-    (r) => new Date(r.reviewedAt).toDateString() === today,
-  );
+  const todayReviews = data.reviews.filter((r) => new Date(r.reviewedAt).toDateString() === today);
   const name = session?.user.name.split(' ')[0] ?? 'there';
   return (
     <Screen
+      leading={<BrandHeader />}
       title={'Hey, ' + name + '.'}
       eyebrow={new Date().toLocaleDateString(undefined, {
         weekday: 'long',
@@ -32,7 +31,7 @@ export default function Home() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: colors.green,
+            backgroundColor: colors.yellow,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -47,7 +46,7 @@ export default function Home() {
         <View style={s.pill}>
           <Text style={s.pillText}>DAILY PRACTICE</Text>
         </View>
-        <Text style={[s.title, { fontSize: 29, lineHeight: 35 }]}>
+        <Text style={[s.editorial, { fontSize: 42, lineHeight: 46, color: colors.ink }]}>
           {due.length
             ? 'Ready when you are.'
             : data.cards.length

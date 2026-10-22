@@ -1,12 +1,27 @@
 import React from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
 import { StoreProvider, useStore } from '../src/store';
 import Login from '../src/login';
-import { colors, s } from '../src/ui';
+import { colors, s, Text } from '../src/ui';
 import { AppUpdateProvider, UpdateNotice } from '../src/app-updates';
+import { TypographyContext } from '../src/brand';
+import manropeRegular from '../assets/fonts/Manrope-Regular.ttf';
+import manropeSemibold from '../assets/fonts/Manrope-SemiBold.ttf';
+import manropeBold from '../assets/fonts/Manrope-Bold.ttf';
+import manropeExtraBold from '../assets/fonts/Manrope-ExtraBold.ttf';
+import instrumentSerifItalic from '../assets/fonts/InstrumentSerif-Italic.ttf';
+
+const brandFonts = {
+  'Manrope-Regular': manropeRegular,
+  'Manrope-SemiBold': manropeSemibold,
+  'Manrope-Bold': manropeBold,
+  'Manrope-ExtraBold': manropeExtraBold,
+  'InstrumentSerif-Italic': instrumentSerifItalic,
+};
 
 export const unstable_settings = { initialRouteName: '(tabs)' };
 
@@ -49,17 +64,26 @@ function AppNavigation() {
   );
 }
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts(brandFonts);
   return (
     <SafeAreaProvider>
-      <StoreProvider>
-        <AppUpdateProvider>
-          <StatusBar style="dark" />
-          <View style={{ flex: 1 }}>
-            <AppNavigation />
-            <UpdateNotice />
-          </View>
-        </AppUpdateProvider>
-      </StoreProvider>
+      <TypographyContext.Provider value={fontsLoaded}>
+        <StoreProvider>
+          <AppUpdateProvider>
+            <StatusBar style="dark" />
+            <View style={{ flex: 1 }}>
+              {fontsLoaded || fontError ? (
+                <AppNavigation />
+              ) : (
+                <View style={[s.safe, { alignItems: 'center', justifyContent: 'center' }]}>
+                  <ActivityIndicator color={colors.accent} />
+                </View>
+              )}
+              <UpdateNotice />
+            </View>
+          </AppUpdateProvider>
+        </StoreProvider>
+      </TypographyContext.Provider>
     </SafeAreaProvider>
   );
 }

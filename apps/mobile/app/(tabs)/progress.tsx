@@ -1,8 +1,8 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useStore } from '../../src/store';
-import { Button, Panel, Screen, colors, s } from '../../src/ui';
+import { Button, Panel, Screen, colors, s, Text } from '../../src/ui';
 export default function Progress() {
   const { data } = useStore();
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -26,7 +26,7 @@ export default function Progress() {
   return (
     <Screen
       title="Your progress"
-      eyebrow="LITTLE BY LITTLE"
+      eyebrow="03 / LITTLE BY LITTLE"
       subtitle="Small sessions add up to lasting knowledge."
     >
       <Panel tint>
@@ -73,8 +73,8 @@ export default function Progress() {
                     ? index === 6
                       ? colors.accent
                       : colors.ink
-                    : '#C4D0BE',
-                  borderRadius: 6,
+                    : colors.line,
+                  borderRadius: 2,
                 }}
               />
               <Text style={[s.caption, { fontSize: 11 }]}>
@@ -96,12 +96,12 @@ export default function Progress() {
         <Text style={s.metric}>{percent === null ? '—' : percent + '%'}</Text>
         <Text style={s.body}>
           {recent.length
-            ? recalled + ' of ' + recent.length + ' reviews rated Good or Easy this week.'
+            ? recalled + ' of ' + recent.length + ' reviews remembered this week.'
             : 'Complete a few reviews to see your recall trend.'}
         </Text>
         <Text style={s.caption}>
-          Based on your Good and Easy ratings during scheduled reviews. Practice mode does not
-          change these totals.
+          Based on remembered answers during scheduled reviews. Practice mode does not change these
+          totals.
         </Text>
       </Panel>
       <View style={s.row}>
@@ -121,8 +121,8 @@ export default function Progress() {
       <Panel>
         <Text style={s.sectionTitle}>Keep a little momentum</Text>
         <Text style={s.body}>
-          A few cards each day is a good place to start. Review the cards that are due, or
-          practice a favorite deck whenever you like.
+          A few cards each day is a good place to start. Review the cards that are due, or practice
+          a favorite deck whenever you like.
         </Text>
         <Text style={s.caption}>
           Your history stays available offline and syncs with your account when you reconnect.

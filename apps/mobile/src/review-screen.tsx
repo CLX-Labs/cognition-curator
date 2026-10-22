@@ -6,6 +6,8 @@ import { useStore } from './store';
 import { dueCards } from './repository';
 import { Back, Button, Panel, Screen, Text, colors, reportError, s } from './ui';
 import ReviewCard from './review-card';
+import { playReviewHaptic } from './review-haptics';
+import { ReviewFeedbackCue, type ReviewFeedback } from './review-feedback';
 
 type ReviewParams = { deckId?: string; practice?: string; cardId?: string; id?: string };
 function duration(seconds: number) {
@@ -42,10 +44,26 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   const [revealed, setRevealed] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<ReviewFeedback | null>(null);
+  const feedbackSequence = useRef(0);
+  const active = useRef(true);
   const saving = useRef(false);
   const scroll = useRef<ScrollView>(null);
   const started = useRef(Date.now());
   const card = data.cards.find((c) => c.id === queue[index]);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!feedback) return;
+    const timeout = setTimeout(() => {
+      setFeedback((current) => (current?.id === feedback.id ? null : current));
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [feedback]);
   useEffect(() => {
     started.current = Date.now();
     saving.current = false;
@@ -61,16 +79,20 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     if (!card || saving.current) return;
     saving.current = true;
     setBusy(true);
+    setFeedback(null);
     try {
       await mutate((repo) =>
         repo.rateCard(card.id, remembered ? 'good' : 'again', Date.now() - started.current),
       );
+      if (!active.current) return;
+      setFeedback({ id: ++feedbackSequence.current, remembered });
+      playReviewHaptic(remembered);
       advance();
     } catch (error) {
-      reportError(error);
+      if (active.current) reportError(error);
     } finally {
       saving.current = false;
-      setBusy(false);
+      if (active.current) setBusy(false);
     }
   }
 
@@ -87,14 +109,17 @@ function ReviewSession({ params }: { params: ReviewParams }) {
             : 'Your next cards will be here when they are ready.'
         }
         footer={
-          <Button
-            title={params.deckId ? 'Back to deck' : 'Back to today'}
-            onPress={() =>
-              params.deckId
-                ? router.dismissTo({ pathname: '/decks/[id]', params: { id: params.deckId } })
-                : router.dismissTo('/')
-            }
-          />
+          <>
+            <Button
+              title={params.deckId ? 'Back to deck' : 'Back to today'}
+              onPress={() =>
+                params.deckId
+                  ? router.dismissTo({ pathname: '/decks/[id]', params: { id: params.deckId } })
+                  : router.dismissTo('/')
+              }
+            />
+            <ReviewFeedbackCue feedback={feedback} />
+          </>
         }
       >
         <Panel tint>
@@ -165,6 +190,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
               ' · Remembered: ' +
               duration(intervals.good)}
           </Text>
+          <ReviewFeedbackCue feedback={feedback} />
         </>
       }
     >

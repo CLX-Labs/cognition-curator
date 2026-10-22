@@ -1,0 +1,28 @@
+name: Submit an existing iOS build to TestFlight
+
+# Retry delivery without spending another native build or changing its version.
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      asc_app_id:
+        type: string
+        required: true
+
+defaults:
+  tools:
+    node: '24.21.0'
+
+jobs:
+  submit_testflight:
+    type: submit
+    env:
+      ASC_APP_ID: ${{ inputs.asc_app_id }}
+    hooks:
+      after_checkout:
+        - run: node ../../scripts/release-pipeline.mjs configure-app
+    params:
+      build_id: ${{ inputs.build_id }}
+      profile: testflight

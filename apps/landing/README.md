@@ -2,6 +2,8 @@
 
 A buildless, responsive landing page. Publish this directory as the site root; the API and mobile application are separate.
 
+The visual direction is artful and editorial: Manrope and Instrument Serif, warm paper, cobalt, yellow, and an original transparent sculpture of collected cards. The design choices, palette, image prompt, and future mobile guidelines are in [the visual direction notes](../../docs/recollect-visual-direction.md).
+
 ## Preview
 
 From the repository root:

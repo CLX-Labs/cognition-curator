@@ -144,7 +144,7 @@
       renderCard(true);
     });
   });
-  document.querySelectorAll('.demo-stage button').forEach((button) => {
+  document.querySelectorAll('.demo-stage button, [data-deck]').forEach((button) => {
     button.disabled = false;
   });
   document.getElementById('year').textContent = String(new Date().getFullYear());

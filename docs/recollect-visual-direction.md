@@ -37,6 +37,8 @@ Card review uses a direct, binary interaction:
 
 Short or vertical drags, cancelled gestures, and multiple fingers do not record a response. Saves are guarded against duplicate actions, and a failed save keeps the current card available for retry. Library synchronization preserves the session queue and current face. Reduced motion disables the flip and spring animation.
 
+Review and practice use a fixed layout with no scroll responder around the card. The card fills the available space above its controls, and long text is bounded without reducing the user's font size. “Read in full,” hints, and context open a separate reading view; scrolling is confined to that view while review swipes and rating controls are disabled. Closing reading returns to the same card and face.
+
 Each saved response gives a brief native haptic: success for remembered, warning for unsure. A small yellow “Remembered” or lilac “Review later” badge floats above the controls for half a second, without moving content or delaying the next card. Reduced motion keeps this cue stationary. There is no saving banner or intermediate saved screen. Cancelled gestures, failed saves, and a session that has already closed produce no confirmation feedback.
 
 Keep card fronts succinct. Saved cards, AI suggestions, and practice have distinct actions. The sculpture is used on sign-in; the app's learning screens remain focused on the user's own cards.

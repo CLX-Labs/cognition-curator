@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, StatusBar, View } from 'react-native';
+import { StatusBar, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { previewIntervals } from '@recollect/scheduler';
 import { useStore } from './store';
@@ -8,6 +8,7 @@ import { Back, Button, Panel, Screen, Text, colors, reportError, s } from './ui'
 import ReviewCard from './review-card';
 import { playReviewHaptic } from './review-haptics';
 import { ReviewFeedbackCue, type ReviewFeedback } from './review-feedback';
+import { ReviewReadingSheet } from './review-reading-sheet';
 
 type ReviewParams = { deckId?: string; practice?: string; cardId?: string; id?: string };
 function duration(seconds: number) {
@@ -42,13 +43,12 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   );
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [showHint, setShowHint] = useState(false);
+  const [reading, setReading] = useState<'card' | 'hint' | 'context' | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<ReviewFeedback | null>(null);
   const feedbackSequence = useRef(0);
   const active = useRef(true);
   const saving = useRef(false);
-  const scroll = useRef<ScrollView>(null);
   const started = useRef(Date.now());
   const card = data.cards.find((c) => c.id === queue[index]);
   useEffect(() => {
@@ -67,16 +67,15 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   useEffect(() => {
     started.current = Date.now();
     saving.current = false;
-    scroll.current?.scrollTo({ y: 0, animated: false });
   }, [index]);
 
   function advance() {
     setRevealed(false);
-    setShowHint(false);
+    setReading(null);
     setIndex((i) => i + 1);
   }
   async function answer(remembered: boolean) {
-    if (!card || saving.current) return;
+    if (!card || saving.current || reading) return;
     saving.current = true;
     setBusy(true);
     setFeedback(null);
@@ -99,7 +98,6 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   if (!card)
     return (
       <Screen
-        scrollRef={scroll}
         syncFeedback="errors"
         title={queue.length ? 'Nicely done.' : 'All caught up.'}
         eyebrow={practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE'}
@@ -156,12 +154,19 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   );
   return (
     <Screen
-      scrollRef={scroll}
+      scrollable={false}
       syncFeedback="errors"
       title={deck?.name ?? 'Your review'}
       appearance="focus"
       eyebrow={practice ? 'FREE PRACTICE' : 'DAILY REVIEW'}
-      leading={<Back label="Finish later" color={colors.paper} />}
+      leading={
+        <View style={s.between}>
+          <Back label="Finish later" color={colors.paper} />
+          <Text style={[s.eyebrow, { color: colors.paper, marginBottom: 0 }]}>
+            {String(index + 1).padStart(2, '0')} / {String(queue.length).padStart(2, '0')}
+          </Text>
+        </View>
+      }
       footer={
         <>
           <View style={s.row}>
@@ -170,7 +175,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
                 title="← Not sure"
                 size="compact"
                 variant="secondary"
-                disabled={busy}
+                disabled={busy || !!reading}
                 onPress={() => void answer(false)}
               />
             </View>
@@ -179,7 +184,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
                 title="I remember →"
                 size="compact"
                 variant="highlight"
-                disabled={busy}
+                disabled={busy || !!reading}
                 onPress={() => void answer(true)}
               />
             </View>
@@ -195,14 +200,6 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       }
     >
       <StatusBar barStyle="light-content" />
-      <View style={s.between}>
-        <Text style={[s.eyebrow, { color: colors.paper }]}>
-          {String(index + 1).padStart(2, '0')} / {String(queue.length).padStart(2, '0')}
-        </Text>
-        <Text style={[s.caption, { color: colors.paper }]}>
-          {practice ? 'At your own pace' : index + ' reviewed'}
-        </Text>
-      </View>
       <View
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: queue.length, now: index }}
@@ -221,34 +218,52 @@ function ReviewSession({ params }: { params: ReviewParams }) {
         key={index + ':' + card.id}
         card={card}
         revealed={revealed}
-        disabled={busy}
-        onFlip={() => setRevealed((value) => !value)}
+        disabled={busy || !!reading}
+        onFlip={() => {
+          if (!reading) setRevealed((value) => !value);
+        }}
         onAnswer={(remembered) => void answer(remembered)}
       />
-      <Text style={[s.caption, { textAlign: 'center', color: colors.paper }]}>
-        Swipe left if unsure. Swipe right if you remember.
-      </Text>
-      {!revealed && !!card.hint && (
-        <>
+      <View style={[s.row, { justifyContent: 'space-between', marginBottom: 36 }]}>
+        <View style={{ flex: 1 }}>
           <Button
-            title={showHint ? 'Hide hint' : 'Show a hint'}
+            title="Read in full"
             variant="secondary"
             size="compact"
-            onPress={() => setShowHint(!showHint)}
+            disabled={busy}
+            onPress={() => setReading('card')}
           />
-          {showHint && (
-            <Panel tint>
-              <Text style={s.label}>A small hint</Text>
-              <Text style={s.body}>{card.hint}</Text>
-            </Panel>
-          )}
-        </>
-      )}
-      {revealed && !!card.explanation && (
-        <Panel>
-          <Text style={s.label}>A little more context</Text>
-          <Text style={s.body}>{card.explanation}</Text>
-        </Panel>
+        </View>
+        {!revealed && !!card.hint && (
+          <View style={{ flex: 1 }}>
+            <Button
+              title="Show a hint"
+              variant="secondary"
+              size="compact"
+              disabled={busy}
+              onPress={() => setReading('hint')}
+            />
+          </View>
+        )}
+        {revealed && !!card.explanation && (
+          <View style={{ flex: 1 }}>
+            <Button
+              title="More context"
+              variant="secondary"
+              size="compact"
+              disabled={busy}
+              onPress={() => setReading('context')}
+            />
+          </View>
+        )}
+      </View>
+      {reading && (
+        <ReviewReadingSheet
+          card={card}
+          revealed={revealed}
+          section={reading}
+          onClose={() => setReading(null)}
+        />
       )}
     </Screen>
   );

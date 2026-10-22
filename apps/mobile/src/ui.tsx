@@ -83,6 +83,7 @@ export function Screen({
   subtitle,
   footer,
   scrollRef,
+  scrollable = true,
   syncFeedback = 'all',
   appearance = 'default',
 }: {
@@ -94,6 +95,7 @@ export function Screen({
   subtitle?: string;
   footer?: React.ReactNode;
   scrollRef?: React.Ref<ScrollView>;
+  scrollable?: boolean;
   syncFeedback?: 'all' | 'errors';
   appearance?: 'default' | 'focus';
 }) {
@@ -103,6 +105,93 @@ export function Screen({
     data.issues.length > 0 ||
     syncState === 'offline' ||
     (syncFeedback === 'all' && (data.pending > 0 || syncState === 'syncing'));
+  const contentStyle = [
+    s.content,
+    appearance === 'focus' && { gap: 14, paddingTop: 6 },
+    !scrollable && { flex: 1, minHeight: 0, paddingTop: 6, paddingBottom: 12, gap: 10 },
+  ];
+  const content = (
+    <>
+      {leading}
+      {(title || eyebrow || subtitle) && (
+        <View
+          style={[
+            s.header,
+            appearance === 'focus' && { borderBottomColor: '#FFFFFF40', paddingBottom: 14 },
+            !scrollable && { paddingBottom: 8 },
+          ]}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
+            {eyebrow && (
+              <Text
+                style={[
+                  s.eyebrow,
+                  appearance === 'focus' && { color: colors.paper },
+                  !scrollable && { marginBottom: 4 },
+                ]}
+              >
+                {eyebrow.toUpperCase()}
+              </Text>
+            )}
+            {title && (
+              <Text
+                numberOfLines={!scrollable && appearance === 'focus' ? 1 : undefined}
+                accessibilityLabel={title}
+                style={[
+                  s.title,
+                  appearance === 'focus' && {
+                    color: colors.paper,
+                    fontSize: scrollable ? 32 : 24,
+                    lineHeight: scrollable ? 38 : 30,
+                  },
+                ]}
+              >
+                {title}
+              </Text>
+            )}
+            {subtitle && (
+              <Text
+                style={[
+                  s.body,
+                  { marginTop: 10 },
+                  appearance === 'focus' && { color: colors.paper },
+                ]}
+              >
+                {subtitle}
+              </Text>
+            )}
+          </View>
+          {action}
+        </View>
+      )}
+      {showSyncFeedback && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            data.issues.length ? 'Review synchronization issues' : 'Synchronize library'
+          }
+          style={s.sync}
+          onPress={() => {
+            if (!data.issues.length) void sync();
+            else if (segments[0] === '(tabs)') router.navigate('/profile');
+            else router.dismissTo('/profile');
+          }}
+        >
+          <Text style={s.syncText}>
+            {data.issues.length
+              ? data.issues.length + ' changes need attention'
+              : syncState === 'offline'
+                ? 'Offline · your library is available'
+                : syncState === 'syncing'
+                  ? 'Synchronizing your library…'
+                  : data.pending + ' changes saved on this device'}
+          </Text>
+          <Text style={s.syncText}>↗</Text>
+        </Pressable>
+      )}
+      {children}
+    </>
+  );
   return (
     <SafeAreaView
       style={[s.safe, appearance === 'focus' && { backgroundColor: colors.accent }]}
@@ -112,83 +201,21 @@ export function Screen({
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={[s.content, appearance === 'focus' && { gap: 14, paddingTop: 6 }]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-        >
-          {leading}
-          {(title || eyebrow || subtitle) && (
-            <View
-              style={[
-                s.header,
-                appearance === 'focus' && { borderBottomColor: '#FFFFFF40', paddingBottom: 14 },
-              ]}
-            >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                {eyebrow && (
-                  <Text style={[s.eyebrow, appearance === 'focus' && { color: colors.paper }]}>
-                    {eyebrow.toUpperCase()}
-                  </Text>
-                )}
-                {title && (
-                  <Text
-                    style={[
-                      s.title,
-                      appearance === 'focus' && {
-                        color: colors.paper,
-                        fontSize: 32,
-                        lineHeight: 38,
-                      },
-                    ]}
-                  >
-                    {title}
-                  </Text>
-                )}
-                {subtitle && (
-                  <Text
-                    style={[
-                      s.body,
-                      { marginTop: 10 },
-                      appearance === 'focus' && { color: colors.paper },
-                    ]}
-                  >
-                    {subtitle}
-                  </Text>
-                )}
-              </View>
-              {action}
-            </View>
-          )}
-          {showSyncFeedback && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                data.issues.length ? 'Review synchronization issues' : 'Synchronize library'
-              }
-              style={s.sync}
-              onPress={() => {
-                if (!data.issues.length) void sync();
-                else if (segments[0] === '(tabs)') router.navigate('/profile');
-                else router.dismissTo('/profile');
-              }}
-            >
-              <Text style={s.syncText}>
-                {data.issues.length
-                  ? data.issues.length + ' changes need attention'
-                  : syncState === 'offline'
-                    ? 'Offline · your library is available'
-                    : syncState === 'syncing'
-                      ? 'Synchronizing your library…'
-                      : data.pending + ' changes saved on this device'}
-              </Text>
-              <Text style={s.syncText}>↗</Text>
-            </Pressable>
-          )}
-          {children}
-        </ScrollView>
+        {scrollable ? (
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={contentStyle}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            {content}
+          </ScrollView>
+        ) : (
+          <View testID="fixed-screen-content" style={contentStyle}>
+            {content}
+          </View>
+        )}
         {footer && (
           <SafeAreaView
             edges={segments[0] === '(tabs)' ? [] : ['bottom']}

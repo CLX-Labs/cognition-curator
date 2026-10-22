@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7f5ef" />
+    <title>Recollect — Curiosity, worth keeping.</title>
+    <meta
+      name="description"
+      content="Turn a little curiosity into something that stays. Create flashcards with AI, make them your own, and build a little daily practice with Recollect for iPhone."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Recollect — Curiosity, worth keeping." />
+    <meta
+      property="og:description"
+      content="Small cards. A little practice. A lasting memory. Meet your next favorite learning habit."
+    />
+    <meta property="og:image" content="/assets/app-icon.png" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" type="image/png" href="./assets/app-icon.png" />
+    <link rel="apple-touch-icon" href="./assets/app-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./site-config.js" defer></script>
+    <script src="./demo.js" defer></script>
+  </head>
+  <body id="top">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="nav-wrap wrap">
+        <a class="wordmark" href="#top" aria-label="Recollect home"
+          ><img src="./assets/app-icon.png" width="36" height="36" alt="" />Recollect<span
+            class="wordmark-dot"
+            >.</span
+          ></a
+        >
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="#how-it-works">How it works</a><a href="#why-recollect">Why Recollect</a
+          ><a href="#questions">A few questions</a>
+        </nav>
+        <a class="button button-small" href="#try" data-download-link
+          >Try a card <span aria-hidden="true">↗</span></a
+        >
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <span class="eyebrow availability"
+            ><span class="status-dot" aria-hidden="true"></span
+            ><span data-availability>In beta for iPhone</span></span
+          >
+          <h1 id="hero-title">Curiosity,<br /><em>worth keeping.</em></h1>
+          <p class="hero-description">
+            The words for your next trip. The idea you can’t stop thinking about. The things you’d
+            love to actually remember.
+          </p>
+          <p class="hero-description hero-description-last">
+            Give them a little home, and a little practice.
+          </p>
+          <div class="hero-actions">
+            <a class="button" href="#try" data-download-link
+              >Try a card <span aria-hidden="true">↗</span></a
+            ><a class="text-link" href="#how-it-works"
+              >Meet Recollect <span aria-hidden="true">↓</span></a
+            >
+          </div>
+          <p class="small-note">Small cards. A little practice. A lasting memory.</p>
+        </div>
+
+        <div class="demo-stage" id="try">
+          <div class="demo-caption">
+            <span class="tiny-star" aria-hidden="true">✳</span> A little “oh, I know this.”
+          </div>
+          <div class="demo-stack">
+            <div class="back-card back-card-peach" aria-hidden="true"></div>
+            <div class="back-card back-card-green" aria-hidden="true"></div>
+            <article class="flashcard" aria-label="Interactive flashcard preview">
+              <div class="card-topline">
+                <span class="deck-label"
+                  ><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect
+                      x="5"
+                      y="5"
+                      width="14"
+                      height="16"
+                      rx="3"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <path
+                      d="M8 2h10a4 4 0 0 1 4 4v11M9 10h6m-6 4h4"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    /></svg
+                  ><span id="demo-deck">Italian essentials</span></span
+                ><span id="demo-counter" class="card-counter">01 / 03</span>
+              </div>
+              <div class="card-content">
+                <span class="eyebrow card-label" id="demo-label">A LITTLE ITALIAN</span>
+                <h2 id="demo-front">Buongiorno</h2>
+                <p class="card-prompt" id="demo-prompt">A new day. A new word.</p>
+                <div class="card-answer" id="demo-answer" hidden>
+                  <span class="eyebrow">THE MEANING</span>
+                  <p id="demo-back">Good morning. Or simply, good day.</p>
+                </div>
+              </div>
+              <div class="card-controls">
+                <div class="choice-actions" id="choice-actions">
+                  <button type="button" class="choice-button" data-confidence="unsure" disabled>
+                    Not sure</button
+                  ><button
+                    type="button"
+                    class="choice-button choice-primary"
+                    data-confidence="known"
+                    disabled
+                  >
+                    I know it
+                  </button>
+                </div>
+                <div id="rating-actions" hidden>
+                  <p class="rating-label">How did that feel?</p>
+                  <div class="choice-actions">
+                    <button type="button" class="choice-button" id="rating-first" disabled>
+                      Good · 10m</button
+                    ><button
+                      type="button"
+                      class="choice-button choice-primary"
+                      id="rating-second"
+                      disabled
+                    >
+                      Easy · 4d
+                    </button>
+                  </div>
+                  <button class="change-choice" type="button" id="change-choice" disabled>
+                    Change choice
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+          <div class="demo-topics" role="group" aria-label="Choose an example deck">
+            <button type="button" data-deck="italian" aria-pressed="true" disabled>Italian</button
+            ><button type="button" data-deck="science" aria-pressed="false" disabled>
+              Everyday science</button
+            ><button type="button" data-deck="ideas" aria-pressed="false" disabled>
+              Big ideas
+            </button>
+          </div>
+          <p class="demo-note">Interactive preview · example cards</p>
+          <p class="sr-only" id="demo-announcement" aria-live="polite"></p>
+          <noscript><p class="demo-note">Enable JavaScript to try the example cards.</p></noscript>
+        </div>
+      </section>
+
+      <div class="intro-strip">
+        <div class="wrap strip-content">
+          <span class="eyebrow">LESS CRAMMING. MORE CURIOSITY.</span>
+          <p>A little each day goes a long way.</p>
+          <span class="strip-star" aria-hidden="true">✳</span>
+        </div>
+      </div>
+
+      <section class="how-section wrap section-space" id="how-it-works" aria-labelledby="how-title">
+        <div class="how-copy">
+          <span class="eyebrow">A SIMPLE LITTLE LOOP</span>
+          <h2 class="section-heading" id="how-title">
+            From “that’s interesting”<br />to <em>“I know this.”</em>
+          </h2>
+          <ol class="steps">
+            <li>
+              <span class="step-number">01</span>
+              <div>
+                <h3>Follow a little curiosity.</h3>
+                <p>
+                  Give Recollect a subject or a deck title. AI drafts 5–10 cards to get you started.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">02</span>
+              <div>
+                <h3>Make it your own.</h3>
+                <p>
+                  Keep the good suggestions, edit the details, and add your own cards. A deck should
+                  feel like yours.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">03</span>
+              <div>
+                <h3>Bring it back to mind.</h3>
+                <p>
+                  Practice a few cards. Say what feels familiar. Recollect uses your answers to plan
+                  your next review.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </div>
+        <div class="creation-scene" aria-label="Example: a deck of five Italian vocabulary cards">
+          <div class="creation-sheet">
+            <div class="sheet-title">
+              <span class="eyebrow">A NEW LITTLE OBSESSION</span
+              ><span class="sheet-spark" aria-hidden="true">✧</span>
+            </div>
+            <h3>What would you<br />like to learn?</h3>
+            <div class="example-input">
+              Italian for everyday life <span aria-hidden="true">↵</span>
+            </div>
+            <div class="draft-summary">
+              <span class="eyebrow">YOUR STARTING POINT</span
+              ><span class="count-pill">5 cards</span>
+            </div>
+            <ul class="example-cards">
+              <li><span>Buongiorno</span><span aria-hidden="true">↗</span></li>
+              <li><span>Grazie</span><span aria-hidden="true">↗</span></li>
+              <li><span>Per favore</span><span aria-hidden="true">↗</span></li>
+              <li><span>Mi scusi</span><span aria-hidden="true">↗</span></li>
+              <li><span>A presto</span><span aria-hidden="true">↗</span></li>
+            </ul>
+            <p class="sheet-footnote">A few new words. A whole lot of possibility.</p>
+          </div>
+          <span class="scene-note"
+            >Start anywhere.<svg
+              width="78"
+              height="35"
+              viewBox="0 0 78 35"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M2 6c20 24 48 30 70 8m-2 17 4-20-20 1"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+          ></span>
+        </div>
+      </section>
+
+      <section class="curiosity-section" aria-labelledby="curiosity-title">
+        <div class="wrap curiosity-inner">
+          <span class="eyebrow">THERE’S NO SYLLABUS HERE</span>
+          <h2 id="curiosity-title">
+            For your next trip.<br />Your next rabbit hole.<br /><em>Your kind of curious.</em>
+          </h2>
+          <p>
+            Learn the words. Understand the how. Keep the idea that made you pause. Recollect makes
+            room for whatever you want to know.
+          </p>
+          <div class="interest-cloud" aria-label="Example subjects">
+            <span>Italian essentials</span><span>How things work</span><span>Art &amp; ideas</span
+            ><span>Everyday science</span
+            ><span>Your next obsession <i aria-hidden="true">↗</i></span>
+          </div>
+          <svg
+            class="curiosity-flower"
+            width="174"
+            height="174"
+            viewBox="0 0 174 174"
+            fill="none"
+            aria-hidden="true"
+          >
+            <g stroke="currentColor" stroke-width="2">
+              <ellipse cx="87" cy="87" rx="22" ry="79" />
+              <ellipse cx="87" cy="87" rx="22" ry="79" transform="rotate(45 87 87)" />
+              <ellipse cx="87" cy="87" rx="22" ry="79" transform="rotate(90 87 87)" />
+              <ellipse cx="87" cy="87" rx="22" ry="79" transform="rotate(135 87 87)" />
+            </g>
+            <circle cx="87" cy="87" r="13" fill="currentColor" />
+          </svg>
+        </div>
+      </section>
+
+      <section
+        class="why-section wrap section-space"
+        id="why-recollect"
+        aria-labelledby="why-title"
+      >
+        <div class="why-intro">
+          <span class="eyebrow">A HABIT, NOT HOMEWORK</span>
+          <h2 class="section-heading" id="why-title">Made to fit<br /><em>into your day.</em></h2>
+          <p>You don’t need a perfect study plan.<br />Just something you’re curious about.</p>
+        </div>
+        <div class="why-list">
+          <article>
+            <span class="why-icon" aria-hidden="true">↻</span>
+            <div>
+              <h3>The right card, at the right time.</h3>
+              <p>
+                Spaced repetition brings cards back based on how well you remember. Keep practicing
+                the things that need another look.
+              </p>
+            </div>
+          </article>
+          <article>
+            <span class="why-icon" aria-hidden="true">✎</span>
+            <div>
+              <h3>A little help getting started.</h3>
+              <p>
+                Create a deck from a subject, or write a card and ask AI for an answer. Review and
+                edit suggestions before they become part of your deck.
+              </p>
+            </div>
+          </article>
+          <article>
+            <span class="why-icon" aria-hidden="true">⌁</span>
+            <div>
+              <h3>Room for the offline moments.</h3>
+              <p>
+                Your saved cards and practice work offline. Connect when you want to generate new
+                suggestions or sync your library.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="faq-section wrap" id="questions" aria-labelledby="faq-title">
+        <div>
+          <span class="eyebrow">GOOD QUESTIONS</span>
+          <h2 class="section-heading" id="faq-title">
+            A few things<br /><em>you might wonder.</em>
+          </h2>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>What can I learn with Recollect?<span aria-hidden="true">+</span></summary>
+            <p>
+              Start with a language, an interesting subject, or a set of concepts you want to
+              remember. You can generate a starting deck or create every card yourself.
+            </p>
+          </details>
+          <details>
+            <summary>Can I add my own cards?<span aria-hidden="true">+</span></summary>
+            <p>
+              Absolutely. Write your own question and answer, add a hint, and organize cards into
+              decks. You can also generate an answer draft or ask for more suggestions for an
+              existing deck.
+            </p>
+          </details>
+          <details>
+            <summary>
+              How is practice different from daily reviews?<span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              Daily reviews use your ratings to plan when a card comes back. Practice lets you go
+              through a deck whenever you want, including another pass at uncertain cards, without
+              changing your review schedule.
+            </p>
+          </details>
+          <details>
+            <summary>Do I need an internet connection?<span aria-hidden="true">+</span></summary>
+            <p>
+              You’ll need a connection to sign in, generate suggestions, and sync. After your
+              library is on your phone, you can practice and review your saved cards offline.
+            </p>
+          </details>
+          <details>
+            <summary>Are AI-generated cards always right?<span aria-hidden="true">+</span></summary>
+            <p>
+              No. Treat suggestions as a starting point. Recollect lets you review, choose, and edit
+              generated cards before saving them, so you stay in charge of what you learn.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="closing-section wrap" id="get-recollect" aria-labelledby="closing-title">
+        <div class="closing-topline">
+          <span class="eyebrow">KEEP A LITTLE CURIOSITY CLOSE</span
+          ><span class="closing-star" aria-hidden="true">✳</span>
+        </div>
+        <h2 id="closing-title">Your next little<br /><em>lightbulb moment.</em></h2>
+        <div class="closing-bottom">
+          <p>Give what you learn a place to stay.</p>
+          <a class="button" href="#try" data-download-link
+            >Try a card <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <p class="closing-availability" data-download-note>
+          Explore an example above. The full app is currently in testing on iPhone.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer wrap">
+      <a class="wordmark" href="#top"
+        ><img src="./assets/app-icon.png" width="30" height="30" alt="" />Recollect<span
+          class="wordmark-dot"
+          >.</span
+        ></a
+      >
+      <p>For the things worth remembering.</p>
+      <span>© <span id="year">2026</span> Recollect</span
+      ><a class="back-to-top" href="#top" aria-label="Back to top">↑</a>
+    </footer>
+  </body>
+</html>

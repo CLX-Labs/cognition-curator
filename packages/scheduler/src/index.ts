@@ -1,11 +1,14 @@
 import {
   ALGORITHM_VERSION,
+  LEGACY_ALGORITHM_VERSION,
+  algorithmVersionSchema,
   dateTimeSchema,
   ratingSchema,
   scheduleStateSchema,
   type Rating,
   type ReviewEvent,
   type ScheduleState,
+  type AlgorithmVersion,
 } from '@recollect/contracts';
 
 export { ALGORITHM_VERSION };
@@ -29,7 +32,9 @@ function boundedInterval(value: number): number {
 /** No ambient clock or randomness: use exactly the same input on the server and device. */
 export function initialSchedule(now: string): ScheduleState {
   return {
-    algorithmVersion: ALGORITHM_VERSION,
+    // New cards are due immediately in either version. Retain the legacy wire
+    // value until a v2 review so older installed clients can keep syncing.
+    algorithmVersion: LEGACY_ALGORITHM_VERSION,
     phase: 'new',
     dueAt: new Date(timestamp(now)).toISOString(),
     intervalSeconds: 0,
@@ -44,13 +49,44 @@ export function initialSchedule(now: string): ScheduleState {
 
 export function reviewSchedule(
   previous: ScheduleState,
-  event: Pick<ReviewEvent, 'rating' | 'reviewedAt'>,
+  event: Pick<ReviewEvent, 'rating' | 'reviewedAt'> & { algorithmVersion?: AlgorithmVersion },
 ): ScheduleState {
   const state = scheduleStateSchema.parse(previous);
   const rating = ratingSchema.parse(event.rating);
   const at = timestamp(event.reviewedAt);
   if (state.lastReviewedAt && at < timestamp(state.lastReviewedAt)) {
     throw new Error('Review precedes schedule checkpoint; replay from an earlier checkpoint');
+  }
+  const version = algorithmVersionSchema.parse(event.algorithmVersion ?? ALGORITHM_VERSION);
+  if (version === ALGORITHM_VERSION) {
+    // No minute-scale learning loops. Misses get breathing room; successful
+    // recall starts at a week and extends an established review interval.
+    const established = state.phase === 'review';
+    const ease = clampEase(state.easeFactor);
+    const interval = boundedInterval(
+      rating === 'again'
+        ? 3 * DAY_SECONDS
+        : rating === 'hard'
+          ? Math.max(3 * DAY_SECONDS, established ? state.intervalSeconds * 1.2 : 0)
+          : rating === 'easy'
+            ? Math.max(14 * DAY_SECONDS, established ? state.intervalSeconds * ease * 1.3 : 0)
+            : Math.max(7 * DAY_SECONDS, established ? state.intervalSeconds * ease : 0),
+    );
+    return {
+      algorithmVersion: version,
+      phase: rating === 'again' ? 'relearning' : 'review',
+      dueAt: new Date(at + interval * 1_000).toISOString(),
+      intervalSeconds: interval,
+      easeFactor: clampEase(
+        ease +
+          (rating === 'again' ? -0.2 : rating === 'hard' ? -0.15 : rating === 'easy' ? 0.15 : 0),
+      ),
+      learningStep: 0,
+      repetitions: rating === 'again' ? 0 : state.repetitions + 1,
+      lapses: state.lapses + (rating === 'again' && established ? 1 : 0),
+      lastReviewedAt: new Date(at).toISOString(),
+      totalReviews: state.totalReviews + 1,
+    };
   }
   let interval: number;
   let phase = state.phase;
@@ -105,7 +141,7 @@ export function reviewSchedule(
   }
   interval = boundedInterval(interval);
   return {
-    algorithmVersion: ALGORITHM_VERSION,
+    algorithmVersion: LEGACY_ALGORITHM_VERSION,
     phase,
     dueAt: new Date(at + interval * 1_000).toISOString(),
     intervalSeconds: interval,
@@ -165,11 +201,15 @@ export function replayReviews(
 export function isDue(schedule: ScheduleState, now: string): boolean {
   return timestamp(schedule.dueAt) <= timestamp(now);
 }
-export function previewIntervals(schedule: ScheduleState, now: string): Record<Rating, number> {
+export function previewIntervals(
+  schedule: ScheduleState,
+  now: string,
+  algorithmVersion: AlgorithmVersion = ALGORITHM_VERSION,
+): Record<Rating, number> {
   return Object.fromEntries(
     ratingSchema.options.map((rating) => [
       rating,
-      reviewSchedule(schedule, { rating, reviewedAt: now }).intervalSeconds,
+      reviewSchedule(schedule, { rating, reviewedAt: now, algorithmVersion }).intervalSeconds,
     ]),
   ) as Record<Rating, number>;
 }

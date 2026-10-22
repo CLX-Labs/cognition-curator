@@ -18,6 +18,7 @@ import {
 import { planMigration, type MigrationPlan } from '../../src/migration';
 import type { LocalIssue } from '../../src/repository';
 import ReleasePanel from '../../src/release-panel';
+import ProfileEditor from '../../src/profile-editor';
 
 type ImportWorkflow = {
   legacy: LegacyExport;
@@ -171,28 +172,7 @@ export default function ProfileScreen() {
       subtitle="Your account, library, and app updates."
     >
       <Panel>
-        <View style={s.row}>
-          <View
-            style={{
-              width: 54,
-              height: 54,
-              borderRadius: 27,
-              backgroundColor: colors.yellow,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 23, fontWeight: '700', color: colors.ink }}>
-              {(session?.user.name || session?.user.email || 'R').charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.sectionTitle}>{session?.user.name || 'Your Recollect account'}</Text>
-            <Text selectable style={s.caption}>
-              {session?.user.email ?? 'Signed in with Apple'}
-            </Text>
-          </View>
-        </View>
+        <ProfileEditor email={session?.user.email ?? null} />
         <View style={s.divider} />
         <View style={s.row}>
           <View style={{ flex: 1 }}>

@@ -9,6 +9,7 @@ import Login from '../src/login';
 import { colors, s, Text } from '../src/ui';
 import { AppUpdateProvider, UpdateNotice } from '../src/app-updates';
 import { TypographyContext } from '../src/brand';
+import { ProfileProvider } from '../src/profile';
 import manropeRegular from '../assets/fonts/Manrope-Regular.ttf';
 import manropeSemibold from '../assets/fonts/Manrope-SemiBold.ttf';
 import manropeBold from '../assets/fonts/Manrope-Bold.ttf';
@@ -78,19 +79,21 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <TypographyContext.Provider value={fontsLoaded}>
         <StoreProvider>
-          <AppUpdateProvider>
-            <StatusBar style="dark" />
-            <View style={{ flex: 1 }}>
-              {fontsLoaded || fontError ? (
-                <AppNavigation />
-              ) : (
-                <View style={[s.safe, { alignItems: 'center', justifyContent: 'center' }]}>
-                  <ActivityIndicator color={colors.accent} />
-                </View>
-              )}
-              <UpdateNotice />
-            </View>
-          </AppUpdateProvider>
+          <ProfileProvider>
+            <AppUpdateProvider>
+              <StatusBar style="dark" />
+              <View style={{ flex: 1 }}>
+                {fontsLoaded || fontError ? (
+                  <AppNavigation />
+                ) : (
+                  <View style={[s.safe, { alignItems: 'center', justifyContent: 'center' }]}>
+                    <ActivityIndicator color={colors.accent} />
+                  </View>
+                )}
+                <UpdateNotice />
+              </View>
+            </AppUpdateProvider>
+          </ProfileProvider>
         </StoreProvider>
       </TypographyContext.Provider>
     </SafeAreaProvider>

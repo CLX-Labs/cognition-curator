@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { FastifyInstance } from 'fastify';
 import {
   cardSchema,
+  profileSchema,
   deckSchema,
   importResponseSchema,
   pullResponseSchema,
@@ -72,6 +73,101 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL backend integration'
     return sessionSchema.parse(r.json());
   }
   const headers = (s: Session) => ({ authorization: 'Bearer ' + s.accessToken });
+
+  it('edits only the authenticated profile, preserves unchanged fields, and refreshes the session name', async () => {
+    const owner = await login(),
+      other = await login();
+    const photo =
+      'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString('base64');
+    const save = await app.inject({
+      method: 'PATCH',
+      url: '/v1/profile',
+      headers: headers(owner),
+      payload: { name: '  Nico  ', photoDataUrl: photo },
+    });
+    expect(save.statusCode, save.body).toBe(200);
+    expect(profileSchema.parse(save.json())).toEqual({
+      id: owner.user.id,
+      name: 'Nico',
+      photoDataUrl: photo,
+    });
+    const rename = await app.inject({
+      method: 'PATCH',
+      url: '/v1/profile',
+      headers: headers(owner),
+      payload: { name: 'Nicholas' },
+    });
+    expect(rename.json().photoDataUrl).toBe(photo);
+    const secondDevice = await app.inject({
+      method: 'GET',
+      url: '/v1/profile',
+      headers: headers(owner),
+    });
+    expect(secondDevice.json().name).toBe('Nicholas');
+    expect(secondDevice.json().photoDataUrl).toBe(photo);
+    const untouched = await app.inject({
+      method: 'GET',
+      url: '/v1/profile',
+      headers: headers(other),
+    });
+    expect(untouched.json()).toEqual({
+      id: other.user.id,
+      name: other.user.name,
+      photoDataUrl: null,
+    });
+    const removed = await app.inject({
+      method: 'PATCH',
+      url: '/v1/profile',
+      headers: headers(owner),
+      payload: { photoDataUrl: null },
+    });
+    expect(removed.json()).toEqual({ id: owner.user.id, name: 'Nicholas', photoDataUrl: null });
+    const refreshed = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/refresh',
+      payload: { refreshToken: owner.refreshToken },
+    });
+    expect(refreshed.statusCode, refreshed.body).toBe(200);
+    expect(sessionSchema.parse(refreshed.json()).user.name).toBe('Nicholas');
+    expect(JSON.stringify(refreshed.json())).not.toContain('photoDataUrl');
+  });
+
+  it('rejects unauthenticated profile changes, blank names, foreign IDs and malformed or oversized photos', async () => {
+    const owner = await login();
+    const anonymous = await app.inject({
+      method: 'PATCH',
+      url: '/v1/profile',
+      payload: { name: 'No' },
+    });
+    expect(anonymous.statusCode).toBe(401);
+    for (const patch of [
+      {},
+      { name: '  ' },
+      { name: 'a'.repeat(101) },
+      { id: randomUUID(), name: 'No' },
+      { photoDataUrl: 'https://example.test/photo.jpg' },
+      { photoDataUrl: 'data:image/jpeg;base64,AAAA' },
+      { photoDataUrl: 'data:image/jpeg;base64,' + 'A'.repeat(280_000) },
+    ]) {
+      const result = await app.inject({
+        method: 'PATCH',
+        url: '/v1/profile',
+        headers: headers(owner),
+        payload: patch,
+      });
+      expect(result.statusCode, result.body).toBe(400);
+    }
+    const unchanged = await app.inject({
+      method: 'GET',
+      url: '/v1/profile',
+      headers: headers(owner),
+    });
+    expect(unchanged.json()).toEqual({
+      id: owner.user.id,
+      name: owner.user.name,
+      photoDataUrl: null,
+    });
+  });
   const deckOp = (id = randomUUID()): SyncOperation => ({
     operationId: randomUUID(),
     deviceId,
@@ -139,6 +235,68 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL backend integration'
     createdAt: new Date().toISOString(),
     type: 'review.append',
     payload,
+  });
+
+  it('syncs day-based reviews idempotently and keeps historical v1 reviews unchanged', async () => {
+    const owner = await login(),
+      unaffected = await login();
+    const { deckId, cardId } = await setup(owner);
+    const old = event(deckId, cardId, 1, createdAt);
+    await push(owner, reviewOp(old));
+    const legacy = await app.inject({ url: '/v1/snapshot', headers: headers(owner) });
+    expect(legacy.statusCode).toBe(200);
+    expect(legacy.json().cards[0].schedule.intervalSeconds).toBe(600);
+    const modern = {
+      ...event(deckId, cardId, 2, new Date(Date.parse(createdAt) + 600_000).toISOString()),
+      algorithmVersion: 'sm2-v2' as const,
+      rating: 'again' as const,
+    };
+    const operation = reviewOp(modern);
+    const currentHeaders = { ...headers(owner), 'x-recollect-scheduler': 'sm2-v2' };
+    const submit = () =>
+      app.inject({
+        method: 'POST',
+        url: '/v1/sync/push',
+        headers: currentHeaders,
+        payload: { operations: [operation] },
+      });
+    const accepted = await submit();
+    expect(accepted.statusCode, accepted.body).toBe(200);
+    expect(accepted.json().receipts[0].canonical.data.schedule.intervalSeconds).toBe(3 * 86_400);
+    expect((await submit()).json().receipts[0].status).toBe('duplicate');
+    const pulled = await app.inject({ url: '/v1/sync/pull?cursor=0', headers: currentHeaders });
+    expect(
+      pullResponseSchema
+        .parse(pulled.json())
+        .changes.some(
+          (change) => change.entity === 'review' && change.data.algorithmVersion === 'sm2-v2',
+        ),
+    ).toBe(true);
+    const snapshot = await app.inject({ url: '/v1/snapshot', headers: currentHeaders });
+    const library = snapshotSchema.parse(snapshot.json());
+    expect(library.cards[0]!.schedule).toEqual(
+      replayReviews(initialSchedule(createdAt), [old, modern]),
+    );
+    expect(library.reviews).toHaveLength(2);
+    expect(library.reviews.find((review) => review.id === old.id)).toEqual(old);
+    // Installed v1 clients get an actionable update message before mutating or
+    // receiving a strict contract they cannot parse. Other owners still work.
+    expect((await app.inject({ url: '/v1/snapshot', headers: headers(owner) })).statusCode).toBe(
+      426,
+    );
+    const staleWrite = await app.inject({
+      method: 'POST',
+      url: '/v1/sync/push',
+      headers: headers(owner),
+      payload: { operations: [reviewOp(event(deckId, cardId, 3, new Date().toISOString()))] },
+    });
+    expect(staleWrite.statusCode).toBe(426);
+    expect(staleWrite.json().error.code).toBe('upgrade_required');
+    expect(
+      (await app.inject({ url: '/v1/snapshot', headers: headers(unaffected) })).statusCode,
+    ).toBe(200);
+    const confirmed = await app.inject({ url: '/v1/snapshot', headers: currentHeaders });
+    expect(confirmed.json().reviews).toHaveLength(2);
   });
 
   it('consumes a one-time nonce and rejects replay and arbitrary old access tokens', async () => {

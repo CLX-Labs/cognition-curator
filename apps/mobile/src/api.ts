@@ -1,7 +1,7 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { appleChallengeSchema, sessionSchema, type Session } from '@recollect/contracts';
+import { ALGORITHM_VERSION, appleChallengeSchema, sessionSchema, type Session } from '@recollect/contracts';
 import { release } from './release';
 
 const SESSION_KEY = 'recollect.session.v2';
@@ -96,6 +96,7 @@ export class ApiClient {
         method: options.method ?? 'GET',
         headers: {
           Accept: 'application/json',
+          'X-Recollect-Scheduler': ALGORITHM_VERSION,
           ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
           ...(options.token ? { Authorization: 'Bearer ' + options.token } : {}),
         },

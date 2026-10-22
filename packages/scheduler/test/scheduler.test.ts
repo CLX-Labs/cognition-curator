@@ -8,7 +8,7 @@ import {
   MAX_INTERVAL_SECONDS,
   previewIntervals,
   replayReviews,
-  reviewSchedule,
+  reviewSchedule as currentReviewSchedule,
 } from '../src/index.ts';
 
 const at = '2026-10-11T12:00:00.000Z';
@@ -28,7 +28,13 @@ function event(n: number, patch: Partial<ReviewEvent> = {}): ReviewEvent {
   };
 }
 
-describe('versioned scheduler', () => {
+// Recorded v1 events must continue producing exactly their historical result.
+const reviewSchedule = (
+  state: Parameters<typeof currentReviewSchedule>[0],
+  event: Parameters<typeof currentReviewSchedule>[1],
+) => currentReviewSchedule(state, { ...event, algorithmVersion: 'sm2-v1' });
+
+describe('legacy v1 scheduler replay', () => {
   it('uses explicit minute learning steps and graduates after the second good answer', () => {
     const first = reviewSchedule(initialSchedule(at), { rating: 'good', reviewedAt: at });
     expect(first.intervalSeconds).toBe(600);
@@ -172,7 +178,77 @@ describe('versioned scheduler', () => {
   it('previews every rating without mutating the card or consulting a clock', () => {
     const state = initialSchedule(at);
     const before = structuredClone(state);
-    expect(previewIntervals(state, at)).toEqual({ again: 60, hard: 60, good: 600, easy: 345_600 });
+    expect(previewIntervals(state, at, 'sm2-v1')).toEqual({
+      again: 60,
+      hard: 60,
+      good: 600,
+      easy: 345_600,
+    });
+    expect(state).toEqual(before);
+  });
+});
+
+describe('day-based v2 review cadence', () => {
+  it('gives an uncertain card three days and a remembered card a week, including old learning cards', () => {
+    for (const phase of ['new', 'learning', 'review', 'relearning'] as const) {
+      const state = { ...initialSchedule(at), phase, intervalSeconds: 60 };
+      expect(previewIntervals(state, at)).toEqual({
+        again: 3 * DAY_SECONDS,
+        hard: 3 * DAY_SECONDS,
+        good: 7 * DAY_SECONDS,
+        easy: 14 * DAY_SECONDS,
+      });
+      const next = currentReviewSchedule(state, { rating: 'again', reviewedAt: at });
+      expect(next.algorithmVersion).toBe('sm2-v2');
+      expect(next.dueAt).toBe('2026-10-14T12:00:00.000Z');
+      expect(isDue(next, '2026-10-12T12:00:00.000Z')).toBe(false);
+    }
+  });
+
+  it('extends successful recall and resets to days after a miss', () => {
+    const first = currentReviewSchedule(initialSchedule(at), { rating: 'good', reviewedAt: at });
+    expect(first.intervalSeconds).toBe(7 * DAY_SECONDS);
+    const next = currentReviewSchedule(first, { rating: 'good', reviewedAt: first.dueAt });
+    expect(next.intervalSeconds).toBe(17.5 * DAY_SECONDS);
+    const third = currentReviewSchedule(next, { rating: 'good', reviewedAt: next.dueAt });
+    expect(third.intervalSeconds).toBe(43.75 * DAY_SECONDS);
+    const missed = currentReviewSchedule(third, { rating: 'again', reviewedAt: third.dueAt });
+    expect(missed.intervalSeconds).toBe(3 * DAY_SECONDS);
+    expect(missed.lapses).toBe(1);
+    expect(
+      currentReviewSchedule(missed, { rating: 'good', reviewedAt: missed.dueAt }).intervalSeconds,
+    ).toBe(7 * DAY_SECONDS);
+    expect(
+      currentReviewSchedule(missed, { rating: 'again', reviewedAt: missed.dueAt }).lapses,
+    ).toBe(1);
+  });
+
+  it('replays mixed versions deterministically without reinterpreting a minute-scale historical event', () => {
+    const old = event(1);
+    const modern = event(2, { algorithmVersion: 'sm2-v2', reviewedAt: '2026-10-11T12:10:00.000Z' });
+    expect(replayReviews(initialSchedule(at), [old]).intervalSeconds).toBe(600);
+    const expected = currentReviewSchedule(reviewSchedule(initialSchedule(at), old), modern);
+    expect(expected.intervalSeconds).toBe(7 * DAY_SECONDS);
+    expect(replayReviews(initialSchedule(at), [modern, old, modern])).toEqual(expected);
+    const checkpoint = structuredClone(expected);
+    expect(replayReviews(checkpoint, [])).toEqual(expected);
+    expect(checkpoint).toEqual(expected);
+  });
+
+  it('bounds long intervals and ease, and previews without changing stored schedules', () => {
+    const state = {
+      ...initialSchedule(at),
+      phase: 'review' as const,
+      intervalSeconds: MAX_INTERVAL_SECONDS * 2,
+      easeFactor: 12,
+    };
+    const before = structuredClone(state);
+    for (const rating of ['hard', 'good', 'easy'] as const) {
+      const next = currentReviewSchedule(state, { rating, reviewedAt: at });
+      expect(next.intervalSeconds).toBe(MAX_INTERVAL_SECONDS);
+      expect(next.easeFactor).toBeLessThanOrEqual(3);
+    }
+    previewIntervals(state, at);
     expect(state).toEqual(before);
   });
 });

@@ -19,6 +19,7 @@ export const users = recollect.table('users', {
   appleId: text('apple_id').unique(),
   email: text(),
   name: text().notNull(),
+  profilePhotoDataUrl: text('profile_photo_data_url'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

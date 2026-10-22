@@ -210,6 +210,8 @@ it('tapping flips both ways without recording an answer or advancing', async () 
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
   expect(actions()).toEqual(['← Not sure', 'I remember →']);
+  expect(text()).toContain('Not sure: 3d');
+  expect(text()).toContain('Remembered: 7d');
   await flip();
   expect(text()).toContain(first.back);
   expect(text()).not.toContain(first.front);
@@ -336,35 +338,31 @@ it('a failed save preserves the current face and allows a retry', async () => {
   expect(text()).toContain(second.front);
 });
 
-it('free practice repeats missed cards at the end without changing schedules', async () => {
+it('practice records the same ratings as daily review without repeating missed cards', async () => {
   rig.params.practice = 'true';
   await mount();
   await swipe(-150);
   expect(text()).toContain(second.front);
-  expect(text()).toContain('03');
+  expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'again', 0);
   await press('I remember →');
-  expect(text()).toContain(first.front);
-  expect(text()).not.toContain(first.back);
-  await flip();
-  await swipe(150);
   expect(text()).toContain('PRACTICE COMPLETE');
-  expect(rig.mutate).not.toHaveBeenCalled();
-  expect(rig.data!.cards.map((item) => item.schedule)).toEqual([first.schedule, second.schedule]);
+  expect(text()).toContain('Your next review dates are saved.');
+  expect(rig.rate).toHaveBeenCalledTimes(2);
+  expect(rig.rate).toHaveBeenLastCalledWith(second.id, 'good', 0);
 });
 
-it('repeating the last practice card resets its answer and hint', async () => {
+it('missing the only practice card completes the session instead of immediately repeating it', async () => {
   rig.params.practice = 'true';
   rig.data = { ...rig.data!, cards: [first] };
   await mount();
   await press('Show a hint');
   await flip();
   await swipe(-150);
-  expect(text()).toContain(first.front);
+  expect(text()).toContain('PRACTICE COMPLETE');
+  expect(text()).not.toContain(first.front);
   expect(text()).not.toContain(first.back);
   expect(text()).not.toContain(first.hint);
-  await swipe(150);
-  expect(text()).toContain('PRACTICE COMPLETE');
-  expect(rig.rate).not.toHaveBeenCalled();
+  expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'again', 0);
 });
 
 it('keeps the flipped face, session queue and position through library synchronization', async () => {

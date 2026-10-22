@@ -52,6 +52,7 @@ vi.mock('../src/store', () => ({
   }),
 }));
 vi.mock('../src/api', () => ({ api: { request: rig.request } }));
+vi.mock('../src/brand-patterns', () => ({ BrandPattern: () => null, DeckArtwork: () => null }));
 vi.mock('../src/ui', () => ({
   Text: ({ children, ...props }: { children: React.ReactNode }) =>
     React.createElement('text', props, children),

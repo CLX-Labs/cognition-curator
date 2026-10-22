@@ -14,6 +14,7 @@ import {
 } from '../../src/generation';
 import { Back, Button, Field, Panel, Screen, colors, s, Text } from '../../src/ui';
 import { useAppActive, usePolling } from '../../src/polling';
+import { BrandPattern } from '../../src/brand-patterns';
 
 export default function GenerateScreen() {
   const focused = useIsFocused();
@@ -372,6 +373,7 @@ export default function GenerateScreen() {
               : 'Grow your deck'
       }
       eyebrow="02 / FOLLOW YOUR CURIOSITY"
+      action={<BrandPattern variant="flow" width={64} height={64} />}
       subtitle={
         state
           ? destinationName

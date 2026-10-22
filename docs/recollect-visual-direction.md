@@ -45,6 +45,22 @@ A small yellow “Remembered” or lilac “Review later” badge floats above t
 
 Keep card fronts succinct. Saved cards, AI suggestions, and practice have distinct actions. The sculpture is used on sign-in; the app's learning screens remain focused on the user's own cards.
 
+## Shapes and patterns
+
+Three original geometric motifs bring a collected, printed quality to the app, inspired by [Book of Shapes](https://bookofshapes.com/):
+
+| Motif | Palette                          | Placement                                |
+| ----- | -------------------------------- | ---------------------------------------- |
+| Weave | Cobalt arcs on yellow            | Deck covers and the account header       |
+| Flow  | Curving lines on lilac           | Creation and exploration                 |
+| Orbit | Yellow and paper rings on cobalt | Daily practice, progress, and completion |
+
+Artwork sits beside information in its own bounded tile. Card faces, charts, form fields, and response controls remain clear. Deck cover families are chosen deterministically from the deck ID and retain the user's chosen color and icon. The app icon and profile photos remain unchanged.
+
+SVG originals and compact retina PNGs live together in `apps/landing/assets/patterns`. The app uses bundled native images, with no new drawing library, animation, network requests, or native runtime changes. Every pattern is decorative and excluded from touch handling and the accessibility tree.
+
+The reference site's [license](https://bookofshapes.com/license) permits use of its generated patterns in products, with exceptions for three named recreations. Recollect's geometry is original; it does not use those recreations or the site's source code.
+
 ## References and original art
 
 The [Promptsites gallery](https://www.promptsites.co/), including its [learning card presentation](https://www.promptsites.co/prompt/bite-sized-courses) and [editorial compositions](https://www.promptsites.co/prompt/prisma-landing), informed the use of depth, type scale, and visual hierarchy. The Recollect layout, copy, code, and hero illustration are original.

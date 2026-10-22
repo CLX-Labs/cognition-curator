@@ -9,6 +9,7 @@ import ReviewCard from './review-card';
 import { createReviewHaptics } from './review-haptics';
 import { ReviewFeedbackCue, type ReviewFeedback } from './review-feedback';
 import { ReviewReadingSheet } from './review-reading-sheet';
+import { BrandPattern } from './brand-patterns';
 
 type ReviewParams = { deckId?: string; practice?: string; cardId?: string; id?: string };
 function duration(seconds: number) {
@@ -133,6 +134,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
         syncFeedback="errors"
         title={queue.length ? 'Nicely done.' : 'All caught up.'}
         eyebrow={practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE'}
+        action={<BrandPattern variant="orbit" width={56} height={56} />}
         subtitle={
           queue.length
             ? 'A little practice, a lasting memory.'

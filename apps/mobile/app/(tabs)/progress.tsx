@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useStore } from '../../src/store';
 import { Button, Panel, Screen, colors, s, Text } from '../../src/ui';
+import { BrandPattern } from '../../src/brand-patterns';
 export default function Progress() {
   const { data } = useStore();
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -27,6 +28,7 @@ export default function Progress() {
     <Screen
       title="Your progress"
       eyebrow="03 / LITTLE BY LITTLE"
+      action={<BrandPattern variant="orbit" width={56} height={56} />}
       subtitle="Small sessions add up to lasting knowledge."
     >
       <Panel tint>

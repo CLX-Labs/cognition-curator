@@ -7,6 +7,7 @@ import { BrandHeader, Button, Empty, Panel, Screen, colors, s, Text } from '../.
 import { ReleaseStamp } from '../../src/release-panel';
 import { useProfile } from '../../src/profile';
 import Avatar from '../../src/avatar';
+import { BrandPattern, DeckArtwork } from '../../src/brand-patterns';
 
 export default function Home() {
   const { data } = useStore();
@@ -44,8 +45,11 @@ export default function Home() {
       }
     >
       <Panel tint>
-        <View style={s.pill}>
-          <Text style={s.pillText}>DAILY PRACTICE</Text>
+        <View style={s.between}>
+          <View style={s.pill}>
+            <Text style={s.pillText}>DAILY PRACTICE</Text>
+          </View>
+          <BrandPattern variant="orbit" width={64} height={28} />
         </View>
         <Text style={[s.editorial, { fontSize: 42, lineHeight: 46, color: colors.ink }]}>
           {due.length
@@ -147,18 +151,7 @@ export default function Home() {
           >
             <Panel>
               <View style={s.row}>
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 13,
-                    backgroundColor: deck.color,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ fontSize: 22 }}>{deck.icon || '▤'}</Text>
-                </View>
+                <DeckArtwork id={deck.id} color={deck.color} icon={deck.icon} size={56} />
                 <View style={{ flex: 1 }}>
                   <Text style={[s.label, { fontSize: 17, lineHeight: 23 }]}>{deck.name}</Text>
                   <Text style={s.caption}>

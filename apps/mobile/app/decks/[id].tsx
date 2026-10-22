@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../src/store';
 import { activeDeck, deckContent, dueCards } from '../../src/repository';
 import DeckForm from '../../src/deck-form';
+import { DeckArtwork } from '../../src/brand-patterns';
 import {
   Back,
   Button,
@@ -99,20 +100,7 @@ export default function DeckDetail() {
           </Pressable>
         </View>
       }
-      action={
-        <View
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 12,
-            backgroundColor: deck.color,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontSize: 21 }}>{deck.icon || '▤'}</Text>
-        </View>
-      }
+      action={<DeckArtwork id={deck.id} color={deck.color} icon={deck.icon} size={56} />}
       subtitle={
         cards.length + ' cards · ' + (activeDeck(deck) ? due.length + ' due' : 'Reviews paused')
       }

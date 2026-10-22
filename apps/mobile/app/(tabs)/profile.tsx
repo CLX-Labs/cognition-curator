@@ -19,6 +19,7 @@ import { planMigration, type MigrationPlan } from '../../src/migration';
 import type { LocalIssue } from '../../src/repository';
 import ReleasePanel from '../../src/release-panel';
 import ProfileEditor from '../../src/profile-editor';
+import { BrandPattern } from '../../src/brand-patterns';
 
 type ImportWorkflow = {
   legacy: LegacyExport;
@@ -169,6 +170,7 @@ export default function ProfileScreen() {
     <Screen
       title="You"
       eyebrow="04 / YOUR SPACE"
+      action={<BrandPattern variant="weave" width={64} height={64} />}
       subtitle="Your account, library, and app updates."
     >
       <Panel>

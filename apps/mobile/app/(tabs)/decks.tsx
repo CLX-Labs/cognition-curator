@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useStore } from '../../src/store';
 import { activeDeck, dueCards } from '../../src/repository';
 import { Button, Empty, Field, Panel, Screen, colors, s, Text } from '../../src/ui';
+import { DeckArtwork } from '../../src/brand-patterns';
 
 export default function Decks() {
   const { data } = useStore();
@@ -56,18 +57,7 @@ export default function Decks() {
             >
               <Panel style={{ padding: 20, borderLeftWidth: 4, borderLeftColor: deck.color }}>
                 <View style={[s.row, { alignItems: 'flex-start' }]}>
-                  <View
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 14,
-                      backgroundColor: deck.color,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ fontSize: 23 }}>{deck.icon || '▤'}</Text>
-                  </View>
+                  <DeckArtwork id={deck.id} color={deck.color} icon={deck.icon} size={68} />
                   <View style={{ flex: 1, gap: 5 }}>
                     <Text style={[s.sectionTitle, { fontSize: 18 }]}>{deck.name}</Text>
                     {!!deck.description && (

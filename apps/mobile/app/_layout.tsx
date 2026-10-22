@@ -60,6 +60,15 @@ function AppNavigation() {
       }}
     >
       <Stack.Screen name="(tabs)" />
+      {/* Card swipes must never dismiss a review session. */}
+      <Stack.Screen
+        name="review"
+        options={{ gestureEnabled: false, fullScreenGestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="review/[id]"
+        options={{ gestureEnabled: false, fullScreenGestureEnabled: false }}
+      />
     </Stack>
   );
 }

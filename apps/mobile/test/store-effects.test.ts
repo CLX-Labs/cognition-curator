@@ -96,6 +96,9 @@ vi.mock('../src/app-updates', () => ({
   AppUpdateProvider: ({ children }: { children: React.ReactNode }) => children,
   UpdateNotice: () => null,
 }));
+vi.mock('../src/profile', () => ({
+  ProfileProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 import RootLayout from '../app/_layout';
 import { useStore } from '../src/store';
 import { useAppActive, usePolling } from '../src/polling';

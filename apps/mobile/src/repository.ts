@@ -1,4 +1,5 @@
 import {
+  ALGORITHM_VERSION,
   cardInputSchema,
   deckInputSchema,
   type Card,
@@ -253,6 +254,7 @@ export class Repository {
             schedule: reviewSchedule(entity.schedule, {
               rating: operation.payload.rating,
               reviewedAt: operation.payload.reviewedAt,
+              algorithmVersion: operation.payload.algorithmVersion,
             }),
             updatedAt: operation.createdAt,
           };
@@ -354,7 +356,7 @@ export class Repository {
         rating,
         reviewedAt,
         elapsedMs: Math.min(86_400_000, Math.max(0, Math.round(elapsedMs))),
-        algorithmVersion: 'sm2-v1',
+        algorithmVersion: ALGORITHM_VERSION,
       };
       await db.run('INSERT INTO reviews(owner,id,card_id,data) VALUES(?,?,?,?)', [
         this.ownerId,

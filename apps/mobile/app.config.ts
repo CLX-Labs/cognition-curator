@@ -39,6 +39,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-sqlite',
     [
+      'expo-image-picker',
+      {
+        photosPermission: 'Choose a photo for your Recollect profile.',
+        cameraPermission: false,
+        microphonePermission: false,
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/icon.png',

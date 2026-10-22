@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { z, ZodError } from 'zod';
 import {
+  ALGORITHM_VERSION,
   generationAcceptSchema,
   generationRequestSchema,
   importRequestSchema,
@@ -15,6 +16,7 @@ import type { ApiConfig } from './config.js';
 import { SyncService } from './sync.js';
 import { GenerationService } from './generations.js';
 import { importDevice } from './imports.js';
+import { ProfileService } from './profile.js';
 
 function generationLog(job: GenerationJob) {
   return {
@@ -41,18 +43,17 @@ export async function buildApp(options: {
   const { db, config } = options;
   const auth = new AuthService(db, config, options.appleVerifier),
     sync = new SyncService(db),
+    profile = new ProfileService(db),
     generation = new GenerationService(db, config.dailyGenerationCards);
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError)
-      return reply
-        .code(400)
-        .send({
-          error: {
-            code: 'invalid_request',
-            message: 'Request does not match the versioned contract.',
-            issues: error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
-          },
-        });
+      return reply.code(400).send({
+        error: {
+          code: 'invalid_request',
+          message: 'Request does not match the versioned contract.',
+          issues: error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
+        },
+      });
     if (error instanceof DomainError)
       return reply
         .code(error.statusCode)
@@ -60,14 +61,12 @@ export async function buildApp(options: {
     const status =
       typeof error === 'object' && error && 'statusCode' in error ? Number(error.statusCode) : 500;
     if (status === 413)
-      return reply
-        .code(413)
-        .send({
-          error: {
-            code: 'payload_too_large',
-            message: 'Split this import into smaller reviewable batches.',
-          },
-        });
+      return reply.code(413).send({
+        error: {
+          code: 'payload_too_large',
+          message: 'Split this import into smaller reviewable batches.',
+        },
+      });
     if (status >= 400 && status < 500)
       return reply
         .code(status)
@@ -76,14 +75,12 @@ export async function buildApp(options: {
       { code: (error as { code?: string }).code, name: (error as Error).name },
       'Request failed',
     );
-    return reply
-      .code(500)
-      .send({
-        error: {
-          code: 'internal_error',
-          message: 'The operation did not complete. Retry with the same operation ID.',
-        },
-      });
+    return reply.code(500).send({
+      error: {
+        code: 'internal_error',
+        message: 'The operation did not complete. Retry with the same operation ID.',
+      },
+    });
   });
   app.get('/health', async () => {
     await db.query('SELECT 1');
@@ -92,19 +89,40 @@ export async function buildApp(options: {
   app.get('/ping', async () => ({ status: 'ok' }));
   // Legacy writers are deliberately gated until a recovery-capable client is released.
   app.all('/api/*', async (_request, reply) =>
-    reply
-      .code(426)
-      .send({
-        error: {
-          code: 'upgrade_required',
-          message:
-            'This endpoint requires the recovery-capable Recollect client. Existing local data must be preserved.',
-        },
-      }),
+    reply.code(426).send({
+      error: {
+        code: 'upgrade_required',
+        message:
+          'This endpoint requires the recovery-capable Recollect client. Existing local data must be preserved.',
+      },
+    }),
   );
   await auth.routes(app);
   await app.register(async (secured) => {
     secured.addHook('preHandler', (request) => auth.authenticate(request));
+    secured.addHook('preHandler', async (request) => {
+      if (request.headers['x-recollect-scheduler'] === ALGORITHM_VERSION) return;
+      // v1 clients decode strict schedule contracts. They can keep using their
+      // account until a v2 review exists, then must update before writing v1
+      // schedules or receiving data they cannot decode. Their outbox stays local.
+      const upgraded = await db.query(
+        `SELECT 1 WHERE EXISTS (SELECT 1 FROM recollect.cards WHERE owner_id=$1
+          AND data->'schedule'->>'algorithmVersion'=$2)
+         OR EXISTS (SELECT 1 FROM recollect.review_events WHERE owner_id=$1
+          AND data->>'algorithmVersion'=$2)`,
+        [request.identity!.ownerId, ALGORITHM_VERSION],
+      );
+      if (upgraded.rowCount)
+        throw new DomainError(
+          'upgrade_required',
+          'Update Recollect in TestFlight to sync the new review schedule. Your cards and queued changes are saved on this device.',
+          426,
+        );
+    });
+    secured.get('/v1/profile', (request) => profile.get(request.identity!.ownerId));
+    secured.patch('/v1/profile', (request) =>
+      profile.update(request.identity!.ownerId, request.body),
+    );
     secured.get('/v1/me', async (request) => (await sync.snapshot(request.identity!.ownerId)).user);
     secured.get('/v1/snapshot', (request) => sync.snapshot(request.identity!.ownerId));
     secured.get('/v1/sync/snapshot', (request) => sync.snapshot(request.identity!.ownerId));

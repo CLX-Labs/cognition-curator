@@ -5,13 +5,16 @@ import { useStore } from '../../src/store';
 import { dueCards } from '../../src/repository';
 import { BrandHeader, Button, Empty, Panel, Screen, colors, s, Text } from '../../src/ui';
 import { ReleaseStamp } from '../../src/release-panel';
+import { useProfile } from '../../src/profile';
+import Avatar from '../../src/avatar';
 
 export default function Home() {
-  const { session, data } = useStore();
+  const { data } = useStore();
+  const { profile } = useProfile();
   const due = dueCards(data);
   const today = new Date().toDateString();
   const todayReviews = data.reviews.filter((r) => new Date(r.reviewedAt).toDateString() === today);
-  const name = session?.user.name.split(' ')[0] ?? 'there';
+  const name = profile.name.split(' ')[0] || 'there';
   return (
     <Screen
       leading={<BrandHeader />}
@@ -36,9 +39,7 @@ export default function Home() {
             justifyContent: 'center',
           }}
         >
-          <Text style={{ fontWeight: '800', color: colors.ink }}>
-            {name.slice(0, 1).toUpperCase()}
-          </Text>
+          <Avatar name={profile.name} photoDataUrl={profile.photoDataUrl} size={44} />
         </Pressable>
       }
     >

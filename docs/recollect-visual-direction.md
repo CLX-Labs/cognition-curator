@@ -30,7 +30,9 @@ Card review uses a direct, binary interaction:
 - Tap the card to flip between question and answer; this never records a rating.
 - Swipe right to remember. A scheduled review saves `good` and advances.
 - Swipe left when unsure. A scheduled review saves `again` and advances.
-- In free practice, remembered cards advance and missed cards repeat at the end. The review schedule is unchanged.
+- Practice anytime includes cards that are not due yet. Each response updates the review schedule, just like daily review; missed cards do not repeat in the same session.
+- “Not sure” schedules the next review in 3 days. “I remember” starts at 7 days and grows with repeated recall. Historical v1 review events retain their original scheduling rules when replayed.
+- In You, Edit profile changes the account name and photo. Photos are cropped to a square, resized to 512 px, and saved as small private JPEGs; the home greeting and avatar use the saved profile.
 - Visible buttons and accessible card actions provide the same choices without gestures.
 
 Short or vertical drags, cancelled gestures, and multiple fingers do not record a response. Saves are guarded against duplicate actions, and a failed save keeps the current card available for retry. Library synchronization preserves the session queue and current face. Reduced motion disables the flip and spring animation. No transient saved banners appear in review.

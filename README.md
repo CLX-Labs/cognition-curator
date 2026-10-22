@@ -39,17 +39,17 @@ The worker requires an explicitly configured available Anthropic model. Missing 
 
 ## Workspaces
 
-| Directory             | Responsibility                                                                |
-| --------------------- | ----------------------------------------------------------------------------- |
-| `apps/mobile`         | Expo Router screens, SecureStore sessions, SQLite records/outbox, recovery UI |
-| `apps/api`            | Fastify auth, sync/content commands, generation, imports and progress         |
-| `apps/worker`         | pg-boss dispatch, bounded attempts, fencing and durable recovery              |
-| `packages/contracts`  | Zod wire schemas and types; string ratings, UUIDs and ISO dates               |
-| `packages/scheduler`  | Pure deterministic `sm2-v1` scheduler for server and device                   |
-| `packages/db`         | PostgreSQL, Drizzle schema, tracked migrations and legacy import              |
-| `packages/ai`         | Validated Anthropic Messages adapter and test-provider interface              |
-| `apps/mobile/modules` | Archived SwiftData reader and retained widget integration                     |
-| `apps/mobile/plugins` | Reproducible native target configuration for Expo CNG                         |
+| Directory             | Responsibility                                                                 |
+| --------------------- | ------------------------------------------------------------------------------ |
+| `apps/mobile`         | Expo Router screens, SecureStore sessions, SQLite records/outbox, recovery UI  |
+| `apps/api`            | Fastify auth, sync/content commands, generation, imports and progress          |
+| `apps/worker`         | pg-boss dispatch, bounded attempts, fencing and durable recovery               |
+| `packages/contracts`  | Zod wire schemas and types; string ratings, UUIDs and ISO dates                |
+| `packages/scheduler`  | Deterministic day-based scheduler with versioned history for server and device |
+| `packages/db`         | PostgreSQL, Drizzle schema, tracked migrations and legacy import               |
+| `packages/ai`         | Validated Anthropic Messages adapter and test-provider interface               |
+| `apps/mobile/modules` | Archived SwiftData reader and retained widget integration                      |
+| `apps/mobile/plugins` | Reproducible native target configuration for Expo CNG                          |
 
 The API and worker use the `recollect` PostgreSQL schema. pg-boss owns `recollect_boss`. Normal new-stack reads and writes do not alter the legacy `public` tables.
 

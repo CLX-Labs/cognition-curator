@@ -6,10 +6,13 @@ export const dateTimeSchema = z.iso.datetime({ offset: true });
 export const revisionSchema = z.string().regex(/^(0|[1-9][0-9]*)$/);
 export const ratingSchema = z.enum(['again', 'hard', 'good', 'easy']);
 export type Rating = z.infer<typeof ratingSchema>;
-export const ALGORITHM_VERSION = 'sm2-v1' as const;
+export const LEGACY_ALGORITHM_VERSION = 'sm2-v1' as const;
+export const ALGORITHM_VERSION = 'sm2-v2' as const;
+export const algorithmVersionSchema = z.enum([LEGACY_ALGORITHM_VERSION, ALGORITHM_VERSION]);
+export type AlgorithmVersion = z.infer<typeof algorithmVersionSchema>;
 
 export const scheduleStateSchema = z.strictObject({
-  algorithmVersion: z.literal(ALGORITHM_VERSION),
+  algorithmVersion: algorithmVersionSchema,
   phase: z.enum(['new', 'learning', 'review', 'relearning']),
   dueAt: dateTimeSchema,
   // Legacy checkpoints may contain fractional/long intervals and ease above 3.
@@ -33,6 +36,29 @@ export const userSchema = z.strictObject({
   name: z.string().min(1).max(100),
 });
 export type User = z.infer<typeof userSchema>;
+
+// Small, normalized JPEGs stay private to the authenticated account. Keep this
+// separate from sessionSchema so credentials never contain a photo payload.
+export const MAX_PROFILE_PHOTO_LENGTH = 280_000;
+export const profilePhotoSchema = z
+  .string()
+  .max(MAX_PROFILE_PHOTO_LENGTH)
+  .regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/);
+export const profileSchema = z.strictObject({
+  id: uuidSchema,
+  name: z.string().trim().min(1).max(100),
+  photoDataUrl: profilePhotoSchema.nullable(),
+});
+export type Profile = z.infer<typeof profileSchema>;
+export const profileUpdateSchema = z
+  .strictObject({
+    name: z.string().trim().min(1).max(100).optional(),
+    photoDataUrl: profilePhotoSchema.nullable().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'Choose a name or photo to update.',
+  });
+export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
 export const sessionSchema = z.strictObject({
   accessToken: z.string().min(1),
   refreshToken: z.string().min(32),
@@ -87,7 +113,7 @@ export const reviewEventSchema = z.strictObject({
   rating: ratingSchema,
   reviewedAt: dateTimeSchema,
   elapsedMs: z.number().int().min(0).max(86_400_000),
-  algorithmVersion: z.literal(ALGORITHM_VERSION),
+  algorithmVersion: algorithmVersionSchema,
 });
 export type ReviewEvent = z.infer<typeof reviewEventSchema>;
 

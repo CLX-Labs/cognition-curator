@@ -89,9 +89,33 @@ describe('durable owner-isolated SQLite repository', () => {
     const state = await reopened.snapshot();
     expect(state.reviews).toEqual([event]);
     expect(state.cards[0]?.schedule.totalReviews).toBe(1);
+    expect(event.algorithmVersion).toBe('sm2-v2');
+    expect(state.cards[0]?.schedule.intervalSeconds).toBe(7 * 86_400);
     expect(state.pending).toBe(1);
     expect((await reopened.nextOperation())?.payload).toEqual(event);
     expect((await reopened.rateCard(f.card.id, 'good', 99)).deviceSequence).toBe(2);
+  });
+  it('preserves the minute schedule of a v1 review already queued before the app upgrade', async () => {
+    const { repo, db, owner, card } = await fixture();
+    await repo.rateCard(card.id, 'good', 100);
+    // Model the durable outbox left by an older installation, then cause local
+    // materialization after an unrelated content edit on the upgraded app.
+    const pending = (await repo.nextOperation())!;
+    if (pending.type !== 'review.append') throw new Error('Expected review');
+    const old = {
+      ...pending,
+      payload: { ...pending.payload, algorithmVersion: 'sm2-v1' as const },
+    };
+    await db.run('UPDATE outbox SET data=? WHERE owner=? AND id=?', [
+      JSON.stringify(old),
+      owner,
+      old.operationId,
+    ]);
+    await repo.saveCard({ ...cardContent(card), front: 'Edited after updating' });
+    const state = await repo.snapshot();
+    expect(state.cards[0]?.schedule.algorithmVersion).toBe('sm2-v1');
+    expect(state.cards[0]?.schedule.intervalSeconds).toBe(600);
+    expect(state.cards[0]?.front).toBe('Edited after updating');
   });
   it('rolls back review history and sequence if the durable outbox cannot be written', async () => {
     const { repo, db, card } = await fixture();

@@ -9,6 +9,7 @@ import { loadConfig } from '../apps/api/src/config.ts';
 import { createDatabase } from '@recollect/db';
 import { migrate } from '../packages/db/src/migrate.ts';
 import {
+  ALGORITHM_VERSION,
   cardInput,
   deckInput,
   importResponseSchema,
@@ -74,6 +75,7 @@ describe.skipIf(!url)('real SQLite → sync engine → authenticated API → Pos
           headers: {
             authorization: `Bearer ${session.accessToken}`,
             'content-type': 'application/json',
+            'x-recollect-scheduler': ALGORITHM_VERSION,
           },
           payload: options.body === undefined ? undefined : JSON.stringify(options.body),
         });
@@ -156,7 +158,7 @@ describe.skipIf(!url)('real SQLite → sync engine → authenticated API → Pos
     await phone.sync.run();
     clock += 1_000;
     const event = await phone.repo.rateCard(cardId, 'good', 3_200);
-    expect((await phone.repo.snapshot()).cards[0]!.schedule.intervalSeconds).toBe(600);
+    expect((await phone.repo.snapshot()).cards[0]!.schedule.intervalSeconds).toBe(7 * 86_400);
     const { file, id } = phone;
     phone.close();
     phone = await device(session, file, id);
@@ -188,7 +190,7 @@ describe.skipIf(!url)('real SQLite → sync engine → authenticated API → Pos
     expect(local.reviews).toHaveLength(1);
     expect(local.cards[0]!.schedule.totalReviews).toBe(1);
     expect(local.cards[0]!.schedule.dueAt).toBe(
-      new Date(Date.parse(event.reviewedAt) + 600_000).toISOString(),
+      new Date(Date.parse(event.reviewedAt) + 7 * 86_400_000).toISOString(),
     );
     expect(server.reviews).toHaveLength(1);
     expect(server.cards[0]!.schedule).toEqual(local.cards[0]!.schedule);

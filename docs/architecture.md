@@ -29,22 +29,24 @@ Credentials live in SecureStore. The installation device ID and its review seque
 
 ## Scheduler
 
-`sm2-v1` receives explicit time inputs and has no randomness. Ratings are `again`, `hard`, `good`, `easy`; intervals are seconds. These are versioned product rules with regression fixtures:
+`sm2-v2` receives explicit time inputs and has no randomness. Ratings are `again`, `hard`, `good`, `easy`; intervals are seconds. Daily review and practice use the same rules, with no automatic repeats in the session:
 
-| State/rating   | Behavior                                               |
-| -------------- | ------------------------------------------------------ |
-| Learning Again | One minute; reset learning step                        |
-| Learning Good  | Ten minutes, then graduate at one day on the next Good |
-| Learning Hard  | Repeat the current learning step                       |
-| Learning Easy  | Graduate at four days                                  |
-| Review Hard    | Interval × 1.2; ease − 0.15                            |
-| Review Good    | Interval × current ease                                |
-| Review Easy    | Interval × ease × 1.3, at least four days; ease + 0.15 |
-| Review Again   | Record lapse; ease − 0.2; one-minute relearning        |
+| State/rating      | Behavior                                                                      |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Again / Not sure  | Three days; reset successful repetitions and enter relearning                 |
+| Good / I remember | At least seven days; established review interval × ease                       |
+| Hard              | At least three days; established review interval × 1.2; ease − 0.15           |
+| Easy              | At least fourteen days; established review interval × ease × 1.3; ease + 0.15 |
+
+Each immutable event carries its algorithm version. Historical `sm2-v1` events still use their original one-/ten-minute learning steps, so replay, duplicate transport, and old offline outboxes retain their meaning. New events use v2. A stored checkpoint's due date is preserved until its next review. The app advertises v2 support in `X-Recollect-Scheduler`; older clients continue syncing until their account contains v2 review data, then receive an actionable 426 update message before writing or decoding unsupported data.
 
 New reviews bound ease to 1.3–3.0 and round intervals to whole seconds, with a maximum of 3,650 days. Imported checkpoints preserve finite fractional intervals, existing due dates, and legacy ease above 3 exactly. On the next rating, the scheduler first bounds the starting ease and then applies the new rules. This avoids rejecting ordinary values produced by the original Swift scheduler or silently changing when an imported card is due. Negative, nonfinite, unsafe numeric values and invalid dates still require recovery. Rating-derived recall is labeled self-rated; it is not an objective correctness measurement. Earlier imported reviews are archival.
 
 A review transaction inserts a unique immutable event, replays post-checkpoint history in effective-time/device/sequence/ID order, updates the current schedule, and publishes changes atomically. Future clock skew above five minutes is rejected. Reviews older than the recoverable checkpoint stay available for explicit recovery, rather than being replayed against unavailable history.
+
+## Profile
+
+Authenticated `GET/PATCH /v1/profile` reads and edits only the signed-in user's name and photo. Patches update only submitted fields. The photo picker crops and resizes images to 512 × 512 JPEGs; the API bounds the encoded payload and checks the JPEG envelope. The small private image is stored with the user, with no public URL or separate hosting service. Session and auth contracts stay unchanged, and photo payloads never enter SecureStore. An owner-scoped SQLite cache keeps the saved profile available offline. Profile refresh runs on account startup, profile focus, and foreground activation with a cooldown; it does not share library polling or reset editing state.
 
 ## Offline consistency
 

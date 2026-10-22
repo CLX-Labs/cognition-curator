@@ -28,7 +28,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   const { data, mutate } = useStore();
   const practice = params.practice === 'true';
   const specific = params.cardId ?? params.id;
-  const [queue, setQueue] = useState(() =>
+  const [queue] = useState(() =>
     (specific
       ? data.cards.filter((c) => c.id.toLowerCase() === specific.toLowerCase())
       : practice
@@ -60,11 +60,6 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   async function answer(remembered: boolean) {
     if (!card || saving.current) return;
     saving.current = true;
-    if (practice) {
-      if (!remembered) setQueue((items) => [...items, card.id]);
-      advance();
-      return;
-    }
     setBusy(true);
     try {
       await mutate((repo) =>
@@ -106,7 +101,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
           <Text style={[s.metric, { fontSize: 72 }]}>{index}</Text>
           <Text style={s.body}>
             {practice
-              ? 'cards practiced. Your review schedule is unchanged.'
+              ? 'cards practiced. Your next review dates are saved.'
               : 'cards reviewed. Your next review dates are saved.'}
           </Text>
         </Panel>
@@ -165,12 +160,10 @@ function ReviewSession({ params }: { params: ReviewParams }) {
             </View>
           </View>
           <Text style={[s.caption, { textAlign: 'center', color: colors.paper }]}>
-            {practice
-              ? 'Missed cards return at the end. Schedule unchanged.'
-              : 'Not sure: ' +
-                duration(intervals.again) +
-                ' · Remembered: ' +
-                duration(intervals.good)}
+            {'Not sure: ' +
+              duration(intervals.again) +
+              ' · Remembered: ' +
+              duration(intervals.good)}
           </Text>
         </>
       }

@@ -35,7 +35,9 @@ Card review uses a direct, binary interaction:
 - In You, Edit profile changes the account name and photo. Photos are cropped to a square, resized to 512 px, and saved as small private JPEGs; the home greeting and avatar use the saved profile.
 - Visible buttons and accessible card actions provide the same choices without gestures.
 
-Short or vertical drags, cancelled gestures, and multiple fingers do not record a response. Saves are guarded against duplicate actions, and a failed save keeps the current card available for retry. Library synchronization preserves the session queue and current face. Reduced motion disables the flip and spring animation. No transient saved banners appear in review.
+Short or vertical drags, cancelled gestures, and multiple fingers do not record a response. Saves are guarded against duplicate actions, and a failed save keeps the current card available for retry. Library synchronization preserves the session queue and current face. Reduced motion disables the flip and spring animation.
+
+Each saved response gives a brief native haptic: success for remembered, warning for unsure. A small yellow “Remembered” or lilac “Review later” badge floats above the controls for half a second, without moving content or delaying the next card. Reduced motion keeps this cue stationary. There is no saving banner or intermediate saved screen. Cancelled gestures, failed saves, and a session that has already closed produce no confirmation feedback.
 
 Keep card fronts succinct. Saved cards, AI suggestions, and practice have distinct actions. The sculpture is used on sign-in; the app's learning screens remain focused on the user's own cards.
 

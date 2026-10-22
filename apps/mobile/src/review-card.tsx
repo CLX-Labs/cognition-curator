@@ -1,16 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Animated,
-  PanResponder,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, StyleSheet, View } from 'react-native';
 import type { Card } from '@recollect/contracts';
 import { Text, colors, s } from './ui';
 import { isHorizontalReviewDrag, reviewSwipe } from './review-gesture';
+import { useReducedMotion } from './use-reduced-motion';
 
 export default function ReviewCard({
   card,
@@ -25,7 +18,7 @@ export default function ReviewCard({
   onFlip(): void;
   onAnswer(remembered: boolean): void;
 }) {
-  const [reduceMotion, setReduceMotion] = useState(true);
+  const reduceMotion = useReducedMotion();
   const [width, setWidth] = useState(320);
   const drag = useRef(new Animated.Value(0)).current;
   const flip = useRef(new Animated.Value(1)).current;
@@ -35,19 +28,6 @@ export default function ReviewCard({
   const latest = useRef({ disabled, onAnswer, width, reduceMotion });
   latest.current = { disabled, onAnswer, width, reduceMotion };
 
-  useEffect(() => {
-    let active = true;
-    void AccessibilityInfo.isReduceMotionEnabled()
-      .then((value) => {
-        if (active) setReduceMotion(value);
-      })
-      .catch(() => undefined);
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
   useEffect(() => {
     const changed = previousFace.current !== revealed;
     previousFace.current = revealed;

@@ -12,8 +12,12 @@ const rig = vi.hoisted(() => ({
   rate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   scrollTo: vi.fn(),
   alert: vi.fn(),
+  haptic: vi.fn<(remembered: boolean) => void>(),
+  reduceMotion: true,
+  timing: vi.fn(),
   syncState: 'idle' as 'idle' | 'syncing' | 'offline',
 }));
+vi.mock('../src/review-haptics', () => ({ playReviewHaptic: rig.haptic }));
 vi.mock('../src/store', () => ({
   useStore: () => ({
     data: rig.data,
@@ -52,7 +56,7 @@ vi.mock('react-native', () => {
     Image: host('image'),
     StatusBar: host('status-bar'),
     AccessibilityInfo: {
-      isReduceMotionEnabled: () => Promise.resolve(true),
+      isReduceMotionEnabled: () => Promise.resolve(rig.reduceMotion),
       addEventListener: () => ({ remove: vi.fn() }),
     },
     Animated: {
@@ -65,7 +69,7 @@ vi.mock('react-native', () => {
         }
       },
       spring: () => ({ start() {}, stop() {} }),
-      timing: () => ({ start() {}, stop() {} }),
+      timing: rig.timing,
     },
     PanResponder: { create: (handlers: unknown) => ({ panHandlers: handlers }) },
     Alert: { alert: rig.alert },
@@ -167,6 +171,8 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   rig.params = { deckId: deck.id };
   rig.syncState = 'idle';
+  rig.reduceMotion = true;
+  rig.timing.mockImplementation(() => ({ start() {}, stop() {} }));
   rig.data = { decks: [deck], cards: [first, second], reviews: [], pending: 0, issues: [] };
   rig.rate.mockResolvedValue(undefined);
   rig.mutate.mockImplementation(async (work) =>
@@ -186,7 +192,17 @@ function cardView() {
   return renderer!.root.findByProps({ testID: 'review-card' }).findByType('pressable');
 }
 function gestureView() {
-  return renderer!.root.findByType('animated-view');
+  return renderer!.root.findByProps({ testID: 'review-gesture' }).findByType('animated-view');
+}
+function feedback() {
+  return renderer!.root.findAll(
+    (node) => typeof node.type === 'string' && node.props.testID === 'review-feedback',
+  );
+}
+async function elapse(milliseconds: number) {
+  await act(async () => {
+    vi.advanceTimersByTime(milliseconds);
+  });
 }
 async function flip() {
   await act(async () => cardView().props.onPress());
@@ -219,14 +235,16 @@ it('tapping flips both ways without recording an answer or advancing', async () 
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
   expect(rig.mutate).not.toHaveBeenCalled();
+  expect(rig.haptic).not.toHaveBeenCalled();
+  expect(feedback()).toHaveLength(0);
 });
 
 it.each([
-  { dx: 140, rating: 'good' },
-  { dx: -140, rating: 'again' },
+  { dx: 140, rating: 'good', remembered: true, cue: '✓ Remembered' },
+  { dx: -140, rating: 'again', remembered: false, cue: '↺ Review later' },
 ] as const)(
-  'a swipe of $dx saves $rating exactly once and shows the next question',
-  async ({ dx, rating }) => {
+  'a swipe of $dx saves $rating once, confirms the outcome and shows the next question',
+  async ({ dx, rating, remembered, cue }) => {
     await mount();
     vi.setSystemTime(new Date(Date.parse(timestamp) + 5000));
     await swipe(dx);
@@ -235,6 +253,12 @@ it.each([
     expect(text()).not.toContain(first.back);
     expect(text()).not.toContain(second.back);
     expect(rig.scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+    expect(rig.haptic).toHaveBeenCalledExactlyOnceWith(remembered);
+    expect(feedback()).toHaveLength(1);
+    expect(text()).toContain(cue);
+    await elapse(700);
+    expect(feedback()).toHaveLength(0);
+    expect(text()).toContain(second.front);
   },
 );
 
@@ -264,6 +288,8 @@ it('small, vertical and cancelled drags never save or flip', async () => {
     cardView().props.onPress();
   });
   expect(rig.rate).not.toHaveBeenCalled();
+  expect(rig.haptic).not.toHaveBeenCalled();
+  expect(feedback()).toHaveLength(0);
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
 });
@@ -279,6 +305,8 @@ it('blocks duplicate swipes, button presses and flips while saving', async () =>
   await mount();
   await press('I remember →');
   expect(rig.rate).toHaveBeenCalledTimes(1);
+  expect(rig.haptic).not.toHaveBeenCalled();
+  expect(feedback()).toHaveLength(0);
   expect(
     footer()
       .findAllByType(Button)
@@ -288,11 +316,15 @@ it('blocks duplicate swipes, button presses and flips while saving', async () =>
   await swipe(-160);
   await flip();
   expect(rig.rate).toHaveBeenCalledTimes(1);
+  expect(rig.haptic).not.toHaveBeenCalled();
+  expect(feedback()).toHaveLength(0);
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
   expect(text()).not.toContain('Saving your review');
   await act(async () => finish());
   expect(text()).toContain(second.front);
+  expect(rig.haptic).toHaveBeenCalledExactlyOnceWith(true);
+  expect(text()).toContain('✓ Remembered');
   expect(
     footer()
       .findAllByType(Button)
@@ -316,6 +348,8 @@ it.each(['start', 'move'])(
       gesture.props.onPanResponderRelease(null, { dx: 140, dy: 0, vx: 0 });
     });
     expect(rig.rate).not.toHaveBeenCalled();
+    expect(rig.haptic).not.toHaveBeenCalled();
+    expect(feedback()).toHaveLength(0);
     expect(text()).toContain(first.front);
   },
 );
@@ -328,6 +362,8 @@ it('a failed save preserves the current face and allows a retry', async () => {
   expect(rig.alert).toHaveBeenCalledWith('Could not finish', 'Storage is full');
   expect(text()).toContain(first.back);
   expect(text()).not.toContain(second.front);
+  expect(rig.haptic).not.toHaveBeenCalled();
+  expect(feedback()).toHaveLength(0);
   expect(
     footer()
       .findAllByType(Button)
@@ -336,6 +372,101 @@ it('a failed save preserves the current face and allows a retry', async () => {
   await press('I remember →');
   expect(rig.rate).toHaveBeenCalledTimes(2);
   expect(text()).toContain(second.front);
+  expect(rig.haptic).toHaveBeenCalledExactlyOnceWith(true);
+  expect(text()).toContain('✓ Remembered');
+});
+
+it.each([
+  { dx: 140, remembered: true, cue: '✓ Remembered' },
+  { dx: -140, remembered: false, cue: '↺ Review later' },
+])(
+  'keeps the last card’s $cue cue visible on session completion',
+  async ({ dx, remembered, cue }) => {
+    rig.data = { ...rig.data!, cards: [first] };
+    await mount();
+    await swipe(dx);
+    expect(text()).toContain('SESSION COMPLETE');
+    expect(text()).not.toContain(first.front);
+    expect(feedback()).toHaveLength(1);
+    expect(text()).toContain(cue);
+    expect(rig.haptic).toHaveBeenCalledExactlyOnceWith(remembered);
+    await elapse(300);
+    expect(text()).toContain(cue);
+    await elapse(400);
+    expect(feedback()).toHaveLength(0);
+    expect(text()).toContain('SESSION COMPLETE');
+  },
+);
+
+it('replaces rapid feedback and gives the latest outcome its own display time', async () => {
+  await mount();
+  await swipe(140);
+  await elapse(300);
+  await swipe(-140);
+  expect(text()).toContain('SESSION COMPLETE');
+  expect(text()).toContain('↺ Review later');
+  expect(text()).not.toContain('✓ Remembered');
+  expect(feedback()).toHaveLength(1);
+  expect(rig.haptic.mock.calls).toEqual([[true], [false]]);
+  // The first answer's timeout must not clear the newer answer's cue.
+  await elapse(300);
+  expect(text()).toContain('↺ Review later');
+  await elapse(400);
+  expect(feedback()).toHaveLength(0);
+});
+
+it.each([true, false])(
+  'keeps the cue outside the layout and honors reduce motion=%s',
+  async (reduceMotion) => {
+    rig.reduceMotion = reduceMotion;
+    await mount();
+    await swipe(140);
+    const badge = feedback()[0]!;
+    expect(badge.props.pointerEvents).toBe('none');
+    expect(Object.assign({}, ...badge.props.style)).toMatchObject({ position: 'absolute' });
+    if (reduceMotion) {
+      expect(rig.timing).not.toHaveBeenCalled();
+    } else {
+      expect(rig.timing).toHaveBeenCalledExactlyOnceWith(
+        expect.anything(),
+        expect.objectContaining({ toValue: 0 }),
+      );
+    }
+    expect(text()).toContain(second.front);
+  },
+);
+
+it('cleans up feedback when leaving a session instead of showing it in the next one', async () => {
+  await mount();
+  await swipe(140);
+  expect(feedback()).toHaveLength(1);
+  rig.params = { ...rig.params, practice: 'true' };
+  await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+  expect(text()).toContain('FREE PRACTICE');
+  expect(feedback()).toHaveLength(0);
+  await elapse(1000);
+  expect(rig.haptic).toHaveBeenCalledTimes(1);
+  expect(text()).toContain(first.front);
+});
+
+it('does not vibrate for an old session when its save finishes after leaving', async () => {
+  let finish!: () => void;
+  rig.rate.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await mount();
+  await swipe(140);
+  expect(rig.rate).toHaveBeenCalledTimes(1);
+  rig.params = { ...rig.params, practice: 'true' };
+  await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+  await act(async () => finish());
+  expect(rig.haptic).not.toHaveBeenCalled();
+  expect(feedback()).toHaveLength(0);
+  expect(text()).toContain('FREE PRACTICE');
+  expect(text()).toContain(first.front);
 });
 
 it('practice records the same ratings as daily review without repeating missed cards', async () => {
@@ -386,7 +517,7 @@ it('keeps the flipped face, session queue and position through library synchroni
   expect(rig.rate).not.toHaveBeenCalled();
 });
 
-it('saving never inserts transient sync or saved feedback into the next card or completion', async () => {
+it('saving never inserts sync or storage-status banners into the next card or completion', async () => {
   rig.mutate.mockImplementation(async (work) => {
     await work({ rateCard: rig.rate } as unknown as Repository);
     rig.data = { ...rig.data!, pending: rig.data!.pending + 1 };
@@ -410,10 +541,14 @@ it('accessible card actions use the same scheduling path as swipes', async () =>
     cardView().props.onAccessibilityAction({ nativeEvent: { actionName: 'remembered' } }),
   );
   expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'good', 0);
+  expect(rig.haptic).toHaveBeenCalledExactlyOnceWith(true);
+  expect(text()).toContain('✓ Remembered');
   await act(async () =>
     cardView().props.onAccessibilityAction({ nativeEvent: { actionName: 'missed' } }),
   );
   expect(rig.rate).toHaveBeenLastCalledWith(second.id, 'again', 0);
+  expect(rig.haptic.mock.calls).toEqual([[true], [false]]);
+  expect(text()).toContain('↺ Review later');
   expect(text()).toContain('SESSION COMPLETE');
 });
 

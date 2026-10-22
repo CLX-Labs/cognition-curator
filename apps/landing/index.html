@@ -10,12 +10,14 @@
       content="Turn a little curiosity into something that stays. Create flashcards with AI, make them your own, and build a little daily practice with Recollect for iPhone."
     />
     <meta property="og:type" content="website" />
+    <link rel="canonical" href="https://recollect-ai.netlify.app/" />
+    <meta property="og:url" content="https://recollect-ai.netlify.app/" />
     <meta property="og:title" content="Recollect — Curiosity, worth keeping." />
     <meta
       property="og:description"
       content="Small cards. A little practice. A lasting memory. Meet your next favorite learning habit."
     />
-    <meta property="og:image" content="/assets/app-icon.png" />
+    <meta property="og:image" content="https://recollect-ai.netlify.app/assets/app-icon.png" />
     <meta name="twitter:card" content="summary" />
     <link rel="icon" type="image/png" href="./assets/app-icon.png" />
     <link rel="apple-touch-icon" href="./assets/app-icon.png" />
@@ -28,6 +30,7 @@
     <link rel="stylesheet" href="./styles.css" />
     <script src="./site-config.js" defer></script>
     <script src="./demo.js" defer></script>
+    <script src="./waitlist.js" defer></script>
   </head>
   <body id="top">
     <a class="skip-link" href="#main">Skip to content</a>
@@ -43,8 +46,8 @@
           <a href="#how-it-works">How it works</a><a href="#why-recollect">Why Recollect</a
           ><a href="#questions">A few questions</a>
         </nav>
-        <a class="button button-small" href="#try" data-download-link
-          >Try a card <span aria-hidden="true">↗</span></a
+        <a class="button button-small" href="#get-recollect" data-download-link
+          >Join the waitlist <span aria-hidden="true">↗</span></a
         >
       </div>
     </header>
@@ -65,11 +68,9 @@
             Give them a little home, and a little practice.
           </p>
           <div class="hero-actions">
-            <a class="button" href="#try" data-download-link
-              >Try a card <span aria-hidden="true">↗</span></a
-            ><a class="text-link" href="#how-it-works"
-              >Meet Recollect <span aria-hidden="true">↓</span></a
-            >
+            <a class="button" href="#get-recollect" data-download-link
+              >Join the waitlist <span aria-hidden="true">↗</span></a
+            ><a class="text-link" href="#try">Try a card <span aria-hidden="true">↓</span></a>
           </div>
           <p class="small-note">Small cards. A little practice. A lasting memory.</p>
         </div>
@@ -381,16 +382,68 @@
           <span class="eyebrow">KEEP A LITTLE CURIOSITY CLOSE</span
           ><span class="closing-star" aria-hidden="true">✳</span>
         </div>
-        <h2 id="closing-title">Your next little<br /><em>lightbulb moment.</em></h2>
         <div class="closing-bottom">
-          <p>Give what you learn a place to stay.</p>
-          <a class="button" href="#try" data-download-link
-            >Try a card <span aria-hidden="true">↗</span></a
+          <div class="closing-copy">
+            <h2 id="closing-title">Your next little<br /><em>lightbulb moment.</em></h2>
+            <p>
+              Recollect is in testing on iPhone. Leave your email and we’ll let you know when it’s
+              ready for you.
+            </p>
+            <p class="closing-availability" data-download-note>
+              Try the example cards while you wait.
+            </p>
+          </div>
+          <form
+            class="waitlist-form"
+            id="waitlist-form"
+            name="recollect-waitlist"
+            method="POST"
+            action="/thanks/"
+            data-netlify="true"
+            netlify-honeypot="website"
+            aria-label="Recollect launch updates"
           >
+            <input type="hidden" name="form-name" value="recollect-waitlist" />
+            <input type="hidden" name="source" value="landing-page" />
+            <input type="hidden" name="consent" value="recollect-availability-updates" />
+            <p hidden>
+              <label
+                >Leave this empty: <input name="website" tabindex="-1" autocomplete="off"
+              /></label>
+            </p>
+            <fieldset id="waitlist-fields">
+              <legend class="sr-only">Join the Recollect waitlist</legend>
+              <label for="waitlist-email">Email address</label>
+              <input
+                id="waitlist-email"
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+                maxlength="254"
+                required
+                aria-describedby="waitlist-note"
+              />
+              <label for="waitlist-interest"
+                >What would you like to learn? <span>(optional)</span></label
+              >
+              <select id="waitlist-interest" name="interest">
+                <option value="">I’m still exploring</option>
+                <option value="languages">Languages</option>
+                <option value="science">Science &amp; how things work</option>
+                <option value="ideas">Ideas &amp; general knowledge</option>
+                <option value="other">Something else</option>
+              </select>
+              <button class="button" id="waitlist-submit" type="submit">
+                Keep me posted <span aria-hidden="true">↗</span>
+              </button>
+              <p class="waitlist-note" id="waitlist-note">
+                Sign up for emails about Recollect availability.
+              </p>
+            </fieldset>
+            <p class="waitlist-status" id="waitlist-status" role="status" tabindex="-1"></p>
+          </form>
         </div>
-        <p class="closing-availability" data-download-note>
-          Explore an example above. The full app is currently in testing on iPhone.
-        </p>
       </section>
     </main>
 

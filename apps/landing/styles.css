@@ -45,7 +45,9 @@ button:disabled {
 }
 button:focus-visible,
 a:focus-visible,
-summary:focus-visible {
+summary:focus-visible,
+input:focus-visible,
+select:focus-visible {
   outline: 3px solid var(--rust);
   outline-offset: 5px;
 }
@@ -795,21 +797,83 @@ h1 em,
   margin: 24px 0 18px;
 }
 .closing-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 25px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 60px;
 }
 .closing-bottom p {
-  font-size: 12px;
+  font-size: 14px;
   color: #6c715f;
   line-height: 1.8;
   margin: 0;
 }
-.closing-bottom .button {
-  min-width: 190px;
+.closing-copy > p {
+  max-width: 320px;
 }
-.closing-availability {
+.waitlist-form {
+  min-width: 0;
+  margin-top: 28px;
+}
+.waitlist-form fieldset {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.waitlist-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+.waitlist-form label span {
+  font-weight: 400;
+}
+.waitlist-form input[type='email'],
+.waitlist-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 53px;
+  border: 1px solid #c6c3b2;
+  border-radius: 8px;
+  padding: 13px 14px;
+  margin: 0 0 20px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--green);
+  background: var(--paper);
+}
+.waitlist-form .button {
+  width: 100%;
+  border: 0;
+}
+.waitlist-form .waitlist-note {
+  font-size: 11px;
+  line-height: 1.7;
+  margin-top: 12px;
+}
+.waitlist-form .waitlist-status {
+  font-size: 14px;
+  min-height: 25px;
+  margin-top: 12px;
+  color: var(--green);
+}
+.waitlist-form [role='alert'] {
+  color: #8c3020;
+}
+.thanks-page {
+  padding-block: 80px;
+  max-width: 850px;
+}
+.thanks-page > p {
+  font-size: 16px;
+  line-height: 1.8;
+  max-width: 430px;
+  margin-bottom: 28px;
+}
+.closing-copy .closing-availability {
   font-size: 9px;
   color: #77776b;
   line-height: 1.8;
@@ -1125,12 +1189,15 @@ h1 em,
     font-size: 52px;
   }
   .closing-bottom {
-    align-items: flex-start;
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 22px;
   }
   .closing-bottom p {
     font-size: 13px;
+  }
+  .waitlist-form {
+    width: min(100%, 470px);
+    margin-top: 0;
   }
   .closing-availability {
     font-size: 10px;
@@ -1174,9 +1241,10 @@ h1 em,
     margin-left: -8px;
   }
   .button-small {
-    padding: 11px 13px;
-    gap: 13px;
-    font-size: 11px;
+    padding: 11px 10px;
+    gap: 9px;
+    font-size: 10px;
+    white-space: nowrap;
   }
   .hero {
     padding-top: 39px;
@@ -1359,6 +1427,12 @@ h1 em,
     letter-spacing: -1.5px;
   }
   .closing-bottom p {
+    font-size: 13px;
+  }
+  .waitlist-form label {
+    font-size: 11px;
+  }
+  .waitlist-form .waitlist-note {
     font-size: 11px;
   }
   .closing-availability {

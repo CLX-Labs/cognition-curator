@@ -1,12 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { StatusBar, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, StatusBar, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { previewIntervals } from '@recollect/scheduler';
 import { useStore } from './store';
 import { dueCards } from './repository';
 import { Back, Button, Panel, Screen, Text, colors, reportError, s } from './ui';
 import ReviewCard from './review-card';
-import { playReviewHaptic } from './review-haptics';
+import { createReviewHaptics } from './review-haptics';
 import { ReviewFeedbackCue, type ReviewFeedback } from './review-feedback';
 import { ReviewReadingSheet } from './review-reading-sheet';
 
@@ -46,17 +46,41 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   const [reading, setReading] = useState<'card' | 'hint' | 'context' | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<ReviewFeedback | null>(null);
+  const [haptics] = useState(createReviewHaptics);
   const feedbackSequence = useRef(0);
   const active = useRef(true);
+  const focused = useRef(true);
+  const foreground = useRef(
+    AppState.currentState !== 'background' && AppState.currentState !== 'inactive',
+  );
   const saving = useRef(false);
   const started = useRef(Date.now());
   const card = data.cards.find((c) => c.id === queue[index]);
   useEffect(() => {
     active.current = true;
+    foreground.current =
+      AppState.currentState !== 'background' && AppState.currentState !== 'inactive';
+    haptics.setActive(focused.current && foreground.current);
+    const subscription = AppState.addEventListener('change', (state) => {
+      foreground.current = state === 'active';
+      haptics.setActive(focused.current && foreground.current);
+    });
     return () => {
       active.current = false;
+      haptics.setActive(false);
+      subscription.remove();
     };
-  }, []);
+  }, [haptics]);
+  useFocusEffect(
+    useCallback(() => {
+      focused.current = true;
+      haptics.setActive(foreground.current);
+      return () => {
+        focused.current = false;
+        haptics.setActive(false);
+      };
+    }, [haptics]),
+  );
   useEffect(() => {
     if (!feedback) return;
     const timeout = setTimeout(() => {
@@ -75,7 +99,8 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     setIndex((i) => i + 1);
   }
   async function answer(remembered: boolean) {
-    if (!card || saving.current || reading) return;
+    if (!card || !active.current || !focused.current || saving.current || reading) return;
+    haptics.cancel();
     saving.current = true;
     setBusy(true);
     setFeedback(null);
@@ -85,7 +110,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       );
       if (!active.current) return;
       setFeedback({ id: ++feedbackSequence.current, remembered });
-      playReviewHaptic(remembered);
+      haptics.answer(remembered);
       advance();
     } catch (error) {
       if (active.current) reportError(error);
@@ -93,6 +118,13 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       saving.current = false;
       if (active.current) setBusy(false);
     }
+  }
+
+  function openReading(section: 'card' | 'hint' | 'context') {
+    if (!active.current || !focused.current || saving.current || busy || reading) return;
+    if (section === 'hint') haptics.reveal();
+    else haptics.cancel();
+    setReading(section);
   }
 
   if (!card)
@@ -220,7 +252,10 @@ function ReviewSession({ params }: { params: ReviewParams }) {
         revealed={revealed}
         disabled={busy || !!reading}
         onFlip={() => {
-          if (!reading) setRevealed((value) => !value);
+          if (!active.current || !focused.current || saving.current || busy || reading) return;
+          if (!revealed) haptics.reveal();
+          else haptics.cancel();
+          setRevealed(!revealed);
         }}
         onAnswer={(remembered) => void answer(remembered)}
       />
@@ -231,7 +266,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
             variant="secondary"
             size="compact"
             disabled={busy}
-            onPress={() => setReading('card')}
+            onPress={() => openReading('card')}
           />
         </View>
         {!revealed && !!card.hint && (
@@ -241,7 +276,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
               variant="secondary"
               size="compact"
               disabled={busy}
-              onPress={() => setReading('hint')}
+              onPress={() => openReading('hint')}
             />
           </View>
         )}
@@ -252,7 +287,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
               variant="secondary"
               size="compact"
               disabled={busy}
-              onPress={() => setReading('context')}
+              onPress={() => openReading('context')}
             />
           </View>
         )}

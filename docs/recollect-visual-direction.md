@@ -1,6 +1,6 @@
 # Recollect: for the curious
 
-The selected direction is **artful and editorial**, with expressive typography and asymmetric layouts. The website is the place to settle this direction before changing the mobile app.
+The selected direction is **artful and editorial**, with expressive typography and asymmetric layouts. The website and mobile app share this visual language.
 
 ## Visual language
 
@@ -19,11 +19,23 @@ The selected direction is **artful and editorial**, with expressive typography a
 | Yellow           | `#e7ed9b` |
 | Artwork backdrop | `#ddd9e8` |
 
-## Function and future mobile work
+## Mobile app
 
-Keep card fronts succinct. The practice choice comes before the answer, with ratings appropriate to “Not sure” or “I know it.” Keep the card frame steady through answer reveal and avoid transient saved banners. Saved cards, AI suggestions, and practice should have obvious, distinct actions.
+Manrope and Instrument Serif are bundled with the app, including their open font licenses. Fonts load at runtime through the existing Expo font module, preserving the installed iOS runtime for OTA delivery. The original app icon is unchanged.
 
-Once the website direction is accepted, carry its color, typography hierarchy, thin rules, and focused card surfaces into the app. Adapt navigation and controls for native use, including comfortable tap targets and stable bottom navigation. Do not copy a marketing layout into app screens. This website change does not modify the mobile UI or original app icon.
+Warm paper, thin rules, stronger headlines, yellow highlights, and cobalt actions carry through Today, Practice, Create, Progress, You, deck management, card editing, and sign-in. Review has a cobalt background with a paper question face and yellow answer face. The mobile layout keeps fixed review controls, comfortable tap targets, and the existing bottom tabs.
+
+Card review uses a direct, binary interaction:
+
+- Tap the card to flip between question and answer; this never records a rating.
+- Swipe right to remember. A scheduled review saves `good` and advances.
+- Swipe left when unsure. A scheduled review saves `again` and advances.
+- In free practice, remembered cards advance and missed cards repeat at the end. The review schedule is unchanged.
+- Visible buttons and accessible card actions provide the same choices without gestures.
+
+Short or vertical drags, cancelled gestures, and multiple fingers do not record a response. Saves are guarded against duplicate actions, and a failed save keeps the current card available for retry. Library synchronization preserves the session queue and current face. Reduced motion disables the flip and spring animation. No transient saved banners appear in review.
+
+Keep card fronts succinct. Saved cards, AI suggestions, and practice have distinct actions. The sculpture is used on sign-in; the app's learning screens remain focused on the user's own cards.
 
 ## References and original art
 

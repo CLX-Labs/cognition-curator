@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../src/store';
 import { activeDeck, deckContent, dueCards } from '../../src/repository';
@@ -14,6 +14,7 @@ import {
   colors,
   reportError,
   s,
+  Text,
 } from '../../src/ui';
 
 export default function DeckDetail() {
@@ -113,9 +114,7 @@ export default function DeckDetail() {
         </View>
       }
       subtitle={
-        cards.length +
-        ' cards · ' +
-        (activeDeck(deck) ? due.length + ' due' : 'Reviews paused')
+        cards.length + ' cards · ' + (activeDeck(deck) ? due.length + ' due' : 'Reviews paused')
       }
       footer={
         <View style={s.row}>
@@ -123,12 +122,7 @@ export default function DeckDetail() {
             <Button title="+ Add card" size="compact" onPress={add} />
           </View>
           <View style={{ flex: 1 }}>
-            <Button
-              title="Generate cards"
-              size="compact"
-              variant="secondary"
-              onPress={generate}
-            />
+            <Button title="Generate cards" size="compact" variant="secondary" onPress={generate} />
           </View>
         </View>
       }
@@ -138,22 +132,6 @@ export default function DeckDetail() {
           {deck.description}
         </Text>
       )}
-      <Panel style={{ padding: 16, gap: 10 }}>
-        <Text style={s.label}>Add to this deck</Text>
-        <View style={s.row}>
-          <View style={{ flex: 1 }}>
-            <Button title="+ Add card" size="compact" onPress={add} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button
-              title="Generate cards"
-              size="compact"
-              variant="secondary"
-              onPress={generate}
-            />
-          </View>
-        </View>
-      </Panel>
       {cards.length > 0 && (
         <View style={s.row}>
           {due.length > 0 && (
@@ -228,12 +206,7 @@ export default function DeckDetail() {
                   ).catch(reportError)
                 }
               />
-              <Button
-                title="Delete deck"
-                variant="danger"
-                size="compact"
-                onPress={deleteDeck}
-              />
+              <Button title="Delete deck" variant="danger" size="compact" onPress={deleteDeck} />
             </>
           )}
         </Panel>
@@ -270,9 +243,9 @@ export default function DeckDetail() {
                   numberOfLines={3}
                   style={{
                     flex: 1,
-                    fontSize: 16,
-                    lineHeight: 23,
-                    fontWeight: '600',
+                    fontSize: 20,
+                    lineHeight: 27,
+                    fontWeight: '700',
                     color: colors.ink,
                   }}
                 >
@@ -318,11 +291,7 @@ export default function DeckDetail() {
           }
           action={
             query ? (
-              <Button
-                title="Clear search"
-                variant="secondary"
-                onPress={() => searchCards('')}
-              />
+              <Button title="Clear search" variant="secondary" onPress={() => searchCards('')} />
             ) : (
               <Button title="Generate suggestions" variant="secondary" onPress={generate} />
             )

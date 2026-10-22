@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import type { Deck } from '@recollect/contracts';
 import { useStore } from './store';
-import { Button, Field, colors, reportError, s } from './ui';
+import { Button, Field, colors, reportError, s, Text } from './ui';
 
 export default function DeckForm({ deck, complete }: { deck?: Deck; complete?(): void }) {
   const { repository, mutate } = useStore();
@@ -11,7 +11,7 @@ export default function DeckForm({ deck, complete }: { deck?: Deck; complete?():
   const [id] = useState(() => deck?.id ?? repository?.newId() ?? '');
   const [name, setName] = useState(deck?.name ?? '');
   const [description, setDescription] = useState(deck?.description ?? '');
-  const [color, setColor] = useState(deck?.color ?? '#DDE8D9');
+  const [color, setColor] = useState(deck?.color ?? colors.yellow);
   const [icon, setIcon] = useState(deck?.icon ?? '📚');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -100,7 +100,7 @@ export default function DeckForm({ deck, complete }: { deck?: Deck; complete?():
                 disabled={busy}
                 onPress={() => setIcon(value)}
                 style={{
-                  backgroundColor: icon === value ? colors.green : colors.paper,
+                  backgroundColor: icon === value ? colors.yellow : colors.paper,
                   borderRadius: 12,
                   width: 48,
                   height: 48,
@@ -117,11 +117,11 @@ export default function DeckForm({ deck, complete }: { deck?: Deck; complete?():
           <Text style={s.label}>Color</Text>
           <View style={[s.row, { flexWrap: 'wrap', gap: 8 }]}>
             {[
-              ['#DDE8D9', 'Sage'],
-              ['#F6D9C5', 'Peach'],
-              ['#DCE5F3', 'Blue'],
-              ['#E8DEF3', 'Lavender'],
-              ['#F4E9B8', 'Yellow'],
+              [colors.yellow, 'Citron'],
+              [colors.lilac, 'Lilac'],
+              ['#CFD5F9', 'Periwinkle'],
+              ['#EFD4C5', 'Apricot'],
+              ['#D8E2CD', 'Sage'],
             ].map(([value, label]) => (
               <Pressable
                 key={value}

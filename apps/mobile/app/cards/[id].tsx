@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../src/store';
 import AnswerGenerator from '../../src/answer-generator';
@@ -14,6 +14,7 @@ import {
   colors,
   reportError,
   s,
+  Text,
 } from '../../src/ui';
 
 export default function CardEditor() {
@@ -21,9 +22,7 @@ export default function CardEditor() {
   const { data, repository, mutate } = useStore();
   const existing = data.cards.find((card) => card.id === id);
   const [baseline] = useState(existing);
-  const [draftCardId, setDraftCardId] = useState(
-    () => existing?.id ?? repository?.newId() ?? '',
-  );
+  const [draftCardId, setDraftCardId] = useState(() => existing?.id ?? repository?.newId() ?? '');
   const [answerDraftId, setAnswerDraftId] = useState(existing?.id ?? 'new');
   const [front, setFront] = useState(existing?.front ?? '');
   const [back, setBack] = useState(existing?.back ?? '');
@@ -57,8 +56,7 @@ export default function CardEditor() {
     aiGenerated !== (baseline?.aiGenerated ?? false);
   function confirmExit() {
     if (busy) return;
-    const exit = () =>
-      router.dismissTo({ pathname: '/decks/[id]', params: { id: parentId! } });
+    const exit = () => router.dismissTo({ pathname: '/decks/[id]', params: { id: parentId! } });
     if (!hasChanges) return exit();
     Alert.alert(
       'Discard unsaved edits?',
@@ -171,7 +169,7 @@ export default function CardEditor() {
       {savedNotice && (
         <View
           accessibilityLiveRegion="polite"
-          style={{ backgroundColor: colors.green, padding: 12, borderRadius: 12 }}
+          style={{ backgroundColor: colors.yellow, padding: 12, borderRadius: 12 }}
         >
           <Text style={s.caption}>{savedNotice}</Text>
         </View>

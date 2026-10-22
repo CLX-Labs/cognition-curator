@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Updates from 'expo-updates';
 import { createUpdateChecker } from './release';
-import { colors } from './ui';
+import { colors, Text } from './ui';
 
 type UpdateState = ReturnType<typeof Updates.useUpdates> & {
   enabled: boolean;
@@ -28,11 +28,7 @@ export function AppUpdateProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!enabled) return;
     const check = () => {
-      if (
-        AppState.currentState !== 'active' ||
-        current.current.pending ||
-        current.current.checking
-      )
+      if (AppState.currentState !== 'active' || current.current.pending || current.current.checking)
         return;
       void checker
         .check()
@@ -104,9 +100,7 @@ export function UpdateNotice() {
     >
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={styles.title}>An update is ready</Text>
-        <Text style={styles.detail}>
-          {error ?? 'Save any edits, then restart to apply it.'}
-        </Text>
+        <Text style={styles.detail}>{error ?? 'Save any edits, then restart to apply it.'}</Text>
       </View>
       <Pressable
         accessibilityRole="button"
@@ -116,9 +110,7 @@ export function UpdateNotice() {
         style={styles.restart}
         onPress={() => {
           setError(null);
-          void restart().catch(() =>
-            setError('Close and reopen the app to apply the update.'),
-          );
+          void restart().catch(() => setError('Close and reopen the app to apply the update.'));
         }}
       >
         <Text style={styles.restartText}>{restarting ? 'Restarting…' : 'Restart'}</Text>
@@ -137,7 +129,7 @@ export function UpdateNotice() {
 }
 const styles = StyleSheet.create({
   notice: {
-    backgroundColor: colors.green,
+    backgroundColor: colors.yellow,
     borderTopWidth: 1,
     borderTopColor: colors.line,
     paddingHorizontal: 18,

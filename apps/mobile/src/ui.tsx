@@ -1,38 +1,77 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Image,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
+  Text as NativeText,
   TextInput,
   View,
   type StyleProp,
   type TextInputProps,
+  type TextProps,
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useSegments } from 'expo-router';
 import { useStore } from './store';
+import { colors, fonts, TypographyContext } from './brand';
 
-export const colors = {
-  background: '#F7F5EF',
-  paper: '#FFFFFF',
-  ink: '#203C31',
-  muted: '#65746A',
-  accent: '#AE492D',
-  pale: '#FAEADF',
-  green: '#E6EDDF',
-  line: '#E2E6DD',
-  danger: '#A43232',
-};
+export { colors, fonts } from './brand';
+
+export function Text({ style, ...props }: TextProps) {
+  const loaded = useContext(TypographyContext);
+  const resolved = StyleSheet.flatten(style);
+  const weight = Number(resolved?.fontWeight ?? 400);
+  const family =
+    resolved?.fontFamily ??
+    (weight >= 800
+      ? fonts.extraBold
+      : weight >= 700
+        ? fonts.bold
+        : weight >= 500
+          ? fonts.semibold
+          : fonts.regular);
+  const custom = Object.values(fonts).includes(family) && family !== fonts.mono;
+  return (
+    <NativeText
+      {...props}
+      style={[
+        { color: colors.ink },
+        style,
+        custom && {
+          fontFamily: loaded ? family : undefined,
+          fontWeight: loaded ? 'normal' : resolved?.fontWeight,
+        },
+      ]}
+    />
+  );
+}
 export function reportError(error: unknown) {
-  Alert.alert(
-    'Could not finish',
-    error instanceof Error ? error.message : 'Please try again.',
+  Alert.alert('Could not finish', error instanceof Error ? error.message : 'Please try again.');
+}
+export function BrandHeader() {
+  return (
+    <View
+      style={[
+        s.between,
+        { paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.line },
+      ]}
+    >
+      <View style={[s.row, { gap: 8 }]}>
+        <Image
+          source={require('../assets/icon.png')}
+          accessible={false}
+          style={{ width: 30, height: 30, borderRadius: 7 }}
+        />
+        <Text style={s.wordmark}>recollect</Text>
+      </View>
+      <Text style={[s.eyebrow, { marginBottom: 0, letterSpacing: 0.4 }]}>FOR THE CURIOUS</Text>
+    </View>
   );
 }
 export function Screen({
@@ -45,6 +84,7 @@ export function Screen({
   footer,
   scrollRef,
   syncFeedback = 'all',
+  appearance = 'default',
 }: {
   children: React.ReactNode;
   title?: string;
@@ -55,6 +95,7 @@ export function Screen({
   footer?: React.ReactNode;
   scrollRef?: React.Ref<ScrollView>;
   syncFeedback?: 'all' | 'errors';
+  appearance?: 'default' | 'focus';
 }) {
   const { data, syncState, sync } = useStore();
   const segments = useSegments();
@@ -63,25 +104,60 @@ export function Screen({
     syncState === 'offline' ||
     (syncFeedback === 'all' && (data.pending > 0 || syncState === 'syncing'));
   return (
-    <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[s.safe, appearance === 'focus' && { backgroundColor: colors.accent }]}
+      edges={['top', 'left', 'right']}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={s.content}
+          contentContainerStyle={[s.content, appearance === 'focus' && { gap: 14, paddingTop: 6 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {leading}
           {(title || eyebrow || subtitle) && (
-            <View style={s.header}>
-              <View style={{ flex: 1 }}>
-                {eyebrow && <Text style={s.eyebrow}>{eyebrow.toUpperCase()}</Text>}
-                {title && <Text style={s.title}>{title}</Text>}
-                {subtitle && <Text style={[s.body, { marginTop: 10 }]}>{subtitle}</Text>}
+            <View
+              style={[
+                s.header,
+                appearance === 'focus' && { borderBottomColor: '#FFFFFF40', paddingBottom: 14 },
+              ]}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                {eyebrow && (
+                  <Text style={[s.eyebrow, appearance === 'focus' && { color: colors.paper }]}>
+                    {eyebrow.toUpperCase()}
+                  </Text>
+                )}
+                {title && (
+                  <Text
+                    style={[
+                      s.title,
+                      appearance === 'focus' && {
+                        color: colors.paper,
+                        fontSize: 32,
+                        lineHeight: 38,
+                      },
+                    ]}
+                  >
+                    {title}
+                  </Text>
+                )}
+                {subtitle && (
+                  <Text
+                    style={[
+                      s.body,
+                      { marginTop: 10 },
+                      appearance === 'focus' && { color: colors.paper },
+                    ]}
+                  >
+                    {subtitle}
+                  </Text>
+                )}
               </View>
               {action}
             </View>
@@ -114,7 +190,16 @@ export function Screen({
           {children}
         </ScrollView>
         {footer && (
-          <SafeAreaView edges={segments[0] === '(tabs)' ? [] : ['bottom']} style={s.footer}>
+          <SafeAreaView
+            edges={segments[0] === '(tabs)' ? [] : ['bottom']}
+            style={[
+              s.footer,
+              appearance === 'focus' && {
+                backgroundColor: colors.accent,
+                borderTopColor: '#FFFFFF40',
+              },
+            ]}
+          >
             <View style={s.footerContent}>{footer}</View>
           </SafeAreaView>
         )}
@@ -132,7 +217,7 @@ export function Button({
 }: {
   title: string;
   onPress(): void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'highlight' | 'danger' | 'ghost';
   size?: 'compact' | 'normal';
   disabled?: boolean;
   loading?: boolean;
@@ -146,6 +231,7 @@ export function Button({
       style={({ pressed }) => [
         s.button,
         variant === 'secondary' && s.secondary,
+        variant === 'highlight' && { backgroundColor: colors.yellow },
         variant === 'danger' && s.danger,
         variant === 'ghost' && s.ghost,
         size === 'compact' && s.compactButton,
@@ -156,14 +242,20 @@ export function Button({
       <View style={s.buttonContents}>
         {loading && (
           <ActivityIndicator
-            color={variant === 'secondary' || variant === 'ghost' ? colors.ink : '#fff'}
+            color={
+              variant === 'secondary' || variant === 'ghost' || variant === 'highlight'
+                ? colors.ink
+                : colors.paper
+            }
           />
         )}
         <Text
           style={[
             s.buttonText,
             size === 'compact' && { fontSize: 14, lineHeight: 20 },
-            (variant === 'secondary' || variant === 'ghost') && { color: colors.ink },
+            (variant === 'secondary' || variant === 'ghost' || variant === 'highlight') && {
+              color: colors.ink,
+            },
           ]}
         >
           {title}
@@ -182,7 +274,7 @@ export function Panel({
   style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View style={[s.panel, tint && { backgroundColor: colors.green }, style]}>{children}</View>
+    <View style={[s.panel, tint && { backgroundColor: colors.yellow }, style]}>{children}</View>
   );
 }
 export function Field({
@@ -197,6 +289,7 @@ export function Field({
   labelAction?: React.ReactNode;
   inputRef?: React.Ref<TextInput>;
 }) {
+  const fontsLoaded = useContext(TypographyContext);
   return (
     <View style={{ gap: 8 }}>
       <View style={s.between}>
@@ -206,10 +299,11 @@ export function Field({
       <TextInput
         ref={inputRef}
         accessibilityLabel={label}
-        placeholderTextColor="#79857D"
+        placeholderTextColor={colors.muted}
         {...props}
         style={[
           s.input,
+          !fontsLoaded && { fontFamily: undefined },
           props.multiline && { minHeight: 104, textAlignVertical: 'top' },
           props.style,
         ]}
@@ -235,7 +329,15 @@ export function Empty({
     </Panel>
   );
 }
-export function Back({ label = 'Back', onPress }: { label?: string; onPress?(): void }) {
+export function Back({
+  label = 'Back',
+  onPress,
+  color = colors.accent,
+}: {
+  label?: string;
+  onPress?(): void;
+  color?: string;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -243,7 +345,7 @@ export function Back({ label = 'Back', onPress }: { label?: string; onPress?(): 
       onPress={onPress ?? (() => (router.canGoBack() ? router.back() : router.replace('/')))}
       style={({ pressed }) => [s.back, pressed && { opacity: 0.65 }]}
     >
-      <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 15 }}>← {label}</Text>
+      <Text style={{ color, fontWeight: '700', fontSize: 15 }}>← {label}</Text>
     </Pressable>
   );
 }
@@ -251,14 +353,21 @@ export const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: {
     paddingHorizontal: 22,
-    paddingTop: 24,
+    paddingTop: 22,
     paddingBottom: 32,
-    gap: 20,
+    gap: 24,
     maxWidth: 760,
     width: '100%',
     alignSelf: 'center',
   },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: 4 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    paddingBottom: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
   footer: {
     backgroundColor: colors.background,
     borderTopWidth: 1,
@@ -274,18 +383,34 @@ export const s = StyleSheet.create({
   },
   back: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', paddingRight: 16 },
   eyebrow: {
-    fontSize: 12,
+    fontFamily: fonts.mono,
+    fontSize: 10,
     lineHeight: 17,
-    letterSpacing: 1.6,
-    fontWeight: '800',
+    letterSpacing: 1.2,
+    fontWeight: '400',
     color: colors.muted,
     marginBottom: 9,
   },
   title: {
-    fontSize: 33,
-    lineHeight: 39,
-    fontWeight: '700',
-    letterSpacing: -1.1,
+    fontSize: 38,
+    lineHeight: 43,
+    fontWeight: '800',
+    letterSpacing: -1.7,
+    color: colors.ink,
+  },
+  editorial: {
+    fontFamily: fonts.editorial,
+    fontSize: 58,
+    lineHeight: 64,
+    fontWeight: '400',
+    letterSpacing: -1.3,
+    color: colors.accent,
+  },
+  wordmark: {
+    fontSize: 25,
+    lineHeight: 32,
+    fontWeight: '800',
+    letterSpacing: -1.5,
     color: colors.ink,
   },
   sectionTitle: {
@@ -299,29 +424,29 @@ export const s = StyleSheet.create({
   caption: { fontSize: 13, lineHeight: 19, color: colors.muted },
   panel: {
     backgroundColor: colors.paper,
-    borderRadius: 24,
+    borderRadius: 8,
     padding: 20,
     gap: 14,
     borderWidth: 1,
     borderColor: colors.line,
   },
   button: {
-    backgroundColor: colors.ink,
+    backgroundColor: colors.accent,
     paddingVertical: 15,
     paddingHorizontal: 20,
-    borderRadius: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 54,
   },
-  secondary: { backgroundColor: '#E9EEE3' },
+  secondary: { backgroundColor: colors.pale },
   danger: { backgroundColor: colors.danger },
   ghost: { backgroundColor: 'transparent' },
   compactButton: {
     minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    borderRadius: 13,
+    borderRadius: 6,
   },
   buttonContents: {
     flexDirection: 'row',
@@ -333,19 +458,20 @@ export const s = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.paper,
     textAlign: 'center',
     flexShrink: 1,
   },
   label: { fontSize: 14, lineHeight: 20, fontWeight: '700', color: colors.ink },
   input: {
-    backgroundColor: '#fff',
-    borderColor: '#D5DBD1',
+    backgroundColor: colors.paper,
+    borderColor: colors.line,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 8,
     padding: 15,
     fontSize: 16,
     color: colors.ink,
+    fontFamily: fonts.regular,
     minHeight: 54,
   },
   row: { flexDirection: 'row', gap: 12, alignItems: 'center' },
@@ -355,16 +481,23 @@ export const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  metric: { fontSize: 38, fontWeight: '700', color: colors.ink, letterSpacing: -1.2 },
+  metric: { fontSize: 42, fontWeight: '800', color: colors.ink, letterSpacing: -2 },
   pill: {
     alignSelf: 'flex-start',
-    borderRadius: 20,
+    borderRadius: 4,
     paddingHorizontal: 11,
-    paddingVertical: 7,
+    paddingVertical: 6,
     backgroundColor: colors.pale,
   },
-  pillText: { color: colors.accent, fontSize: 12, lineHeight: 16, fontWeight: '700' },
-  tabs: { backgroundColor: colors.paper, borderTopWidth: 1, borderTopColor: colors.line },
+  pillText: {
+    color: colors.accent,
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    lineHeight: 16,
+    fontWeight: '400',
+    letterSpacing: 0.5,
+  },
+  tabs: { backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.line },
   tabRow: {
     flexDirection: 'row',
     maxWidth: 760,
@@ -383,7 +516,7 @@ export const s = StyleSheet.create({
   tabIconWell: {
     width: 44,
     height: 30,
-    borderRadius: 12,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -392,8 +525,8 @@ export const s = StyleSheet.create({
   sync: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#E8EDE2',
-    borderRadius: 12,
+    backgroundColor: colors.yellow,
+    borderRadius: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,

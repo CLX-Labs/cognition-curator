@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
-import { Button, Panel, colors, s } from './ui';
+import { Button, Panel, colors, s, Text } from './ui';
 import { release, releaseLabel } from './release';
 import { useAppUpdates } from './app-updates';
 
@@ -32,8 +32,7 @@ export default function ReleasePanel() {
   const inFlight = useRef(false);
   const development = Platform.OS === 'web' || __DEV__;
   // The installed binary's number is independent of the changeable OTA manifest.
-  const build =
-    Constants.platform?.ios?.buildNumber ?? Constants.platform?.android?.versionCode;
+  const build = Constants.platform?.ios?.buildNumber ?? Constants.platform?.android?.versionCode;
   async function check() {
     if (!enabled || inFlight.current) return;
     inFlight.current = true;
@@ -120,9 +119,7 @@ export default function ReleasePanel() {
           />
         )
       ) : (
-        <Text style={s.caption}>
-          App updates are available in your installed TestFlight build.
-        </Text>
+        <Text style={s.caption}>App updates are available in your installed TestFlight build.</Text>
       )}
       <Pressable
         accessibilityRole="button"

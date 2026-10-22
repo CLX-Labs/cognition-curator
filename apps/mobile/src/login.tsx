@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, View } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { api, developmentAuthEnabled } from './api';
-import { Button, Field, Panel, Screen, colors, reportError, s } from './ui';
+import { BrandHeader, Button, Field, Panel, Screen, colors, reportError, s, Text } from './ui';
 import { ReleaseStamp } from './release-panel';
 
 export default function Login() {
-  const [available, setAvailable] = useState<boolean | null>(
-    Platform.OS === 'ios' ? null : false,
-  );
+  const [available, setAvailable] = useState<boolean | null>(Platform.OS === 'ios' ? null : false);
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState('');
   useEffect(() => {
@@ -38,13 +36,14 @@ export default function Login() {
   }
   return (
     <Screen
+      leading={<BrandHeader />}
       footer={
         <View style={{ gap: 10 }}>
           {available ? (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
               buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={16}
+              cornerRadius={8}
               style={{ width: '100%', height: 56, opacity: busy ? 0.5 : 1 }}
               onPress={() => {
                 if (!busy) void signIn();
@@ -68,37 +67,41 @@ export default function Login() {
         </View>
       }
     >
-      <View style={{ paddingTop: 20, gap: 20 }}>
-        <View
-          style={{
-            width: 62,
-            height: 62,
-            backgroundColor: colors.ink,
-            borderRadius: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontSize: 36, color: colors.green }}>r.</Text>
-        </View>
-        <View style={{ gap: 10 }}>
-          <Text style={s.eyebrow}>RECOLLECT AI</Text>
-          <Text style={[s.title, { fontSize: 39, lineHeight: 45 }]}>
-            Learn a little.{'\n'}Remember more.
+      <View style={{ paddingTop: 10, gap: 24 }}>
+        <View>
+          <Text style={[s.title, { fontSize: 48, lineHeight: 52 }]}>FOR THE</Text>
+          <Text style={[s.editorial, { fontSize: 80, lineHeight: 88, marginTop: -4 }]}>
+            curious.
           </Text>
           <Text style={[s.body, { fontSize: 17, lineHeight: 26 }]}>
-            A home for what you want to know, and a simple way to keep it with you.
+            Keep what catches your mind. Turn it into cards. Make a little more of it stay.
+          </Text>
+        </View>
+        <View style={{ backgroundColor: colors.lilac, borderRadius: 8, padding: 12 }}>
+          <Image
+            source={require('../../landing/assets/curiosity-sculpture.png')}
+            accessible={false}
+            resizeMode="contain"
+            style={{ width: '100%', height: 210 }}
+          />
+          <Text style={[s.eyebrow, { color: colors.ink, marginBottom: 0 }]}>
+            OBJECTS OF CURIOSITY / NO. 001
           </Text>
         </View>
       </View>
-      <Panel style={{ marginTop: 8, gap: 20 }}>
+      <Panel
+        style={{
+          gap: 24,
+          backgroundColor: 'transparent',
+          paddingHorizontal: 0,
+          borderWidth: 0,
+          borderTopWidth: 1,
+          borderRadius: 0,
+        }}
+      >
         {[
           ['01', 'Make it yours', 'Write a card or turn any subject into a deck with AI.'],
-          [
-            '02',
-            'Keep it fresh',
-            'Practice a few cards at a time, even when you are offline.',
-          ],
+          ['02', 'Keep it fresh', 'Practice a few cards at a time, even when you are offline.'],
         ].map(([number, title, detail]) => (
           <View key={number} style={[s.row, { alignItems: 'flex-start', gap: 14 }]}>
             <View
@@ -108,7 +111,7 @@ export default function Login() {
                 borderRadius: 12,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: colors.green,
+                backgroundColor: colors.yellow,
               }}
             >
               <Text style={[s.label, { fontSize: 12 }]}>{number}</Text>

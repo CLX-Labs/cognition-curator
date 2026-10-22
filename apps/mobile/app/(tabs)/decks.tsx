@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { useStore } from '../../src/store';
 import { activeDeck, dueCards } from '../../src/repository';
-import { Button, Empty, Field, Panel, Screen, colors, s } from '../../src/ui';
+import { Button, Empty, Field, Panel, Screen, colors, s, Text } from '../../src/ui';
 
 export default function Decks() {
   const { data } = useStore();
@@ -17,7 +17,7 @@ export default function Decks() {
   return (
     <Screen
       title="Your decks"
-      eyebrow="LIBRARY"
+      eyebrow="01 / YOUR COLLECTION"
       subtitle={data.decks.length + (data.decks.length === 1 ? ' deck' : ' decks')}
       action={<Button title="+ New deck" size="compact" onPress={create} />}
     >
@@ -41,7 +41,7 @@ export default function Decks() {
           </View>
         </Panel>
       )}
-      <View style={{ gap: 12 }}>
+      <View style={{ gap: 14 }}>
         {decks.map((deck) => {
           const count = data.cards.filter((card) => card.deckId === deck.id).length;
           const dueCount = due.filter((card) => card.deckId === deck.id).length;
@@ -54,7 +54,7 @@ export default function Decks() {
               onPress={() => router.push({ pathname: '/decks/[id]', params: { id: deck.id } })}
               style={({ pressed }) => ({ opacity: pressed ? 0.76 : 1 })}
             >
-              <Panel style={{ padding: 18 }}>
+              <Panel style={{ padding: 20, borderLeftWidth: 4, borderLeftColor: deck.color }}>
                 <View style={[s.row, { alignItems: 'flex-start' }]}>
                   <View
                     style={{
@@ -77,11 +77,7 @@ export default function Decks() {
                     )}
                     <Text style={s.caption}>
                       {count} {count === 1 ? 'card' : 'cards'}
-                      {paused
-                        ? ' · Reviews paused'
-                        : dueCount
-                          ? ' · ' + dueCount + ' due'
-                          : ''}
+                      {paused ? ' · Reviews paused' : dueCount ? ' · ' + dueCount + ' due' : ''}
                       {deck.version === 0 ? ' · On this device' : ''}
                     </Text>
                   </View>

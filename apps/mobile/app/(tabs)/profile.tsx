@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import {
   importResponseSchema,
   type ImportRequest,
@@ -7,7 +7,7 @@ import {
 } from '@recollect/contracts';
 import { useStore } from '../../src/store';
 import { api, ApiError } from '../../src/api';
-import { Button, Panel, Screen, colors, reportError, s } from '../../src/ui';
+import { Button, Panel, Screen, colors, reportError, s, Text } from '../../src/ui';
 import { shareExistingFile, shareJSON } from '../../src/export';
 import {
   exportLegacyStore,
@@ -150,8 +150,7 @@ export default function ProfileScreen() {
     );
   }
   function resolve(issue: LocalIssue, action: 'server' | 'retry') {
-    const title =
-      action === 'server' ? 'Use the server version?' : 'Submit your version again?';
+    const title = action === 'server' ? 'Use the server version?' : 'Submit your version again?';
     const detail =
       action === 'server'
         ? 'This replaces the visible local version and its queued edits with the server version. A recovery copy of every replaced change remains in your export.'
@@ -166,7 +165,11 @@ export default function ProfileScreen() {
     ]);
   }
   return (
-    <Screen title="You" subtitle="Your account, library, and app updates.">
+    <Screen
+      title="You"
+      eyebrow="04 / YOUR SPACE"
+      subtitle="Your account, library, and app updates."
+    >
       <Panel>
         <View style={s.row}>
           <View
@@ -174,7 +177,7 @@ export default function ProfileScreen() {
               width: 54,
               height: 54,
               borderRadius: 27,
-              backgroundColor: colors.green,
+              backgroundColor: colors.yellow,
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -184,10 +187,10 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.sectionTitle}>
-              {session?.user.name || 'Your Recollect account'}
+            <Text style={s.sectionTitle}>{session?.user.name || 'Your Recollect account'}</Text>
+            <Text selectable style={s.caption}>
+              {session?.user.email ?? 'Signed in with Apple'}
             </Text>
-            <Text style={s.body}>{session?.user.email ?? 'Signed in with Apple'}</Text>
           </View>
         </View>
         <View style={s.divider} />
@@ -210,7 +213,7 @@ export default function ProfileScreen() {
             style={[
               s.pill,
               {
-                backgroundColor: syncError || data.issues.length ? colors.pale : colors.green,
+                backgroundColor: syncError || data.issues.length ? colors.pale : colors.yellow,
               },
             ]}
           >
@@ -242,9 +245,7 @@ export default function ProfileScreen() {
             Widget refresh unavailable: {widgetError}
           </Text>
         )}
-        {!!syncError && (
-          <Text style={{ color: colors.danger, lineHeight: 22 }}>{syncError}</Text>
-        )}
+        {!!syncError && <Text style={{ color: colors.danger, lineHeight: 22 }}>{syncError}</Text>}
         <View style={[s.row, { alignItems: 'stretch' }]}>
           <View style={{ flex: 1 }}>
             <Button
@@ -304,9 +305,7 @@ export default function ProfileScreen() {
                   >
                     <Text style={s.label}>Server version</Text>
                     <Text style={s.body}>
-                      {'name' in issue.canonical
-                        ? issue.canonical.name
-                        : issue.canonical.front}
+                      {'name' in issue.canonical ? issue.canonical.name : issue.canonical.front}
                     </Text>
                     {'back' in issue.canonical && (
                       <Text style={s.body}>{issue.canonical.back}</Text>
@@ -358,14 +357,12 @@ export default function ProfileScreen() {
               {inspection?.message ?? 'Checking for the original iOS library…'}
             </Text>
             <Text style={s.caption}>
-              Recovery reads a protected copy of the original SwiftData store. It does not
-              erase the original. You can export the copy and review ownership before any
-              upload.
+              Recovery reads a protected copy of the original SwiftData store. It does not erase the
+              original. You can export the copy and review ownership before any upload.
             </Text>
             <Text style={s.caption}>
-              An approved import sends the cards and their non-secret recovery archive,
-              including original reviews, preferences, and pending sync records, to your
-              configured server.
+              An approved import sends the cards and their non-secret recovery archive, including
+              original reviews, preferences, and pending sync records, to your configured server.
             </Text>
             {(inspection?.status === 'found' || inspection?.status === 'needs_recovery') &&
               !workflow && (
@@ -437,9 +434,8 @@ export default function ProfileScreen() {
                 )}
                 {!workflow.plan.request && (
                   <Text style={s.body}>
-                    The source is preserved. Resolve these account or data issues before
-                    importing; this screen will not guess, discard records, or clamp your
-                    schedule.
+                    The source is preserved. Resolve these account or data issues before importing;
+                    this screen will not guess, discard records, or clamp your schedule.
                   </Text>
                 )}
                 {!workflow.request && !workflow.result && (
@@ -478,8 +474,8 @@ export default function ProfileScreen() {
                     <Text style={s.body}>
                       {workflow.result.importedDeckIds.length} decks and{' '}
                       {workflow.result.importedCardIds.length} cards imported.{' '}
-                      {workflow.result.conflicts.length} existing records were preserved
-                      without overwrite.
+                      {workflow.result.conflicts.length} existing records were preserved without
+                      overwrite.
                     </Text>
                     {workflow.result.conflicts.map((conflict) => (
                       <Text
@@ -490,8 +486,8 @@ export default function ProfileScreen() {
                       </Text>
                     ))}
                     <Text style={s.caption}>
-                      Your original files and complete migration receipt remain available here
-                      and in your export. Synchronize to load the imported cards.
+                      Your original files and complete migration receipt remain available here and
+                      in your export. Synchronize to load the imported cards.
                     </Text>
                   </>
                 )}
@@ -501,8 +497,7 @@ export default function ProfileScreen() {
         )}
       </Panel>
       <Text style={s.caption}>
-        Cards and practice work offline. Connect to generate suggestions and sync between
-        devices.
+        Cards and practice work offline. Connect to generate suggestions and sync between devices.
       </Text>
       <Button
         title="Sign out"

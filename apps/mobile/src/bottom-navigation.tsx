@@ -1,8 +1,8 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { colors, s } from './ui';
+import { colors, s, Text } from './ui';
 
 export const tabs = [
   { name: 'index', icon: '◉', label: 'Today' },

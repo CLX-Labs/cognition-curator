@@ -63,6 +63,8 @@ vi.mock('../src/answer-generator', () => ({
   default: (props: Record<string, unknown>) => React.createElement('answer-generator', props),
 }));
 vi.mock('../src/ui', () => ({
+  Text: ({ children, ...props }: { children: React.ReactNode }) =>
+    React.createElement('text', props, children),
   colors: {},
   s: {},
   reportError: (...args: unknown[]) => rig.reportError(...args),
@@ -215,18 +217,14 @@ it('keeps optional details hidden and retains an edited card baseline through a 
 it('explains a pending answer save lock and enables saving again after Set aside', async () => {
   await mount();
   await enter('Question', 'My own answer');
-  await act(async () =>
-    renderer!.root.findByType('answer-generator').props.onPendingChange(true),
-  );
+  await act(async () => renderer!.root.findByType('answer-generator').props.onPendingChange(true));
   expect(button('Save & add another').props.disabled).toBe(true);
   const copy = renderer!.root
     .findAllByType('text')
     .map((node) => node.props.children)
     .join(' ');
   expect(copy).toContain('Set aside');
-  await act(async () =>
-    renderer!.root.findByType('answer-generator').props.onPendingChange(false),
-  );
+  await act(async () => renderer!.root.findByType('answer-generator').props.onPendingChange(false));
   expect(button('Save & add another').props.disabled).toBe(false);
 });
 it('asks before discarding unsaved card entry on the visible Back action', async () => {

@@ -25,10 +25,25 @@ test('App Store submission settings are applied only after the native build, pre
   assert.match(commands, /--input asc_app_id="\$ASC_APP_ID"/);
   assert.equal(expo.on.workflow_dispatch.inputs.asc_app_id.required, true);
   const submission = expo.jobs.submit_testflight;
+  assert.equal(submission.type, 'submit', 'Binary upload must work without the paid TestFlight job.');
+  assert.deepEqual(Object.keys(submission.params).sort(), ['build_id', 'profile']);
   assert.deepEqual(submission.needs, ['native_build']);
   assert.equal(submission.env.ASC_APP_ID, '${{ inputs.asc_app_id }}');
   assert.match(submission.hooks.after_checkout[0].run, /release-pipeline\.mjs configure-app/);
   for (const [name, job] of Object.entries(expo.jobs)) {
     if (name !== 'submit_testflight') assert.doesNotMatch(JSON.stringify(job), /configure-app/);
   }
+});
+
+test('a failed upload can retry the same native build without rebuilding or publishing an OTA', async () => {
+  const expo = parse(await readFile(new URL('../apps/mobile/.eas/workflows/submit-existing.yml', import.meta.url), 'utf8'));
+  assert.equal(expo.on.workflow_dispatch.inputs.build_id.required, true);
+  assert.equal(expo.on.workflow_dispatch.inputs.asc_app_id.required, true);
+  assert.deepEqual(Object.keys(expo.jobs), ['submit_testflight']);
+  const submission = expo.jobs.submit_testflight;
+  assert.equal(submission.type, 'submit');
+  assert.equal(submission.params.build_id, '${{ inputs.build_id }}');
+  assert.equal(submission.params.profile, 'testflight');
+  assert.equal(submission.env.ASC_APP_ID, '${{ inputs.asc_app_id }}');
+  assert.match(submission.hooks.after_checkout[0].run, /release-pipeline\.mjs configure-app/);
 });

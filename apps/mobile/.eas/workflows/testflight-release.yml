@@ -50,7 +50,9 @@ jobs:
       message: ${{ inputs.release_version }} · ${{ inputs.release_id }} · ${{ inputs.release_sha }}
   submit_testflight:
     needs: [native_build]
-    type: testflight
+    # Standard EAS Submit uploads to App Store Connect/TestFlight on the free
+    # plan. The advanced `testflight` job requires a paid plan for build_id.
+    type: submit
     env:
       ASC_APP_ID: ${{ inputs.asc_app_id }}
     # eas.json is fingerprinted in full. Configure submission only after the
@@ -61,8 +63,6 @@ jobs:
     params:
       build_id: ${{ needs.native_build.outputs.build_id }}
       profile: testflight
-      changelog: ${{ inputs.release_version }} · ${{ inputs.release_id }} · ${{ inputs.release_sha }}
-      submit_beta_review: false
   incompatible_ota:
     needs: [compatible_build]
     if: ${{ inputs.release_type == 'ota' && !needs.compatible_build.outputs.build_id }}

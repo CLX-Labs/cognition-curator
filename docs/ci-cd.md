@@ -92,6 +92,9 @@ as **Unversioned release** rather than implying it came from main.
 `apps/mobile/.eas/workflows/testflight-release.yml` compares the iOS native
 fingerprint against a successful store build on channel `testflight`. The source
 branch selects OTA or native as described above.
+Native delivery uses the standard EAS `submit` job to upload the signed binary to
+App Store Connect for TestFlight processing. The advanced `testflight` job's
+`build_id` upload requires a paid Expo plan and is not used here.
 The first release needs a store build. The existing ad hoc
 `preview` installation cannot serve as the TestFlight baseline.
 
@@ -172,8 +175,14 @@ Once these connections are complete, merge the current TypeScript app and releas
 workflow into `main`. Configure required checks and branch protection. Feature
 branches and PRs run checks; main runs deployment and app release.
 
-If a native submission fails, retry the submission in EAS before the next OTA
-release. A matching EAS binary alone does not prove TestFlight submission or
+If a native submission fails, retry the existing signed build before the next OTA
+release. From `apps/mobile`, run `eas workflow:run .eas/workflows/submit-existing.yml
+--input build_id=<EAS_BUILD_UUID> --input asc_app_id=<ASC_APP_ID> --non-interactive --wait`.
+This uploads that exact binary without incrementing its version or rebuilding.
+After verified delivery, record the original successful release plan with
+`RELEASE_PLAN_FILE=<original-plan.json> node scripts/release-policy.mjs record`
+from the repository root, so the next release continues from the delivered version.
+A matching EAS binary alone does not prove TestFlight submission or
 installation. Alternatively, manually dispatch the GitHub release workflow on
 main with `release_type=native` to bump the major version, build and submit a fresh
 binary. Failed app checks or Expo build/update/submission steps prevent release.

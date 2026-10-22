@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, PanResponder, Platform, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  PanResponder,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import type { Card } from '@recollect/contracts';
 import { Text, colors, s } from './ui';
 import { isHorizontalReviewDrag, reviewSwipe } from './review-gesture';
@@ -19,7 +27,9 @@ export default function ReviewCard({
   onAnswer(remembered: boolean): void;
 }) {
   const reduceMotion = useReducedMotion();
+  const { fontScale } = useWindowDimensions();
   const [width, setWidth] = useState(320);
+  const [faceHeight, setFaceHeight] = useState(0);
   const drag = useRef(new Animated.Value(0)).current;
   const flip = useRef(new Animated.Value(1)).current;
   const previousFace = useRef(revealed);
@@ -57,8 +67,15 @@ export default function ReviewCard({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gesture) =>
         !latest.current.disabled && isHorizontalReviewDrag(gesture),
-      onMoveShouldSetPanResponderCapture: (_, gesture) =>
-        !latest.current.disabled && isHorizontalReviewDrag(gesture),
+      onMoveShouldSetPanResponderCapture: (_, gesture) => {
+        if (
+          Math.abs(gesture.dx) > 12 ||
+          Math.abs(gesture.dy) > 12 ||
+          gesture.numberActiveTouches > 1
+        )
+          dragged.current = true;
+        return !latest.current.disabled && isHorizontalReviewDrag(gesture);
+      },
       onPanResponderGrant: () => {
         dragged.current = true;
         cancelled.current = false;
@@ -109,19 +126,26 @@ export default function ReviewCard({
     extrapolate: 'clamp',
   });
   const faceTurn = flip.interpolate({ inputRange: [0, 1], outputRange: ['-85deg', '0deg'] });
+  const visibleLines = Math.max(
+    1,
+    Math.floor(faceHeight / ((revealed ? 33 : 40) * Math.max(1, fontScale))),
+  );
   return (
     <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={styles.stage}>
       <Animated.View
         testID="review-gesture"
         {...responder.panHandlers}
-        style={{
-          transform: [
-            { perspective: 1000 },
-            { translateX: drag },
-            { rotate: reduceMotion ? '0deg' : turn },
-            { rotateY: faceTurn },
-          ],
-        }}
+        style={[
+          styles.gesture,
+          {
+            transform: [
+              { perspective: 1000 },
+              { translateX: drag },
+              { rotate: reduceMotion ? '0deg' : turn },
+              { rotateY: faceTurn },
+            ],
+          },
+        ]}
       >
         <Pressable
           testID="review-card"
@@ -156,18 +180,30 @@ export default function ReviewCard({
           style={[styles.card, revealed && { backgroundColor: colors.yellow }]}
         >
           <View style={s.between}>
-            <Text style={[s.eyebrow, { marginBottom: 0, color: colors.ink }]}>
+            <Text
+              numberOfLines={1}
+              style={[s.eyebrow, { marginBottom: 0, color: colors.ink, flexShrink: 1 }]}
+            >
               {revealed ? '02 / ANSWER' : card.aiGenerated ? '01 / CONCEPT' : '01 / QUESTION'}
             </Text>
             <Text style={[s.caption, { color: colors.ink }]}>↻</Text>
           </View>
-          <View style={styles.face}>
-            <Text style={revealed ? styles.answer : styles.question}>
+          <View
+            testID="review-card-face"
+            onLayout={(event) => setFaceHeight(event.nativeEvent.layout.height)}
+            style={styles.face}
+          >
+            <Text
+              testID="review-card-text"
+              numberOfLines={visibleLines}
+              ellipsizeMode="tail"
+              style={revealed ? styles.answer : styles.question}
+            >
               {revealed ? card.back : card.front}
             </Text>
           </View>
           <View style={styles.cardFooter}>
-            <Text style={[s.caption, { color: colors.ink }]}>
+            <Text numberOfLines={1} style={[s.caption, { color: colors.ink, flexShrink: 1 }]}>
               {revealed ? 'Tap to see the question' : 'Tap to reveal the answer'}
             </Text>
             <Text style={{ fontSize: 22, color: colors.accent }}>↗</Text>
@@ -179,17 +215,19 @@ export default function ReviewCard({
 }
 
 const styles = StyleSheet.create({
-  stage: { paddingBottom: 6 },
+  stage: { flex: 1, minHeight: 0 },
+  gesture: { flex: 1, minHeight: 0 },
   card: {
+    flex: 1,
+    minHeight: 0,
     borderRadius: 10,
     backgroundColor: colors.paper,
-    padding: 24,
+    padding: 16,
     borderWidth: 1,
     borderColor: colors.line,
-    gap: 22,
-    minHeight: 340,
+    gap: 12,
   },
-  face: { minHeight: 176, flex: 1, justifyContent: 'center', paddingVertical: 12 },
+  face: { minHeight: 0, flex: 1, justifyContent: 'center', overflow: 'hidden' },
   question: {
     fontSize: 32,
     lineHeight: 40,
@@ -205,6 +243,6 @@ const styles = StyleSheet.create({
     gap: 12,
     borderTopWidth: 1,
     borderTopColor: '#20221E30',
-    paddingTop: 14,
+    paddingTop: 10,
   },
 });

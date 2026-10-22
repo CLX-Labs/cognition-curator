@@ -55,6 +55,8 @@ vi.mock('react-native', () => {
     ActivityIndicator: host('spinner'),
     Image: host('image'),
     StatusBar: host('status-bar'),
+    Modal: host('modal'),
+    useWindowDimensions: () => ({ width: 375, height: 667, scale: 2, fontScale: 1 }),
     AccessibilityInfo: {
       isReduceMotionEnabled: () => Promise.resolve(rig.reduceMotion),
       addEventListener: () => ({ remove: vi.fn() }),
@@ -207,6 +209,20 @@ async function elapse(milliseconds: number) {
 async function flip() {
   await act(async () => cardView().props.onPress());
 }
+function reader() {
+  return renderer!.root.findByProps({ testID: 'review-reader' }).findByType('modal');
+}
+function readingText() {
+  return reader().findByProps({ testID: 'review-reader-text' }).findByType('text');
+}
+async function closeReader() {
+  await act(async () =>
+    renderer!.root
+      .findByProps({ testID: 'review-reader-close' })
+      .findByType('pressable')
+      .props.onPress(),
+  );
+}
 async function swipe(dx: number, dy = 0, vx = 0) {
   const gesture = gestureView();
   await act(async () => {
@@ -220,6 +236,103 @@ function actions() {
     .findAllByType(Button)
     .map((node) => node.props.title);
 }
+
+it.each([false, true])(
+  'keeps active review fixed and restores scrolling after the swipe session ends (practice=%s)',
+  async (practice) => {
+    if (practice) rig.params.practice = 'true';
+    await mount();
+    expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
+    await swipe(140);
+    expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
+    expect(text()).toContain(second.front);
+    await swipe(-140);
+    expect(text()).toContain(practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE');
+    expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
+    expect(
+      renderer!.root.findAll(
+        (node) => typeof node.type === 'string' && node.props.testID === 'review-gesture',
+      ),
+    ).toHaveLength(0);
+    expect(rig.scrollTo).not.toHaveBeenCalled();
+  },
+);
+
+it('preserves scrolling for ordinary screens', async () => {
+  await act(async () => {
+    renderer = create(
+      React.createElement(Screen, { title: 'Your library', children: 'Library content' }),
+    );
+  });
+  expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
+  expect(text()).toContain('Your library');
+});
+
+it.each([false, true])(
+  'opens the full current face in a separate reader and returns to that face (revealed=%s)',
+  async (revealed) => {
+    await mount();
+    if (revealed) await flip();
+    await press('Read in full');
+    expect(readingText().children.join('')).toBe(revealed ? first.back : first.front);
+    expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
+    expect(cardView().props.disabled).toBe(true);
+    expect(
+      footer()
+        .findAllByType(Button)
+        .every((node) => node.props.disabled),
+    ).toBe(true);
+    await swipe(140);
+    await press('I remember →');
+    await flip();
+    expect(rig.rate).not.toHaveBeenCalled();
+    expect(rig.haptic).not.toHaveBeenCalled();
+    expect(feedback()).toHaveLength(0);
+    await closeReader();
+    expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
+    expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
+    expect(cardView().props.disabled).toBe(false);
+    expect(cardView().props.accessibilityLabel).toContain(revealed ? first.back : first.front);
+    await swipe(-140);
+    expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'again', 0);
+    expect(text()).toContain(second.front);
+  },
+);
+
+it('keeps long answers and context readable without adding a scroll view to the swipe surface', async () => {
+  const back = 'A long answer with all of its original details. '.repeat(80);
+  const explanation = 'The wider context remains available in full. '.repeat(80);
+  rig.data = { ...rig.data!, cards: [{ ...first, back, explanation }, second] };
+  await mount();
+  await flip();
+  expect(cardView().props.accessibilityLabel).toBe('Answer: ' + back);
+  expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
+  await press('Read in full');
+  expect(readingText().children.join('')).toBe(back);
+  expect(readingText().props.numberOfLines).toBeUndefined();
+  await closeReader();
+  await press('More context');
+  expect(readingText().children.join('')).toBe(explanation);
+  expect(readingText().props.numberOfLines).toBeUndefined();
+  await act(async () => reader().props.onRequestClose());
+  expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
+  expect(cardView().props.accessibilityLabel).toBe('Answer: ' + back);
+  expect(rig.rate).not.toHaveBeenCalled();
+});
+
+it('opens hints outside the swipe surface without flipping or saving the card', async () => {
+  await mount();
+  await press('Show a hint');
+  expect(readingText().children.join('')).toBe(first.hint);
+  expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
+  await closeReader();
+  expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
+  expect(cardView().props.accessibilityLabel).toBe('Question: ' + first.front);
+  expect(rig.rate).not.toHaveBeenCalled();
+  await swipe(140);
+  expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
+  expect(text()).toContain(second.front);
+});
 
 it('tapping flips both ways without recording an answer or advancing', async () => {
   await mount();
@@ -252,7 +365,7 @@ it.each([
     expect(text()).toContain(second.front);
     expect(text()).not.toContain(first.back);
     expect(text()).not.toContain(second.back);
-    expect(rig.scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+    expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
     expect(rig.haptic).toHaveBeenCalledExactlyOnceWith(remembered);
     expect(feedback()).toHaveLength(1);
     expect(text()).toContain(cue);
@@ -293,6 +406,37 @@ it('small, vertical and cancelled drags never save or flip', async () => {
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
 });
+
+it.each([
+  { direction: 'vertical', dx: 2, dy: 80, numberActiveTouches: 1 },
+  { direction: 'diagonal', dx: 70, dy: 70, numberActiveTouches: 1 },
+  { direction: 'multiple fingers', dx: 2, dy: 2, numberActiveTouches: 2 },
+])(
+  'rejects $direction movement without allowing its release to flip the card',
+  async ({ direction: _direction, ...movement }) => {
+    await mount();
+    await act(async () => {
+      cardView().props.onPressIn();
+      expect(gestureView().props.onMoveShouldSetPanResponderCapture(null, movement)).toBe(false);
+      expect(gestureView().props.onMoveShouldSetPanResponder(null, movement)).toBe(false);
+      // With no enclosing ScrollView, a rejected drag may still reach Pressable's release.
+      cardView().props.onPress();
+    });
+    expect(text()).toContain(first.front);
+    expect(text()).not.toContain(first.back);
+    expect(rig.rate).not.toHaveBeenCalled();
+    expect(rig.haptic).not.toHaveBeenCalled();
+    expect(feedback()).toHaveLength(0);
+    await act(async () => {
+      cardView().props.onPressIn();
+      cardView().props.onPress();
+    });
+    expect(text()).toContain(first.back);
+    expect(text()).not.toContain(first.front);
+    expect(rig.rate).not.toHaveBeenCalled();
+    expect(rig.haptic).not.toHaveBeenCalled();
+  },
+);
 
 it('blocks duplicate swipes, button presses and flips while saving', async () => {
   let finish!: () => void;
@@ -487,6 +631,7 @@ it('missing the only practice card completes the session instead of immediately 
   rig.data = { ...rig.data!, cards: [first] };
   await mount();
   await press('Show a hint');
+  await closeReader();
   await flip();
   await swipe(-150);
   expect(text()).toContain('PRACTICE COMPLETE');

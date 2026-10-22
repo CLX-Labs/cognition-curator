@@ -13,11 +13,26 @@ const rig = vi.hoisted(() => ({
   scrollTo: vi.fn(),
   alert: vi.fn(),
   haptic: vi.fn<(remembered: boolean) => void>(),
+  revealHaptic: vi.fn<() => void>(),
+  cancelHaptic: vi.fn<() => void>(),
+  setActiveHaptic: vi.fn<(active: boolean) => void>(),
+  appState: 'active',
+  appStateChange: null as ((state: string) => void) | null,
+  removeAppStateListener: vi.fn(),
+  focusEffect: null as (() => void | (() => void)) | null,
+  blur: null as (() => void) | null,
   reduceMotion: true,
   timing: vi.fn(),
   syncState: 'idle' as 'idle' | 'syncing' | 'offline',
 }));
-vi.mock('../src/review-haptics', () => ({ playReviewHaptic: rig.haptic }));
+vi.mock('../src/review-haptics', () => ({
+  createReviewHaptics: () => ({
+    answer: rig.haptic,
+    reveal: rig.revealHaptic,
+    cancel: rig.cancelHaptic,
+    setActive: rig.setActiveHaptic,
+  }),
+}));
 vi.mock('../src/store', () => ({
   useStore: () => ({
     data: rig.data,
@@ -29,6 +44,14 @@ vi.mock('../src/store', () => ({
 vi.mock('expo-router', () => ({
   useLocalSearchParams: () => rig.params,
   useSegments: () => [],
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    React.useEffect(() => {
+      rig.focusEffect = effect;
+      const cleanup = effect();
+      rig.blur = typeof cleanup === 'function' ? cleanup : null;
+      return cleanup;
+    }, [effect]);
+  },
   router: {
     canGoBack: () => true,
     back: vi.fn(),
@@ -55,6 +78,15 @@ vi.mock('react-native', () => {
     ActivityIndicator: host('spinner'),
     Image: host('image'),
     StatusBar: host('status-bar'),
+    AppState: {
+      get currentState() {
+        return rig.appState;
+      },
+      addEventListener: (_event: string, listener: (state: string) => void) => {
+        rig.appStateChange = listener;
+        return { remove: rig.removeAppStateListener };
+      },
+    },
     Modal: host('modal'),
     useWindowDimensions: () => ({ width: 375, height: 667, scale: 2, fontScale: 1 }),
     AccessibilityInfo: {
@@ -173,6 +205,10 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   rig.params = { deckId: deck.id };
   rig.syncState = 'idle';
+  rig.appState = 'active';
+  rig.appStateChange = null;
+  rig.focusEffect = null;
+  rig.blur = null;
   rig.reduceMotion = true;
   rig.timing.mockImplementation(() => ({ start() {}, stop() {} }));
   rig.data = { decks: [deck], cards: [first, second], reviews: [], pending: 0, issues: [] };
@@ -273,6 +309,7 @@ it.each([false, true])(
   async (revealed) => {
     await mount();
     if (revealed) await flip();
+    rig.revealHaptic.mockClear();
     await press('Read in full');
     expect(readingText().children.join('')).toBe(revealed ? first.back : first.front);
     expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
@@ -287,6 +324,7 @@ it.each([false, true])(
     await flip();
     expect(rig.rate).not.toHaveBeenCalled();
     expect(rig.haptic).not.toHaveBeenCalled();
+    expect(rig.revealHaptic).not.toHaveBeenCalled();
     expect(feedback()).toHaveLength(0);
     await closeReader();
     expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
@@ -323,18 +361,21 @@ it('keeps long answers and context readable without adding a scroll view to the 
 it('opens hints outside the swipe surface without flipping or saving the card', async () => {
   await mount();
   await press('Show a hint');
+  expect(rig.revealHaptic).toHaveBeenCalledExactlyOnceWith();
+  expect(rig.haptic).not.toHaveBeenCalled();
   expect(readingText().children.join('')).toBe(first.hint);
   expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
   await closeReader();
   expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
   expect(cardView().props.accessibilityLabel).toBe('Question: ' + first.front);
   expect(rig.rate).not.toHaveBeenCalled();
+  expect(rig.revealHaptic).toHaveBeenCalledTimes(1);
   await swipe(140);
   expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
   expect(text()).toContain(second.front);
 });
 
-it('tapping flips both ways without recording an answer or advancing', async () => {
+it('tapping to reveal ticks once while flipping back stays silent without rating or advancing', async () => {
   await mount();
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
@@ -342,6 +383,7 @@ it('tapping flips both ways without recording an answer or advancing', async () 
   expect(text()).toContain('Not sure: 3d');
   expect(text()).toContain('Remembered: 7d');
   await flip();
+  expect(rig.revealHaptic).toHaveBeenCalledExactlyOnceWith();
   expect(text()).toContain(first.back);
   expect(text()).not.toContain(first.front);
   await flip();
@@ -349,6 +391,7 @@ it('tapping flips both ways without recording an answer or advancing', async () 
   expect(text()).not.toContain(first.back);
   expect(rig.mutate).not.toHaveBeenCalled();
   expect(rig.haptic).not.toHaveBeenCalled();
+  expect(rig.revealHaptic).toHaveBeenCalledTimes(1);
   expect(feedback()).toHaveLength(0);
 });
 
@@ -402,6 +445,7 @@ it('small, vertical and cancelled drags never save or flip', async () => {
   });
   expect(rig.rate).not.toHaveBeenCalled();
   expect(rig.haptic).not.toHaveBeenCalled();
+  expect(rig.revealHaptic).not.toHaveBeenCalled();
   expect(feedback()).toHaveLength(0);
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
@@ -426,6 +470,7 @@ it.each([
     expect(text()).not.toContain(first.back);
     expect(rig.rate).not.toHaveBeenCalled();
     expect(rig.haptic).not.toHaveBeenCalled();
+    expect(rig.revealHaptic).not.toHaveBeenCalled();
     expect(feedback()).toHaveLength(0);
     await act(async () => {
       cardView().props.onPressIn();
@@ -435,6 +480,7 @@ it.each([
     expect(text()).not.toContain(first.front);
     expect(rig.rate).not.toHaveBeenCalled();
     expect(rig.haptic).not.toHaveBeenCalled();
+    expect(rig.revealHaptic).toHaveBeenCalledExactlyOnceWith();
   },
 );
 
@@ -447,9 +493,12 @@ it('blocks duplicate swipes, button presses and flips while saving', async () =>
       }),
   );
   await mount();
+  rig.cancelHaptic.mockClear();
   await press('I remember →');
+  expect(rig.cancelHaptic).toHaveBeenCalledExactlyOnceWith();
   expect(rig.rate).toHaveBeenCalledTimes(1);
   expect(rig.haptic).not.toHaveBeenCalled();
+  expect(rig.revealHaptic).not.toHaveBeenCalled();
   expect(feedback()).toHaveLength(0);
   expect(
     footer()
@@ -459,11 +508,15 @@ it('blocks duplicate swipes, button presses and flips while saving', async () =>
   await press('← Not sure');
   await swipe(-160);
   await flip();
+  await press('Show a hint');
   expect(rig.rate).toHaveBeenCalledTimes(1);
+  expect(rig.cancelHaptic).toHaveBeenCalledTimes(1);
   expect(rig.haptic).not.toHaveBeenCalled();
+  expect(rig.revealHaptic).not.toHaveBeenCalled();
   expect(feedback()).toHaveLength(0);
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
+  expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
   expect(text()).not.toContain('Saving your review');
   await act(async () => finish());
   expect(text()).toContain(second.front);
@@ -474,6 +527,64 @@ it('blocks duplicate swipes, button presses and flips while saving', async () =>
       .findAllByType(Button)
       .every((node) => !node.props.disabled),
   ).toBe(true);
+});
+
+it('reading full text and context stay silent, and an open hint cannot replay its reveal tick', async () => {
+  rig.data = { ...rig.data!, cards: [{ ...first, explanation: 'The wider context.' }, second] };
+  await mount();
+  await press('Read in full');
+  expect(rig.revealHaptic).not.toHaveBeenCalled();
+  expect(rig.cancelHaptic).toHaveBeenCalledExactlyOnceWith();
+  await closeReader();
+  await press('Show a hint');
+  expect(rig.revealHaptic).toHaveBeenCalledExactlyOnceWith();
+  await press('Show a hint');
+  await flip();
+  expect(rig.revealHaptic).toHaveBeenCalledTimes(1);
+  expect(readingText().children.join('')).toBe(first.hint);
+  await closeReader();
+  await flip();
+  expect(rig.revealHaptic).toHaveBeenCalledTimes(2);
+  await press('More context');
+  expect(readingText().children.join('')).toBe('The wider context.');
+  await closeReader();
+  expect(rig.revealHaptic).toHaveBeenCalledTimes(2);
+  expect(rig.haptic).not.toHaveBeenCalled();
+  expect(rig.rate).not.toHaveBeenCalled();
+});
+
+it('disables feedback when backgrounded or blurred, resumes only when focused, and cleans up on unmount', async () => {
+  await mount();
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(true);
+  await act(async () => rig.appStateChange!('background'));
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(false);
+  await act(async () => rig.appStateChange!('active'));
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(true);
+  await act(async () => rig.blur!());
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(false);
+  await act(async () => {
+    rig.appStateChange!('background');
+    rig.appStateChange!('active');
+  });
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(false);
+  await act(async () => {
+    rig.focusEffect!();
+  });
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(true);
+  await act(async () => renderer!.unmount());
+  renderer = null;
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(false);
+  expect(rig.removeAppStateListener).toHaveBeenCalledExactlyOnceWith();
+});
+
+it('keeps feedback disabled when the session first mounts in the background', async () => {
+  rig.appState = 'background';
+  await mount();
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(false);
+  await act(async () => rig.appStateChange!('active'));
+  expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(true);
+  expect(rig.haptic).not.toHaveBeenCalled();
+  expect(rig.revealHaptic).not.toHaveBeenCalled();
 });
 
 it.each(['start', 'move'])(
@@ -493,6 +604,7 @@ it.each(['start', 'move'])(
     });
     expect(rig.rate).not.toHaveBeenCalled();
     expect(rig.haptic).not.toHaveBeenCalled();
+    expect(rig.revealHaptic).not.toHaveBeenCalled();
     expect(feedback()).toHaveLength(0);
     expect(text()).toContain(first.front);
   },

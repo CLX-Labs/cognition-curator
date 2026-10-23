@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { Card, Deck, Session } from '@recollect/contracts';
 import { initialSchedule } from '@recollect/scheduler';
 import type { LocalSnapshot } from '../src/repository';
+import type { AccountDeletionRecovery } from '../src/api';
 
 const rig = vi.hoisted(() => ({
   session: null as Session | null,
@@ -17,6 +18,8 @@ const rig = vi.hoisted(() => ({
   setWidgetOwner: vi.fn(async () => {}),
   fontsLoaded: true,
   fontError: null as Error | null,
+  deletion: null as AccountDeletionRecovery | null,
+  finishDeletion: vi.fn(async () => {}),
 }));
 vi.mock('react-native', () => ({
   AppState: {
@@ -38,11 +41,46 @@ vi.mock('expo-crypto', () => ({ randomUUID: () => 'device-id' }));
 vi.mock('../src/database', () => ({ openDatabase: async () => ({}) }));
 vi.mock('../src/api', () => ({
   api: {
+    get session() {
+      return rig.session;
+    },
     subscribe: (listener: (session: Session | null) => void) => {
       rig.sessionListeners.add(listener);
       return () => rig.sessionListeners.delete(listener);
     },
     initialize: async () => rig.session,
+    deletionRecovery: () => rig.deletion,
+    requestAccountDeletion: async (
+      ownerId: string,
+      operationId: string,
+      prepared: (record: AccountDeletionRecovery) => void,
+    ) => {
+      rig.deletion = { ownerId, operationId, localCleared: false };
+      prepared(rig.deletion);
+      rig.deletion = {
+        ...rig.deletion,
+        receipt: {
+          requestId: operationId,
+          ownerId,
+          status: 'pending',
+          requestedAt: new Date().toISOString(),
+          completedAt: null,
+          estimatedCompletionDays: null,
+          actionRequired: 'none',
+        },
+      };
+    },
+    assertDeletionOwner: async (ownerId: string) => {
+      if (rig.session && rig.session.user.id !== ownerId) throw new Error('account changed');
+    },
+    forgetDeletedAccount: async () => {
+      rig.session = null;
+      for (const listener of rig.sessionListeners) listener(null);
+    },
+    finishDeletionRecovery: async () => {
+      await rig.finishDeletion();
+      if (rig.deletion) rig.deletion = { ...rig.deletion, localCleared: true };
+    },
     request: (...args: unknown[]) => rig.request(...args),
     logout: async () => {},
   },
@@ -56,6 +94,7 @@ vi.mock('../src/repository', async (importOriginal) => {
   return {
     ...original,
     installationDeviceId: async () => 'device-id',
+    eraseOwnerData: async () => {},
     Repository: class {
       constructor(
         _db: unknown,
@@ -74,6 +113,8 @@ vi.mock('../src/repository', async (importOriginal) => {
         return '0';
       }
       async applyChanges() {}
+      retire() {}
+      async retireAndDrain() {}
     },
   };
 });
@@ -98,6 +139,9 @@ vi.mock('../src/app-updates', () => ({
 }));
 vi.mock('../src/profile', () => ({
   ProfileProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+vi.mock('../src/account-deletion', () => ({
+  AccountDeletionRecoveryScreen: () => React.createElement('deletion-recovery'),
 }));
 import RootLayout from '../app/_layout';
 import { useStore } from '../src/store';
@@ -170,6 +214,8 @@ beforeEach(() => {
   rig.fontsLoaded = true;
   rig.fontError = null;
   rig.session = session();
+  rig.deletion = null;
+  rig.finishDeletion.mockImplementation(async () => {});
   rig.snapshots.clear();
   rig.request.mockImplementation(async () => page());
 });
@@ -295,6 +341,29 @@ it('a late failure from a previous account cannot replace the new account with a
   expect(store.syncError).toBeNull();
   expect(store.initializationError).toBeNull();
   expect(mounts).toBe(2);
+});
+it('a new account signed in during final deletion recovery is not signed out or given a cleared widget', async () => {
+  await mount();
+  const held = deferred();
+  rig.finishDeletion.mockImplementation(async () => {
+    await held.promise;
+  });
+  let deletion!: Promise<void>;
+  await act(async () => {
+    deletion = store.requestAccountDeletion('owner-a');
+  });
+  expect(rig.deletion?.receipt?.status).toBe('pending');
+  await act(async () => {
+    emitSession(session('owner-b'));
+  });
+  await act(async () => {
+    held.resolve(undefined);
+    await deletion;
+  });
+  expect(store.session?.user.id).toBe('owner-b');
+  expect(store.repository?.ownerId).toBe('owner-b');
+  expect(rig.setWidgetOwner.mock.calls.at(-1)?.[0]).toBe('owner-b');
+  expect(rig.publishWidget.mock.calls.at(-1)?.[0]).toMatchObject({ ownerId: 'owner-b' });
 });
 
 it('real library changes update the UI while preserving the mounted editor draft', async () => {

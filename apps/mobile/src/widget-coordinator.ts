@@ -26,6 +26,11 @@ export class WidgetCoordinator {
       else await this.adapter.publishWidget(null);
     });
   }
+  clearOwner(ownerId: string) {
+    if (this.desiredOwner && this.desiredOwner !== ownerId)
+      return Promise.reject(new Error('Another account’s widget was preserved.'));
+    return this.setOwner(null);
+  }
   publish(snapshot: WidgetSnapshot) {
     const epoch = this.epoch;
     return this.queue(async () => {

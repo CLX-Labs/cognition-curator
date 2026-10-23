@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { generationRequestSchema, type Deck, type GenerationJob } from '@recollect/contracts';
 import { Repository } from '../src/repository';
 import { TestDatabase } from './sqlite';
+import { saveAIConsent } from '../src/ai-consent';
 
 const request = vi.hoisted(() => vi.fn());
 vi.mock('../src/api', () => ({ api: { request } }));
@@ -29,6 +30,7 @@ async function fixture() {
   databases.push(db);
   const repo = new Repository(db, randomUUID(), randomUUID(), randomUUID);
   await repo.initialize();
+  await saveAIConsent(repo, true);
   const deck = {
     id: randomUUID(),
     name: 'Biology',
@@ -79,9 +81,7 @@ describe('subject decks and answer drafts', () => {
     expect(local.pending).toBe(1);
     expect(restored.request.operationId).toBe(state.request.operationId);
     await repo.applyChanges([{ revision: '1', entity: 'deck', data: canonical }], '1');
-    await expect(
-      prepareGeneration(repo, restored, async () => undefined),
-    ).resolves.toBeUndefined();
+    await expect(prepareGeneration(repo, restored, async () => undefined)).resolves.toBeUndefined();
   });
 
   it('persists answer results separately from deck drafts and sends the owning account', async () => {
@@ -138,9 +138,9 @@ describe('subject decks and answer drafts', () => {
   it('rejects empty subjects while accepting short titles and each count from five to ten', async () => {
     const { state } = await fixture();
     for (const count of [5, 6, 7, 8, 9, 10]) {
-      expect(
-        generationRequestSchema.parse({ ...state.request, prompt: 'AI', count }).prompt,
-      ).toBe('AI');
+      expect(generationRequestSchema.parse({ ...state.request, prompt: 'AI', count }).prompt).toBe(
+        'AI',
+      );
     }
     expect(generationRequestSchema.safeParse({ ...state.request, prompt: '  ' }).success).toBe(
       false,

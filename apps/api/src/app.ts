@@ -18,6 +18,7 @@ import { GenerationService } from './generations.js';
 import { importDevice } from './imports.js';
 import { ProfileService } from './profile.js';
 import { CommunityService } from './community.js';
+import { CommunitySafetyService } from './community-safety.js';
 
 function generationLog(job: GenerationJob) {
   return {
@@ -46,6 +47,7 @@ export async function buildApp(options: {
     sync = new SyncService(db),
     profile = new ProfileService(db),
     community = new CommunityService(db),
+    safety = new CommunitySafetyService(db),
     generation = new GenerationService(db, config.dailyGenerationCards);
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError)
@@ -129,6 +131,20 @@ export async function buildApp(options: {
       community.ownInsights(request.identity!.ownerId, request.query),
     );
     secured.get('/v1/community', (request) => community.overview(request.identity!.ownerId));
+    secured.get('/v1/community/blocks', (request) => safety.blocked(request.identity!.ownerId));
+    secured.post('/v1/community/blocks/:userId', async (request, reply) => {
+      const { userId } = z.object({ userId: z.uuid().toLowerCase() }).parse(request.params);
+      await safety.block(request.identity!.ownerId, userId);
+      return reply.code(204).send();
+    });
+    secured.delete('/v1/community/blocks/:userId', async (request, reply) => {
+      const { userId } = z.object({ userId: z.uuid().toLowerCase() }).parse(request.params);
+      await safety.unblock(request.identity!.ownerId, userId);
+      return reply.code(204).send();
+    });
+    secured.post('/v1/community/reports', async (request, reply) =>
+      reply.code(201).send(await safety.report(request.identity!.ownerId, request.body)),
+    );
     secured.post('/v1/community/invites', (request) =>
       community.createInvite(request.identity!.ownerId),
     );
@@ -136,34 +152,36 @@ export async function buildApp(options: {
       community.acceptInvite(request.identity!.ownerId, request.body),
     );
     secured.delete('/v1/community/friends/:id', (request) => {
-      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
       return community.removeFriend(request.identity!.ownerId, id);
     });
     secured.get('/v1/community/friends/:id/insights', (request) => {
-      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
       return community.friendInsights(request.identity!.ownerId, id, request.query);
     });
     secured.post('/v1/community/shares', (request) =>
       community.createShare(request.identity!.ownerId, request.body),
     );
     secured.get('/v1/community/shares/:id', (request) => {
-      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
       return community.detail(request.identity!.ownerId, id);
     });
     secured.post('/v1/community/shares/:id/accept', (request) => {
-      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
       return community.acceptShare(request.identity!.ownerId, id, request.body);
     });
     secured.patch('/v1/community/shares/:id/progress', (request) => {
-      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
       return community.setProgress(request.identity!.ownerId, id, request.body);
     });
     secured.delete('/v1/community/shares/:id', (request) => {
-      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
       return community.revokeShare(request.identity!.ownerId, id);
     });
     secured.get('/v1/community/shares/:id/insights/:userId', (request) => {
-      const { id, userId } = z.object({ id: z.uuid(), userId: z.uuid() }).parse(request.params);
+      const { id, userId } = z
+        .object({ id: z.uuid().toLowerCase(), userId: z.uuid().toLowerCase() })
+        .parse(request.params);
       return community.shareInsights(request.identity!.ownerId, id, userId, request.query);
     });
     secured.get('/v1/me', async (request) => (await sync.snapshot(request.identity!.ownerId)).user);
@@ -187,7 +205,7 @@ export async function buildApp(options: {
       decks: (await sync.snapshot(request.identity!.ownerId)).decks.filter((d) => !d.deletedAt),
     }));
     secured.get('/v1/decks/:id/cards', async (request) => {
-      const { id } = z.object({ id: z.uuid() }).parse(request.params),
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params),
         snapshot = await sync.snapshot(request.identity!.ownerId);
       if (!snapshot.decks.some((d) => d.id === id && !d.deletedAt))
         throw new DomainError('not_found', 'Deck not found.', 404);
@@ -267,7 +285,7 @@ export async function buildApp(options: {
     secured.get('/v1/generations/:id', async (request) => {
       const job = await generation.get(
         request.identity!.ownerId,
-        z.object({ id: z.uuid() }).parse(request.params).id,
+        z.object({ id: z.uuid().toLowerCase() }).parse(request.params).id,
       );
       request.log.info(generationLog(job), 'Generation status checked');
       return job;
@@ -275,13 +293,13 @@ export async function buildApp(options: {
     secured.delete('/v1/generations/:id', (request) =>
       generation.cancel(
         request.identity!.ownerId,
-        z.object({ id: z.uuid() }).parse(request.params).id,
+        z.object({ id: z.uuid().toLowerCase() }).parse(request.params).id,
       ),
     );
     secured.post('/v1/generations/:id/accept', (request) =>
       generation.accept(
         request.identity!.ownerId,
-        z.object({ id: z.uuid() }).parse(request.params).id,
+        z.object({ id: z.uuid().toLowerCase() }).parse(request.params).id,
         generationAcceptSchema.parse(request.body),
       ),
     );

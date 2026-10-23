@@ -39,3 +39,9 @@ The enhanced submission locks while saving, preserves entries on failure, and co
 The interactive cards are illustrative examples. They run entirely in browser memory and do not call the production API, collect user information, or save review schedules.
 
 The original app icon is copied without changes from `apps/mobile/assets/icon.png`. Fonts are served by Google Fonts, with system and Georgia fallbacks. Security headers for Netlify are declared in `_headers`.
+
+## Support, privacy, and community pages
+
+The public pages live at `/support/`, `/privacy/`, and `/community-guidelines/`. The support form is named `recollect-support`; confirm Netlify form detection and a successful submission before relying on it for public support. Messages contain the provided email, category, and text; no attachment, tracking identifier, or automatic account data is included. JavaScript confirms success only after an accepted response, preserves text on errors, and does not submit from local previews. The native form action is `/support/thanks/`.
+
+The owner-confirmed public publisher is Collect Software and the monitored support address is `collectsoftwarev2@gmail.com`, set in `site-config.js` and provided as a static contact link on support and privacy pages. Public policy copy must describe the final shipped deletion, consent, and community controls accurately. The launch review draft and outstanding confirmations are in [the App Store release notes](../../docs/app-store-release.md); those notes are outside this static publish directory.

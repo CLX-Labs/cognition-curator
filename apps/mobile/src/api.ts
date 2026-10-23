@@ -1,10 +1,24 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { ALGORITHM_VERSION, appleChallengeSchema, sessionSchema, type Session } from '@recollect/contracts';
+import {
+  ALGORITHM_VERSION,
+  appleChallengeSchema,
+  accountDeletionReceiptSchema,
+  sessionSchema,
+  type AccountDeletionReceipt,
+  type Session,
+} from '@recollect/contracts';
 import { release } from './release';
 
 const SESSION_KEY = 'recollect.session.v2';
+const DELETION_KEY = 'recollect.accountDeletion.v1';
+export type AccountDeletionRecovery = {
+  ownerId: string;
+  operationId: string;
+  receipt?: AccountDeletionReceipt;
+  localCleared: boolean;
+};
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -20,11 +34,18 @@ export const developmentAuthEnabled = __DEV__ && process.env.EXPO_PUBLIC_ENABLE_
 function baseUrl() {
   // Pin installed releases to the origin stamped by CI, independent of which
   // EAS environment or local dotenv file the bundler happened to load.
-  const value = ((!__DEV__ && release.apiUrl) || process.env.EXPO_PUBLIC_API_URL)?.replace(/\/$/, '');
+  const value = ((!__DEV__ && release.apiUrl) || process.env.EXPO_PUBLIC_API_URL)?.replace(
+    /\/$/,
+    '',
+  );
   if (!value)
     throw new Error('The API address is not configured. Set EXPO_PUBLIC_API_URL for this build.');
   const url = new URL(value);
-  if ((url.protocol !== 'https:' && !(__DEV__ && url.protocol === 'http:')) || url.username || url.password) {
+  if (
+    (url.protocol !== 'https:' && !(__DEV__ && url.protocol === 'http:')) ||
+    url.username ||
+    url.password
+  ) {
     throw new Error('A secure HTTPS API address is required.');
   }
   return value;
@@ -49,6 +70,26 @@ export class ApiClient {
   private refreshFlight: Promise<Session> | null = null;
   private epoch = 0;
   private storageTail: Promise<unknown> = Promise.resolve();
+  private deletionRecoveries: AccountDeletionRecovery[] = [];
+  deletionRecovery(ownerId?: string) {
+    return ownerId
+      ? (this.deletionRecoveries.find((item) => item.ownerId === ownerId) ?? null)
+      : (this.deletionRecoveries.find((item) => !item.localCleared) ??
+          this.deletionRecoveries.at(-1) ??
+          null);
+  }
+  private async saveDeletionRecovery(record: AccountDeletionRecovery) {
+    await this.store(async () => {
+      const next = [
+        ...this.deletionRecoveries.filter((item) => item.ownerId !== record.ownerId),
+        record,
+      ];
+      await SecureStore.setItemAsync(DELETION_KEY, JSON.stringify(next), {
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+      });
+      this.deletionRecoveries = next;
+    });
+  }
   private store<T>(work: () => Promise<T>) {
     const next = this.storageTail.then(work);
     this.storageTail = next.catch(() => undefined);
@@ -65,6 +106,29 @@ export class ApiClient {
   }
   async initialize() {
     const generation = this.epoch;
+    const deletionRaw = await SecureStore.getItemAsync(DELETION_KEY);
+    if (deletionRaw) {
+      const records: unknown = JSON.parse(deletionRaw);
+      if (!Array.isArray(records))
+        throw new Error('Account deletion recovery could not be read. Contact support.');
+      this.deletionRecoveries = records.map((record: unknown) => {
+        const value = record as AccountDeletionRecovery;
+        if (
+          !value ||
+          !/^[0-9a-f-]{36}$/i.test(value.ownerId) ||
+          !/^[0-9a-f-]{36}$/i.test(value.operationId) ||
+          typeof value.localCleared !== 'boolean'
+        )
+          throw new Error('Account deletion recovery could not be read. Contact support.');
+        return {
+          ownerId: value.ownerId,
+          operationId: value.operationId,
+          localCleared: value.localCleared,
+          ...(value.receipt ? { receipt: accountDeletionReceiptSchema.parse(value.receipt) } : {}),
+        };
+      });
+      if (this.deletionRecoveries.some((record) => !record.localCleared)) return null;
+    }
     const raw = await SecureStore.getItemAsync(SESSION_KEY);
     if (generation !== this.epoch) return this.session;
     if (!raw) return null;
@@ -104,7 +168,11 @@ export class ApiClient {
         signal: controller.signal,
       }).catch(() => {
         const code = controller.signal.aborted ? 'request_timeout' : 'network_unavailable';
-        console.warn('[Recollect API]', { code, host: new URL(origin).hostname, route: path.split('?')[0] });
+        console.warn('[Recollect API]', {
+          code,
+          host: new URL(origin).hostname,
+          route: path.split('?')[0],
+        });
         throw new ApiError(
           code === 'request_timeout'
             ? 'Recollect took too long to respond. Your request is saved; try again.'
@@ -254,6 +322,115 @@ export class ApiClient {
         token: previous.accessToken,
       }).catch(() => undefined);
     }
+  }
+  async requestAccountDeletion(
+    ownerId: string,
+    operationId: string,
+    prepared: (record: AccountDeletionRecovery) => void,
+  ) {
+    const generation = this.epoch;
+    if (this.session && this.session.user.id !== ownerId)
+      throw new Error('Sign out of the other account before continuing this deletion request.');
+    const challenge = appleChallengeSchema.parse(
+      await this.requestRaw('/v1/auth/apple/challenge', { method: 'POST' }),
+    );
+    const nonce = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      challenge.nonce,
+    );
+    const credential = await AppleAuthentication.signInAsync({ requestedScopes: [], nonce });
+    if (!credential.identityToken)
+      throw new Error('Apple did not return an identity token. Please try again.');
+    if (generation !== this.epoch || (this.session && this.session.user.id !== ownerId))
+      throw new Error('The signed-in account changed. The deletion request was not sent.');
+    // The server verifies that the fresh Apple proof matches ownerId. This method
+    // never installs a session for a different Apple account.
+    const previous = this.deletionRecovery(ownerId);
+    const marker: AccountDeletionRecovery = {
+      ...(previous ?? {}),
+      ownerId,
+      operationId,
+      localCleared: previous?.localCleared ?? false,
+    };
+    await this.saveDeletionRecovery(marker);
+    prepared(marker);
+    let receipt: AccountDeletionReceipt;
+    try {
+      receipt = accountDeletionReceiptSchema.parse(
+        await this.requestRaw('/v1/account/deletion', {
+          method: 'POST',
+          body: {
+            ownerId,
+            operationId,
+            challengeId: challenge.challengeId,
+            identityToken: credential.identityToken,
+            ...(credential.authorizationCode
+              ? { authorizationCode: credential.authorizationCode }
+              : {}),
+          },
+        }),
+      );
+    } catch (cause) {
+      if (!previous && cause instanceof ApiError && cause.status >= 400 && cause.status < 500) {
+        await this.store(async () => {
+          const next = this.deletionRecoveries.filter((item) => item.ownerId !== ownerId);
+          await SecureStore.setItemAsync(DELETION_KEY, JSON.stringify(next));
+          this.deletionRecoveries = next;
+        });
+      }
+      throw cause;
+    }
+    if (receipt.ownerId !== ownerId)
+      throw new Error('The deletion receipt belongs to a different account. Contact support.');
+    await this.saveDeletionRecovery({ ...marker, receipt });
+    return receipt;
+  }
+  async forgetDeletedAccount(ownerId: string) {
+    await this.assertDeletionOwner(ownerId);
+    ++this.epoch;
+    await this.store(async () => {
+      const raw = await SecureStore.getItemAsync(SESSION_KEY);
+      if (raw) {
+        let decoded: unknown;
+        try {
+          decoded = JSON.parse(raw);
+        } catch {
+          decoded = null;
+        }
+        const saved = sessionSchema.safeParse(decoded);
+        if (saved.success && saved.data.user.id !== ownerId)
+          throw new Error(
+            'Another account’s sign-in was preserved. Sign out before finishing this deletion.',
+          );
+        await SecureStore.deleteItemAsync(SESSION_KEY);
+      }
+      this.session = null;
+      this.refreshFlight = null;
+      this.emit();
+    });
+  }
+  async assertDeletionOwner(ownerId: string) {
+    if (this.session && this.session.user.id !== ownerId)
+      throw new Error('The signed-in account changed. Its data has not been removed.');
+    const raw = await SecureStore.getItemAsync(SESSION_KEY);
+    if (this.session && this.session.user.id !== ownerId)
+      throw new Error('The signed-in account changed. Its data has not been removed.');
+    if (!raw) return;
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(raw);
+    } catch {
+      decoded = null;
+    }
+    const saved = sessionSchema.safeParse(decoded);
+    if (saved.success && saved.data.user.id !== ownerId)
+      throw new Error('Another account is signed in. Its data has not been changed.');
+  }
+  async finishDeletionRecovery(ownerId: string) {
+    const record = this.deletionRecovery(ownerId);
+    if (!record?.receipt)
+      throw new Error('Confirm the deletion request before clearing local recovery.');
+    await this.saveDeletionRecovery({ ...record, localCleared: true });
   }
 }
 export const api = new ApiClient();

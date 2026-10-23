@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { SignJWT, createRemoteJWKSet, jwtVerify } from 'jose';
 import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import type { Session, User } from '@recollect/contracts';
+import { accountDeletionRequestSchema, type Session, type User } from '@recollect/contracts';
 import {
   DomainError,
   secretHash,
@@ -11,6 +11,7 @@ import {
   type Transaction,
 } from '@recollect/db';
 import type { ApiConfig } from './config.js';
+import { AccountDeletionService } from './account-deletion.js';
 
 export type AppleClaims = { sub: string; nonce: string; email?: string };
 export type AppleVerifier = (token: string, audience: string) => Promise<AppleClaims>;
@@ -47,6 +48,12 @@ export class AuthService {
       throw new Error('A dedicated strong access signing secret is required.');
   }
   async issue(tx: Transaction, user: User, familyId: string = randomUUID()): Promise<Session> {
+    const active = await tx.query(
+      'SELECT 1 FROM recollect.users WHERE id=$1 AND is_active=true FOR SHARE',
+      [user.id],
+    );
+    if (!active.rowCount)
+      throw new DomainError('account_inactive', 'This account is no longer active.', 401);
     await tx.query(
       'INSERT INTO recollect.session_families(id,owner_id) VALUES($1,$2) ON CONFLICT DO NOTHING',
       [familyId, user.id],
@@ -123,6 +130,22 @@ export class AuthService {
       throw new DomainError('rate_limited', 'Too many requests; retry in a minute.', 429);
   }
   async routes(app: FastifyInstance): Promise<void> {
+    const deletion = new AccountDeletionService(this.db, this.config);
+    app.post('/v1/account/deletion', async (request) => {
+      const body = accountDeletionRequestSchema.parse(request.body);
+      await this.throttle('account-deletion:' + secretHash(request.ip), 10);
+      let claims: AppleClaims;
+      try {
+        claims = await this.appleVerifier(body.identityToken, this.config.appleAudience);
+      } catch {
+        throw new DomainError(
+          'invalid_apple_token',
+          'Confirm your Apple sign-in before deleting this account.',
+          401,
+        );
+      }
+      return deletion.request(body, claims);
+    });
     app.post('/v1/auth/apple/challenge', async (request) => {
       await this.throttle('challenge:' + secretHash(request.ip), 20);
       const challengeId = randomUUID(),
@@ -151,6 +174,19 @@ export class AuthService {
         throw new DomainError('invalid_apple_token', 'Apple identity could not be verified.', 401);
       }
       return transaction(this.db, async (tx) => {
+        await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          'recollect.apple:' + secretHash(claims.sub),
+        ]);
+        const deleting = await tx.query(
+          "SELECT 1 FROM recollect.account_deletion_requests WHERE apple_subject_hash=$1 AND status='pending'",
+          [secretHash(claims.sub)],
+        );
+        if (deleting.rowCount)
+          throw new DomainError(
+            'account_deletion_pending',
+            'Account deletion is pending. Use your deletion receipt to check its status.',
+            403,
+          );
         const r = await tx.query<{
           nonce_hash: string;
           expires_at: Date;
@@ -177,6 +213,15 @@ export class AuthService {
             [claims.sub],
           )
         ).rows[0];
+        if (
+          found &&
+          (
+            await tx.query('SELECT 1 FROM recollect.account_deletion_requests WHERE owner_id=$1', [
+              found.id,
+            ])
+          ).rowCount
+        )
+          throw new DomainError('account_deleted', 'This former account cannot be restored.', 403);
         if (found && !found.is_active)
           throw new DomainError(
             'account_inactive',
@@ -193,7 +238,7 @@ export class AuthService {
               "SELECT to_regclass('public.users')::text AS present",
             )
           ).rows[0]?.present;
-          const legacy = exists
+          let legacy = exists
             ? (
                 await tx.query<User & { is_active: boolean }>(
                   'SELECT id,email,name,is_active FROM public.users WHERE apple_id=$1',
@@ -201,6 +246,16 @@ export class AuthService {
                 )
               ).rows[0]
             : undefined;
+          if (
+            legacy &&
+            (
+              await tx.query(
+                'SELECT 1 FROM recollect.account_deletion_requests WHERE owner_id=$1 OR apple_subject_hash=$2',
+                [legacy.id, secretHash(claims.sub)],
+              )
+            ).rowCount
+          )
+            legacy = undefined;
           if (legacy && !legacy.is_active)
             throw new DomainError(
               'account_inactive',
@@ -214,6 +269,9 @@ export class AuthService {
                 email: claims.email ?? null,
                 name: body.displayName?.trim() || 'Learner',
               };
+          await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+            'recollect.account:' + created.id,
+          ]);
           user = (
             await tx.query<User>(
               'INSERT INTO recollect.users(id,apple_id,email,name) VALUES($1,$2,$3,$4) ON CONFLICT(apple_id) DO UPDATE SET apple_id=excluded.apple_id RETURNING id,email,name',
@@ -232,12 +290,17 @@ export class AuthService {
       await this.throttle('refresh:' + secretHash(request.ip), 60);
       const result = await transaction(this.db, async (tx) => {
         const lookup = (
-          await tx.query<{ family_id: string }>(
-            'SELECT family_id FROM recollect.sessions WHERE token_hash=$1',
+          await tx.query<{ family_id: string; owner_id: string }>(
+            'SELECT family_id,owner_id FROM recollect.sessions WHERE token_hash=$1',
             [secretHash(refreshToken)],
           )
         ).rows[0];
         if (!lookup) return null;
+        const active = await tx.query(
+          'SELECT 1 FROM recollect.users WHERE id=$1 AND is_active=true FOR SHARE',
+          [lookup.owner_id],
+        );
+        if (!active.rowCount) return null;
         const family = (
           await tx.query<{ revoked_at: Date | null }>(
             'SELECT revoked_at FROM recollect.session_families WHERE id=$1 FOR UPDATE',

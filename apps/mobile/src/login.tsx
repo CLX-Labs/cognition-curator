@@ -4,8 +4,12 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { api, developmentAuthEnabled } from './api';
 import { BrandHeader, Button, Field, Panel, Screen, colors, reportError, s, Text } from './ui';
 import { ReleaseStamp } from './release-panel';
+import PublicLinks from './public-links';
+import { DeletionReceiptNotice } from './account-deletion';
+import { useStore } from './store';
 
 export default function Login() {
+  const { deletionBusy } = useStore();
   const [available, setAvailable] = useState<boolean | null>(Platform.OS === 'ios' ? null : false);
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState('');
@@ -44,9 +48,9 @@ export default function Login() {
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
               buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
               cornerRadius={8}
-              style={{ width: '100%', height: 56, opacity: busy ? 0.5 : 1 }}
+              style={{ width: '100%', height: 56, opacity: busy || deletionBusy ? 0.5 : 1 }}
               onPress={() => {
-                if (!busy) void signIn();
+                if (!busy && !deletionBusy) void signIn();
               }}
             />
           ) : available === null ? (
@@ -67,6 +71,7 @@ export default function Login() {
         </View>
       }
     >
+      <DeletionReceiptNotice />
       <View style={{ paddingTop: 10, gap: 24 }}>
         <View>
           <Text style={[s.title, { fontSize: 48, lineHeight: 52 }]}>FOR THE</Text>
@@ -143,6 +148,7 @@ export default function Login() {
         </Panel>
       )}
       <ReleaseStamp />
+      <PublicLinks />
     </Screen>
   );
 }

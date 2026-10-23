@@ -43,7 +43,20 @@ export function hash(value: unknown): string {
 export function secretHash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
-export async function lockOwner(tx: Transaction, owner: string): Promise<bigint> {
+export async function lockOwner(
+  tx: Transaction,
+  owner: string,
+  options: { allowInactive?: boolean } = {},
+): Promise<bigint> {
+  // Account deletion takes FOR UPDATE first. Every writer holds this shared
+  // account lock before sync/FK locks, so no stale authenticated writer can
+  // recreate records after a deletion request disables the account.
+  const account = await tx.query<{ is_active: boolean }>(
+    'SELECT is_active FROM recollect.users WHERE id=$1 FOR SHARE',
+    [owner],
+  );
+  if (!account.rows[0] || (!account.rows[0].is_active && !options.allowInactive))
+    throw new DomainError('account_inactive', 'This account is no longer active.', 401);
   await tx.query('INSERT INTO recollect.sync_heads(owner_id) VALUES($1) ON CONFLICT DO NOTHING', [
     owner,
   ]);

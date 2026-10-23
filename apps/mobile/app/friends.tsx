@@ -7,6 +7,7 @@ import { CommunityFeedback, SharedDeckSummary } from '../src/deck-sharing';
 import { BrandPattern } from '../src/brand-patterns';
 import Avatar from '../src/avatar';
 import { Back, Button, Empty, Field, Panel, Screen, Text, colors, s } from '../src/ui';
+import { BlockedPeople } from '../src/community-safety';
 import { friendInviteMessage, invitationCode } from '../src/friend-invite';
 
 export default function FriendsScreen() {
@@ -206,6 +207,7 @@ export default function FriendsScreen() {
           />
         </>
       )}
+      <BlockedPeople />
     </Screen>
   );
 }

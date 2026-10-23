@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#f0eee6" />
+    <title>Support — Recollect</title>
+    <meta name="description" content="Get help with Recollect, report a problem, or ask a question about your account and privacy." />
+    <link rel="canonical" href="https://recollect-ai.netlify.app/support/" />
+    <link rel="icon" type="image/png" href="/assets/app-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/legal.css" />
+    <script src="/site-config.js" defer></script>
+    <script src="/public-contact.js" defer></script>
+    <script src="/support.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to support</a>
+    <header class="site-header"><div class="nav-wrap wrap"><a class="wordmark" href="/" aria-label="Recollect home"><img src="/assets/app-icon.png" width="32" height="32" alt="" />recollect<span class="wordmark-dot">.</span></a><a class="text-link" href="/">Back to Recollect ↗</a></div></header>
+    <main id="main" class="information-page wrap">
+      <span class="eyebrow">A LITTLE HELP</span>
+      <h1>Let’s figure<br />it out.</h1>
+      <p class="information-lede">A question, a bug, or something that doesn’t feel right? Tell us what’s happening.</p>
+      <p>Recollect is provided by Collect Software. Email <a data-support-email href="mailto:collectsoftwarev2@gmail.com">collectsoftwarev2@gmail.com</a> or use the form below.</p>
+      <section aria-labelledby="help-title">
+        <h2 id="help-title">Before you write</h2>
+        <ul>
+          <li><strong>App version:</strong> open <strong>You</strong> in Recollect and include the version or commit shown in app updates.</li>
+          <li><strong>Sync or a stuck AI request:</strong> tell us which screen you’re on and any visible error. Keep your library on the device while we investigate.</li>
+          <li><strong>Friend invitations:</strong> after installing, return to the original invitation or paste its code in <strong>You → Friends</strong>.</li>
+          <li><strong>AI permission:</strong> generation asks to share your question or topic, and up to 40 existing card questions when expanding a deck, with Anthropic. Change this permission in <strong>You</strong>. Requests already sent cannot be recalled.</li>
+          <li><strong>Unwanted shared content:</strong> open the person’s page in <strong>You → Friends</strong> to report a concern or block them. Reporting and blocking are separate actions. See our <a href="/community-guidelines/">community guidelines</a>.</li>
+          <li><strong>Privacy or account questions:</strong> choose “Account or privacy” below. Signing out leaves your account and library in place.</li>
+        </ul>
+        <p class="information-note">Don’t include passwords, Apple sign-in codes, invite codes, or private card contents you don’t want us to read.</p>
+      </section>
+      <section aria-labelledby="deletion-help-title">
+        <h2 id="deletion-help-title">Delete an account</h2>
+        <p>Open <strong>You → Delete account</strong>. You can export your library first. Type <strong>DELETE</strong> and confirm with Apple to submit the request for that account.</p>
+        <p>An accepted request disables access. The app shows whether permanent server deletion is pending or complete and keeps a request reference for checking again. If a connection ends before confirmation, use the recovery screen to check or retry with Apple. Include the request reference when asking us for help.</p>
+        <p>After acceptance, the current account’s local library, drafts, profile cache, and widget data are removed from this device. Server deletion waits for Apple sign-in revocation and erasure of owned records. Friends’ independent deck copies, exports you saved elsewhere, and older native recovery files with unconfirmed ownership are separate. Contact us for help with older recovery files; don’t remove them while investigating a missing library.</p>
+      </section>
+      <section aria-labelledby="contact-title">
+        <h2 id="contact-title">Send us a message</h2>
+        <p>Your email address is used to respond to this request. Messages are processed through Netlify Forms. Read the <a href="/privacy/">privacy policy</a> for more about the information we handle.</p>
+        <form class="support-form" id="support-form" name="recollect-support" method="POST" action="/support/thanks/" data-netlify="true" netlify-honeypot="website">
+          <input type="hidden" name="form-name" value="recollect-support" />
+          <p hidden><label>Leave this empty: <input name="website" tabindex="-1" autocomplete="off" /></label></p>
+          <fieldset id="support-fields">
+            <legend class="sr-only">Contact Recollect support</legend>
+            <label for="support-email">Your email address</label>
+            <input id="support-email" name="email" type="email" autocomplete="email" maxlength="254" required />
+            <label for="support-category">What can we help with?</label>
+            <select id="support-category" name="category"><option value="app-help">Using the app</option><option value="bug">Report a bug</option><option value="account-privacy">Account or privacy</option><option value="community-report">Report shared content or a user</option><option value="feedback">An idea or feedback</option></select>
+            <label for="support-message">Your message</label>
+            <textarea id="support-message" name="message" rows="7" maxlength="5000" required aria-describedby="support-note"></textarea>
+            <p id="support-note" class="information-note">Include the app version and enough detail to understand the problem. Share only the personal information needed for your request.</p>
+            <button class="button" id="support-submit" type="submit">Send message <span aria-hidden="true">↗</span></button>
+          </fieldset>
+          <p class="support-status" id="support-status" role="status" tabindex="-1"></p>
+        </form>
+      </section>
+    </main>
+    <footer class="information-footer wrap"><span>© 2026 Collect Software</span><nav aria-label="Information"><a href="/">Home</a><a href="/privacy/">Privacy</a><a href="/community-guidelines/">Community guidelines</a></nav></footer>
+  </body>
+</html>

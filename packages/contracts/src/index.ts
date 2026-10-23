@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export * from './account-deletion.ts';
 
 /** Wire format is deliberately explicit: UUIDs, UTC/offset ISO dates, seconds for intervals. */
 export const uuidSchema = z.uuid().toLowerCase();
@@ -296,4 +297,5 @@ export function cardInput(card: Card | CardInput): CardInput {
 }
 
 export * from './community.ts';
+export * from './community-safety.ts';
 export * from './insights.ts';

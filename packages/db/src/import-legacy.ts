@@ -12,6 +12,7 @@ import {
   createDatabase,
   hash,
   lockOwner,
+  secretHash,
   transaction,
   type Change,
   type Database,
@@ -44,6 +45,19 @@ export async function importLegacy(
   for (const { data: rawUser } of users) {
     const outcome = await transaction(db, async (tx) => {
       const owner = asText(rawUser.id).toLowerCase();
+      if (typeof rawUser.apple_id === 'string')
+        await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          'recollect.apple:' + secretHash(rawUser.apple_id),
+        ]);
+      await tx.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['recollect.account:' + owner]);
+      const deleted = await tx.query(
+        'SELECT 1 FROM recollect.account_deletion_requests WHERE owner_id=$1 OR apple_subject_hash=$2',
+        [owner, typeof rawUser.apple_id === 'string' ? secretHash(rawUser.apple_id) : null],
+      );
+      if (deleted.rowCount)
+        throw new Error(
+          'A legacy account has a deletion receipt. Its deleted library must not be restored.',
+        );
       const existing = (
         await tx.query<{ apple_id: string | null; is_active: boolean }>(
           'SELECT apple_id,is_active FROM recollect.users WHERE id=$1',
@@ -69,7 +83,7 @@ export async function importLegacy(
           iso(rawUser.created_at, new Date().toISOString()),
         ],
       );
-      await lockOwner(tx, owner);
+      await lockOwner(tx, owner, { allowInactive: true });
       const rawDecks = (
         await tx.query<{ data: Raw }>(
           'SELECT to_jsonb(d) AS data FROM public.decks d WHERE user_id=$1 ORDER BY id',

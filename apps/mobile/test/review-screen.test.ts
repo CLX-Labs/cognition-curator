@@ -7,7 +7,7 @@ import type { LocalSnapshot, Repository } from '../src/repository';
 
 const rig = vi.hoisted(() => ({
   data: null as LocalSnapshot | null,
-  params: {} as { practice?: string; deckId?: string },
+  params: {} as { practice?: string; deckId?: string; cardId?: string; id?: string },
   mutate: vi.fn<(work: (repository: Repository) => Promise<unknown>) => Promise<unknown>>(),
   rate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   scrollTo: vi.fn(),
@@ -773,6 +773,80 @@ it('keeps the flipped face, session queue and position through library synchroni
   }
   expect(rig.rate).not.toHaveBeenCalled();
 });
+
+it.each([false, true])(
+  'shuffles a general session once and preserves its queue through synchronization (practice=%s)',
+  async (practice) => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    rig.params = practice ? { practice: 'true' } : {};
+    const otherDeck = { ...deck, id: 'e0000000-0000-4000-8000-000000000000', name: 'History' };
+    const third = {
+      ...card(
+        'f0000000-0000-4000-8000-000000000000',
+        'Who painted the Mona Lisa?',
+        'Leonardo da Vinci.',
+      ),
+      deckId: otherDeck.id,
+    };
+    const source = [first, second, third];
+    rig.data = { ...rig.data!, decks: [deck, otherDeck], cards: source };
+    await mount();
+    expect(text()).toContain(second.front);
+    expect(source.map((item) => item.id)).toEqual([first.id, second.id, third.id]);
+    expect(random).toHaveBeenCalledTimes(2);
+
+    await press('I remember →');
+    expect(text()).toContain(third.front);
+    await flip();
+    rig.data = {
+      ...structuredClone(rig.data!),
+      cards: [
+        third,
+        second,
+        first,
+        card('a1111111-0000-4000-8000-000000000000', 'New question', 'New answer'),
+      ],
+    };
+    for (const state of ['syncing', 'idle'] as const) {
+      rig.syncState = state;
+      await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+      expect(text()).toContain(third.back);
+      expect(random).toHaveBeenCalledTimes(2);
+    }
+    await press('I remember →');
+    expect(text()).toContain(first.front);
+    await press('I remember →');
+    expect(text()).toContain(practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE');
+    expect(rig.rate.mock.calls.map(([id]) => id)).toEqual([second.id, third.id, first.id]);
+  },
+);
+
+it.each([false, true])('retains deck session order (practice=%s)', async (practice) => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+  rig.params = { deckId: deck.id, practice: String(practice) };
+  await mount();
+  expect(text()).toContain(first.front);
+  await press('I remember →');
+  expect(text()).toContain(second.front);
+  await press('I remember →');
+  expect(rig.rate.mock.calls.map(([id]) => id)).toEqual([first.id, second.id]);
+  expect(random).not.toHaveBeenCalled();
+});
+
+it.each(['cardId', 'id'] as const)(
+  'reviews only the explicitly selected %s card',
+  async (param) => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    rig.params = { [param]: second.id.toUpperCase() };
+    await mount();
+    expect(text()).toContain(second.front);
+    expect(text()).not.toContain(first.front);
+    await press('I remember →');
+    expect(text()).toContain('SESSION COMPLETE');
+    expect(rig.rate).toHaveBeenCalledExactlyOnceWith(second.id, 'good', 0);
+    expect(random).not.toHaveBeenCalled();
+  },
+);
 
 it('saving never inserts sync or storage-status banners into the next card or completion', async () => {
   rig.mutate.mockImplementation(async (work) => {

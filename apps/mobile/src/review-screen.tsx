@@ -32,16 +32,24 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   const { data, mutate } = useStore();
   const practice = params.practice === 'true';
   const specific = params.cardId ?? params.id;
-  const [queue] = useState(() =>
-    (specific
-      ? data.cards.filter((c) => c.id.toLowerCase() === specific.toLowerCase())
-      : practice
-        ? data.cards
-        : dueCards(data)
+  const [queue] = useState(() => {
+    const ids = (
+      specific
+        ? data.cards.filter((c) => c.id.toLowerCase() === specific.toLowerCase())
+        : practice
+          ? data.cards
+          : dueCards(data)
     )
       .filter((c) => !params.deckId || c.deckId === params.deckId)
-      .map((c) => c.id),
-  );
+      .map((c) => c.id);
+    if (!params.deckId && !specific) {
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+      }
+    }
+    return ids;
+  });
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [reading, setReading] = useState<'card' | 'hint' | 'context' | null>(null);

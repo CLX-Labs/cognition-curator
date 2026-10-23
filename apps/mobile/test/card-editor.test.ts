@@ -63,6 +63,7 @@ vi.mock('../src/answer-generator', () => ({
   default: (props: Record<string, unknown>) => React.createElement('answer-generator', props),
 }));
 vi.mock('../src/brand-patterns', () => ({ BrandPattern: () => null, DeckArtwork: () => null }));
+vi.mock('../src/deck-sharing', () => ({ default: () => null }));
 vi.mock('../src/ui', () => ({
   Text: ({ children, ...props }: { children: React.ReactNode }) =>
     React.createElement('text', props, children),

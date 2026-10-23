@@ -5,6 +5,7 @@ import { useStore } from '../../src/store';
 import { activeDeck, deckContent, dueCards } from '../../src/repository';
 import DeckForm from '../../src/deck-form';
 import { DeckArtwork } from '../../src/brand-patterns';
+import DeckSharing from '../../src/deck-sharing';
 import {
   Back,
   Button,
@@ -152,6 +153,13 @@ export default function DeckDetail() {
           </View>
         </View>
       )}
+      <DeckSharing key={deck.id} deckId={deck.id} />
+      <Button
+        title="Deck insights →"
+        variant="ghost"
+        size="compact"
+        onPress={() => router.push({ pathname: '/insights', params: { deckId: deck.id } })}
+      />
       {settingsOpen && (
         <Panel style={{ padding: 18 }}>
           {editing ? (

@@ -1,5 +1,6 @@
 import { profileSchema, profileUpdateSchema, type Profile } from '@recollect/contracts';
 import { DomainError, type Database } from '@recollect/db';
+import { assertShareableText } from './community-safety.js';
 
 export class ProfileService {
   constructor(private db: Database) {}
@@ -15,6 +16,7 @@ export class ProfileService {
 
   async update(ownerId: string, input: unknown): Promise<Profile> {
     const patch = profileUpdateSchema.parse(input);
+    if (patch.name) assertShareableText(patch.name);
     if (patch.photoDataUrl) {
       const encoded = patch.photoDataUrl.slice('data:image/jpeg;base64,'.length);
       const image = Buffer.from(encoded, 'base64');

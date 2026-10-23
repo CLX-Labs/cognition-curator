@@ -63,10 +63,12 @@ The API and worker use the `recollect` PostgreSQL schema. pg-boss owns `recollec
 - Atomic offline edits and review events with a durable outbox, stable retry identities, and restart recovery.
 - Canonical schedules, commit-ordered sync revisions, tombstones, account partitioning, and explicit conflicts with retained recovery copies.
 - Durable AI jobs, editable candidate drafts, idempotent acceptance, bounded retries, and per-account quotas.
+- Explicit Anthropic consent before generation, public privacy/support links, and friend reporting and blocking.
+- In-app account deletion with fresh Apple proof, durable pending/completed receipts, Apple grant revocation and owner-scoped erasure. Production credentials and a verified completion are required before public launch; see [account deletion](docs/account-deletion.md).
 - Protected export of the supported old SwiftData schema, explicit ownership confirmation, archival history and schedule-checkpoint import.
 - Original Home Screen and Control Center widget identities generated from committed source.
 
-The old subscriptions simulated purchases. This branch does not expose a fake paid entitlement. Verified billing, notifications, production account deletion across legacy archives, Android Apple OAuth, and complete superset membership remain separate product work. Compatibility with older uninspected shipped native schemas remains a release investigation.
+The old subscriptions simulated purchases. This branch does not expose a fake paid entitlement. Verified billing, notifications, Android Apple OAuth, and complete superset membership remain separate product work. Uninspected legacy schemas require review before erasure; original device recovery stores and exported files remain separate from the current signed-in library. Compatibility with older uninspected shipped native schemas remains a release investigation.
 
 ## Verify changes
 

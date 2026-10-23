@@ -1,15 +1,22 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Session } from '@recollect/contracts';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
-const store = vi.hoisted(() => ({ value: null as string | null }));
+const store = vi.hoisted(() => ({
+  value: null as string | null,
+  deletions: null as string | null,
+}));
 const releaseStamp = vi.hoisted(() => ({ apiUrl: null as string | null }));
 vi.mock('../src/release', () => ({ release: releaseStamp }));
 vi.mock('expo-secure-store', () => ({
   AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 'device-only',
-  getItemAsync: vi.fn(async () => store.value),
-  setItemAsync: vi.fn(async (_key: string, value: string) => {
-    store.value = value;
+  getItemAsync: vi.fn(async (key: string) =>
+    key === 'recollect.accountDeletion.v1' ? store.deletions : store.value,
+  ),
+  setItemAsync: vi.fn(async (key: string, value: string) => {
+    if (key === 'recollect.accountDeletion.v1') store.deletions = value;
+    else store.value = value;
   }),
   deleteItemAsync: vi.fn(async () => {
     store.value = null;
@@ -32,6 +39,7 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   store.value = null;
+  store.deletions = null;
   releaseStamp.apiUrl = null;
   process.env.EXPO_PUBLIC_API_URL = 'https://test.recollect.invalid';
 });
@@ -65,25 +73,38 @@ describe('rotating authentication and account race boundaries', () => {
     const fetcher = vi.fn(async () => json({ okay: true }));
     vi.stubGlobal('fetch', fetcher);
     await client.request('/v1/generations', { method: 'POST', body: { prompt: 'question' } });
-    expect(fetcher.mock.calls[0][0]).toBe('https://cognition-curator-production.up.railway.app/v1/generations');
+    expect(fetcher.mock.calls[0][0]).toBe(
+      'https://cognition-curator-production.up.railway.app/v1/generations',
+    );
   });
   it('turns a native hostname error into a retryable connection error without losing the session', async () => {
     const client = new ApiClient();
     const original = session();
     client.session = original;
-    vi.stubGlobal('fetch', vi.fn(async () => {
-      throw new Error('fetch failed: UnexpectedException: A server with the specified hostname could not be found.');
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error(
+          'fetch failed: UnexpectedException: A server with the specified hostname could not be found.',
+        );
+      }),
+    );
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       await expect(client.request('/v1/generations')).rejects.toMatchObject({
-        status: 0, code: 'network_unavailable', message: expect.stringContaining('Your request is saved'),
+        status: 0,
+        code: 'network_unavailable',
+        message: expect.stringContaining('Your request is saved'),
       });
       expect(client.session).toBe(original);
       expect(warning).toHaveBeenCalledWith('[Recollect API]', {
-        code: 'network_unavailable', host: 'test.recollect.invalid', route: '/v1/generations',
+        code: 'network_unavailable',
+        host: 'test.recollect.invalid',
+        route: '/v1/generations',
       });
-    } finally { warning.mockRestore(); }
+    } finally {
+      warning.mockRestore();
+    }
   });
   it('uses one refresh for simultaneous expired requests and persists rotation', async () => {
     const client = new ApiClient();
@@ -199,5 +220,100 @@ describe('rotating authentication and account race boundaries', () => {
     );
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(client.session).not.toBeNull();
+  });
+});
+
+describe('recoverable account deletion', () => {
+  function appleProof() {
+    vi.mocked(AppleAuthentication.signInAsync).mockResolvedValue({
+      identityToken: 'fresh-identity-token'.repeat(2),
+      authorizationCode: 'fresh-authorization-code',
+    } as AppleAuthentication.AppleAuthenticationCredential);
+  }
+  const challenge = () => ({
+    challengeId: randomUUID(),
+    nonce: 'n'.repeat(40),
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+  it('retains an ambiguous request after a rejected retry and gates session hydration on restart', async () => {
+    const owner = session();
+    const operationId = randomUUID();
+    store.value = JSON.stringify(owner);
+    const client = new ApiClient();
+    client.session = owner;
+    appleProof();
+    let attempt = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.endsWith('/challenge')) return json(challenge());
+        if (++attempt === 1) throw new Error('response lost after server accepted');
+        return json(
+          { error: { code: 'wrong_apple_owner', message: 'Confirm the original Apple account.' } },
+          403,
+        );
+      }),
+    );
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(
+      client.requestAccountDeletion(owner.user.id, operationId, () => {}),
+    ).rejects.toMatchObject({ status: 0 });
+    await expect(
+      client.requestAccountDeletion(owner.user.id, operationId, () => {}),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(client.deletionRecovery()?.operationId).toBe(operationId);
+    const restarted = new ApiClient();
+    expect(await restarted.initialize()).toBeNull();
+    expect(restarted.deletionRecovery()?.ownerId).toBe(owner.user.id);
+    expect(store.value).toBe(JSON.stringify(owner));
+  });
+  it('sends fresh Apple authorization, preserves the original retry ID, and distinguishes pending from completed', async () => {
+    const owner = session();
+    const operationId = randomUUID();
+    const receiptId = randomUUID();
+    const client = new ApiClient();
+    client.session = owner;
+    store.value = JSON.stringify(owner);
+    appleProof();
+    const receipt = {
+      requestId: receiptId,
+      ownerId: owner.user.id,
+      status: 'pending',
+      requestedAt: new Date().toISOString(),
+      completedAt: null,
+      estimatedCompletionDays: null,
+      actionRequired: 'none',
+    };
+    const fetcher = vi.fn(async (url: string) =>
+      json(url.endsWith('/challenge') ? challenge() : receipt),
+    );
+    vi.stubGlobal('fetch', fetcher);
+    expect((await client.requestAccountDeletion(owner.user.id, operationId, () => {})).status).toBe(
+      'pending',
+    );
+    expect(client.deletionRecovery()?.operationId).toBe(operationId);
+    expect(client.deletionRecovery()?.localCleared).toBe(false);
+    expect(client.session).toBe(owner);
+    const posted = fetcher.mock.calls.find(([url]) => url.endsWith('/account/deletion'));
+    expect(posted).toBeDefined();
+    // The public deletion endpoint must not replace an existing session with a different Apple identity.
+    const rawCalls = vi.mocked(globalThis.fetch).mock.calls;
+    expect(
+      JSON.parse(
+        String(rawCalls.find(([url]) => String(url).endsWith('/account/deletion'))?.[1]?.body),
+      ),
+    ).toMatchObject({
+      operationId,
+      ownerId: owner.user.id,
+      authorizationCode: 'fresh-authorization-code',
+    });
+  });
+  it('refuses to clear another account’s saved credentials', async () => {
+    const deleted = session();
+    const other = session();
+    const client = new ApiClient();
+    store.value = JSON.stringify(other);
+    await expect(client.forgetDeletedAccount(deleted.user.id)).rejects.toThrow('Another account');
+    expect(store.value).toBe(JSON.stringify(other));
   });
 });

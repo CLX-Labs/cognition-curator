@@ -10,6 +10,7 @@ import {
 import { CommunityFeedback, SharedDeckPreview, SharedDeckSummary } from '../../src/deck-sharing';
 import Avatar from '../../src/avatar';
 import { Back, Button, Empty, Panel, Screen, Text, s } from '../../src/ui';
+import { FriendSafety } from '../../src/community-safety';
 
 export default function FriendScreen() {
   const { id, shareId } = useLocalSearchParams<{ id: string; shareId?: string }>();
@@ -158,6 +159,12 @@ export default function FriendScreen() {
             disabled={community.busy !== null}
             loading={community.busy === 'remove'}
             onPress={remove}
+          />
+          <FriendSafety
+            key={friend.id}
+            userId={friend.id}
+            name={friend.name}
+            shareId={previewId ?? undefined}
           />
         </>
       )}

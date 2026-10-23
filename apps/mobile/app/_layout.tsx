@@ -10,6 +10,7 @@ import { colors, s, Text } from '../src/ui';
 import { AppUpdateProvider, UpdateNotice } from '../src/app-updates';
 import { TypographyContext } from '../src/brand';
 import { ProfileProvider } from '../src/profile';
+import { AccountDeletionRecoveryScreen } from '../src/account-deletion';
 import manropeRegular from '../assets/fonts/Manrope-Regular.ttf';
 import manropeSemibold from '../assets/fonts/Manrope-SemiBold.ttf';
 import manropeBold from '../assets/fonts/Manrope-Bold.ttf';
@@ -27,13 +28,14 @@ const brandFonts = {
 export const unstable_settings = { initialRouteName: '(tabs)' };
 
 function AppNavigation() {
-  const { ready, session, initializationError, repository } = useStore();
+  const { ready, session, initializationError, repository, deletionRecovery } = useStore();
   if (!ready)
     return (
       <View style={[s.safe, { alignItems: 'center', justifyContent: 'center' }]}>
         <ActivityIndicator color={colors.ink} />
       </View>
     );
+  if (deletionRecovery && !deletionRecovery.localCleared) return <AccountDeletionRecoveryScreen />;
   if (initializationError)
     return (
       <View style={[s.safe, { padding: 32, justifyContent: 'center', gap: 14 }]}>

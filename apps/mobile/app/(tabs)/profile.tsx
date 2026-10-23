@@ -21,6 +21,9 @@ import type { LocalIssue } from '../../src/repository';
 import ReleasePanel from '../../src/release-panel';
 import ProfileEditor from '../../src/profile-editor';
 import { BrandPattern } from '../../src/brand-patterns';
+import PublicLinks from '../../src/public-links';
+import { AIPermissionPanel, useAIConsent } from '../../src/ai-consent-ui';
+import { AccountDeletionPanel } from '../../src/account-deletion';
 
 type ImportWorkflow = {
   legacy: LegacyExport;
@@ -43,6 +46,7 @@ export default function ProfileScreen() {
     refresh,
   } = useStore();
   const [busy, setBusy] = useState<string | null>(null);
+  const aiConsent = useAIConsent(repository);
   const [inspection, setInspection] = useState<LegacyInspection | null>(null);
   const [workflow, setWorkflow] = useState<ImportWorkflow | null>(null);
   const [migrationError, setMigrationError] = useState<string | null>(null);
@@ -201,6 +205,7 @@ export default function ProfileScreen() {
         />
       </Panel>
       <ReleasePanel />
+      <AIPermissionPanel consent={aiConsent} settings />
       <Panel>
         <View style={s.between}>
           <Text style={s.sectionTitle}>Your library</Text>
@@ -494,6 +499,8 @@ export default function ProfileScreen() {
       <Text style={s.caption}>
         Cards and practice work offline. Connect to generate suggestions and sync between devices.
       </Text>
+      <PublicLinks />
+      <AccountDeletionPanel />
       <Button
         title="Sign out"
         size="compact"

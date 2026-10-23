@@ -9,6 +9,7 @@ import {
 } from '@recollect/contracts';
 import { api } from './api';
 import { cardContent, type Repository } from './repository';
+import { requireAIConsent } from './ai-consent';
 
 export type GenerationWorkflow = {
   newDeck?: DeckInput;
@@ -76,8 +77,7 @@ export async function prepareGeneration(
 }
 
 export function answerForQuestion(state: GenerationWorkflow | null, question: string) {
-  if (state?.sourceQuestion !== question.trim() || state?.job?.status !== 'succeeded')
-    return null;
+  if (state?.sourceQuestion !== question.trim() || state?.job?.status !== 'succeeded') return null;
   return state.job.candidates[0]?.back ?? null;
 }
 
@@ -86,6 +86,7 @@ export async function fetchGeneration(
   state: GenerationWorkflow,
   storageKey = GENERATION_KEY,
 ): Promise<GenerationWorkflow> {
+  if (!state.job) await requireAIConsent(repo);
   const job = generationJobSchema.parse(
     await api.request(state.job ? '/v1/generations/' + state.job.id : '/v1/generations', {
       ...(state.job ? {} : { method: 'POST', body: state.request }),

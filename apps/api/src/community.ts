@@ -35,6 +35,7 @@ import {
   type Transaction,
 } from '@recollect/db';
 import { initialSchedule } from '@recollect/scheduler';
+import { assertShareableText, lockCommunityPair, requireUnblocked } from './community-safety.js';
 
 type ShareSnapshot = { deck: SharedDeckSummary; cards: SharedCard[] };
 type ShareRow = {
@@ -75,6 +76,8 @@ function parseQuery(input: unknown, shared = false): InsightQuery {
   return { ...query, days: query.days === 'all' ? null : (Number(query.days) as 7 | 30 | 90) };
 }
 function pair(a: string, b: string): [string, string] {
+  a = a.toLowerCase();
+  b = b.toLowerCase();
   return a < b ? [a, b] : [b, a];
 }
 function notFound(): never {
@@ -135,6 +138,8 @@ export class CommunityService {
 
   private async lockFriend(tx: Transaction, owner: string, friend: string) {
     if (owner === friend) return notFound();
+    await lockCommunityPair(tx, owner, friend);
+    await requireUnblocked(tx, owner, friend);
     const result = await tx.query(
       `SELECT f.user_a FROM recollect.friendships f
        JOIN recollect.users a ON a.id=f.user_a AND a.is_active=true
@@ -166,6 +171,8 @@ export class CommunityService {
          FROM recollect.friendships f JOIN recollect.users u
          ON u.id=CASE WHEN f.user_a=$1 THEN f.user_b ELSE f.user_a END
          WHERE (f.user_a=$1 OR f.user_b=$1) AND f.active=true AND u.is_active=true
+         AND NOT EXISTS (SELECT 1 FROM recollect.user_blocks b
+          WHERE (b.blocker_id=$1 AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=$1))
          ORDER BY f.connected_at DESC,u.id`,
         [owner],
       );
@@ -173,6 +180,9 @@ export class CommunityService {
         `SELECT s.* FROM recollect.deck_shares s JOIN recollect.friendships f
          ON f.user_a=LEAST(s.sender_id,s.recipient_id) AND f.user_b=GREATEST(s.sender_id,s.recipient_id)
          WHERE (s.sender_id=$1 OR s.recipient_id=$1) AND s.revoked_at IS NULL AND f.active=true
+         AND NOT EXISTS (SELECT 1 FROM recollect.user_blocks b
+          WHERE (b.blocker_id=s.sender_id AND b.blocked_id=s.recipient_id)
+          OR (b.blocker_id=s.recipient_id AND b.blocked_id=s.sender_id))
          ORDER BY s.created_at DESC,s.id`,
         [owner],
       );
@@ -193,10 +203,20 @@ export class CommunityService {
     await this.throttle(owner, 'invite', 10);
     const code = randomBytes(24).toString('base64url');
     const expiresAt = new Date(Date.now() + 7 * 86_400_000).toISOString();
-    await this.db.query(
-      'INSERT INTO recollect.friend_invites(id,owner_id,code_hash,expires_at) VALUES($1,$2,$3,$4)',
-      [randomUUID(), owner, secretHash(code), expiresAt],
-    );
+    await transaction(this.db, async (tx) => {
+      const user = (
+        await tx.query<{ name: string }>(
+          'SELECT name FROM recollect.users WHERE id=$1 AND is_active=true FOR SHARE',
+          [owner],
+        )
+      ).rows[0];
+      if (!user) return notFound();
+      assertShareableText(user.name);
+      await tx.query(
+        'INSERT INTO recollect.friend_invites(id,owner_id,code_hash,expires_at) VALUES($1,$2,$3,$4)',
+        [randomUUID(), owner, secretHash(code), expiresAt],
+      );
+    });
     return friendInviteSchema.parse({ code, expiresAt });
   }
 
@@ -204,6 +224,24 @@ export class CommunityService {
     const { code } = acceptInviteSchema.parse(input);
     await this.throttle(owner, 'accept-invite', 20);
     await transaction(this.db, async (tx) => {
+      // Read the immutable owner first, then lock users before the invitation.
+      // Deletion locks the account before removing invitations in that order.
+      const initial = (
+        await tx.query<{ owner_id: string }>(
+          'SELECT owner_id FROM recollect.friend_invites WHERE code_hash=$1',
+          [secretHash(code)],
+        )
+      ).rows[0];
+      if (!initial)
+        throw new DomainError(
+          'invalid_invite',
+          'This invite has expired or is no longer available.',
+          404,
+        );
+      if (initial.owner_id === owner)
+        throw new DomainError('self_invite', 'Send this invite to a friend to connect.');
+      await lockCommunityPair(tx, owner, initial.owner_id);
+      await requireUnblocked(tx, owner, initial.owner_id);
       const invite = (
         await tx.query<{
           id: string;
@@ -224,6 +262,7 @@ export class CommunityService {
         throw new DomainError('self_invite', 'Send this invite to a friend to connect.');
       const profiles = await people(tx, [owner, invite.owner_id]);
       if (profiles.size !== 2) return notFound();
+      for (const profile of profiles.values()) assertShareableText(profile.name);
       // A lost response can be retried by the same recipient. A consumed invite
       // never creates another connection or reconnects a removed friendship.
       if (invite.consumed_by) {
@@ -313,6 +352,19 @@ export class CommunityService {
         },
         cards,
       };
+      assertShareableText(
+        [
+          snapshot.deck.name,
+          snapshot.deck.description,
+          ...cards.flatMap((card) => [
+            card.front,
+            card.back,
+            card.hint,
+            card.explanation,
+            ...card.tags,
+          ]),
+        ].join('\n'),
+      );
       const row = (
         await tx.query<ShareRow>(
           `INSERT INTO recollect.deck_shares(id,sender_id,recipient_id,operation_id,payload_hash,source_deck_id,snapshot,source_revision,sender_shares_progress)

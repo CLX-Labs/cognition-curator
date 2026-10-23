@@ -11,6 +11,7 @@ import {
 } from './generation';
 import { Button, Panel, colors, s, Text } from './ui';
 import { useAppActive, usePolling } from './polling';
+import { AIPermissionPanel, useAIConsent } from './ai-consent-ui';
 
 export default function AnswerGenerator({
   cardId,
@@ -30,6 +31,7 @@ export default function AnswerGenerator({
   const focused = useIsFocused();
   const active = useAppActive();
   const { repository, sync, refresh } = useStore();
+  const consent = useAIConsent(repository);
   const key = 'answer:' + deckId + ':' + cardId;
   const [state, setState] = useState<GenerationWorkflow | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -67,7 +69,7 @@ export default function AnswerGenerator({
 
   const run = useCallback(
     async (pending: GenerationWorkflow, poll = false) => {
-      if (!repository || inFlight.current) return;
+      if (!repository || inFlight.current || (!pending.job && !consent.allowed)) return;
       inFlight.current = true;
       const epoch = scope.current;
       const current = () => alive.current && scope.current === epoch;
@@ -94,7 +96,7 @@ export default function AnswerGenerator({
         }
       }
     },
-    [repository, key, sync, refresh],
+    [repository, key, sync, refresh, consent.allowed],
   );
 
   usePolling(
@@ -171,12 +173,13 @@ export default function AnswerGenerator({
   }
   return (
     <View style={{ gap: 10 }}>
+      <AIPermissionPanel consent={consent} />
       {!pending && state?.job?.status !== 'succeeded' && (
         <Button
           title={state?.job?.status === 'failed' ? 'Try generating again' : '✦ Generate answer'}
           size="compact"
           variant="secondary"
-          disabled={!loaded || !question.trim()}
+          disabled={!loaded || !question.trim() || !consent.allowed}
           loading={busy}
           onPress={generate}
         />
@@ -234,7 +237,7 @@ export default function AnswerGenerator({
             title={changedQuestion ? 'Generate for updated question' : 'Try another answer'}
             size="compact"
             variant="ghost"
-            disabled={!question.trim()}
+            disabled={!question.trim() || !consent.allowed}
             loading={busy}
             onPress={generate}
           />

@@ -739,6 +739,169 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('private community and recall in
     expect(recallInsightsSchema.parse((await get('days=all')).json()).summary.reviewCount).toBe(1);
   });
 
+  it('blocks connections in both directions, revokes shares, and never restores friendship on unblock', async () => {
+    const sender = await login('Sender'),
+      recipient = await login('Recipient');
+    await connect(sender, recipient);
+    const deck = await library(sender);
+    const published = await share(sender, recipient, deck.deckId, true);
+    await accept(recipient, published.id, true);
+    const beforeBlock = await invite(sender);
+    const block = await app.inject({
+      method: 'POST',
+      url: '/v1/community/blocks/' + sender.user.id.toUpperCase(),
+      headers: headers(recipient),
+    });
+    expect(block.statusCode, block.body).toBe(204);
+    const list = await app.inject({
+      method: 'GET',
+      url: '/v1/community/blocks',
+      headers: headers(recipient),
+    });
+    expect(list.json()).toEqual({ users: [{ id: sender.user.id, name: 'Sender' }] });
+    expect(
+      (
+        await app.inject({ method: 'GET', url: '/v1/community/blocks', headers: headers(sender) })
+      ).json(),
+    ).toEqual({ users: [] });
+    for (const account of [sender, recipient]) {
+      expect(
+        (
+          await app.inject({ method: 'GET', url: '/v1/community', headers: headers(account) })
+        ).json(),
+      ).toEqual({ friends: [], shares: [] });
+      expect(
+        (
+          await app.inject({
+            method: 'GET',
+            url: '/v1/community/shares/' + published.id,
+            headers: headers(account),
+          })
+        ).statusCode,
+      ).toBe(404);
+    }
+    const reconnect = await app.inject({
+      method: 'POST',
+      url: '/v1/community/invites/accept',
+      headers: headers(recipient),
+      payload: { code: beforeBlock.code },
+    });
+    expect(reconnect.statusCode).toBe(404);
+    const reverseInvite = await invite(recipient);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/v1/community/invites/accept',
+          headers: headers(sender),
+          payload: { code: reverseInvite.code },
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'DELETE',
+          url: '/v1/community/blocks/' + sender.user.id,
+          headers: headers(recipient),
+        })
+      ).statusCode,
+    ).toBe(204);
+    expect(
+      (
+        await app.inject({ method: 'GET', url: '/v1/community', headers: headers(recipient) })
+      ).json(),
+    ).toEqual({ friends: [], shares: [] });
+    await connect(sender, recipient);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/v1/community/shares/' + published.id,
+          headers: headers(recipient),
+        })
+      ).statusCode,
+    ).toBe(404);
+  });
+
+  it('records only known-user reports and participant-scoped evidence, including after blocking', async () => {
+    const sender = await login(),
+      recipient = await login(),
+      outsider = await login();
+    await connect(sender, recipient);
+    const deck = await library(sender);
+    const published = await share(sender, recipient, deck.deckId);
+    const report = (account: Session, targetUserId: string, shareId?: string) =>
+      app.inject({
+        method: 'POST',
+        url: '/v1/community/reports',
+        headers: headers(account),
+        payload: {
+          targetUserId,
+          shareId,
+          reason: 'inappropriate',
+          details: 'Please review the shared content.',
+        },
+      });
+    expect((await report(outsider, sender.user.id, published.id)).statusCode).toBe(404);
+    await app.inject({
+      method: 'POST',
+      url: '/v1/community/blocks/' + sender.user.id,
+      headers: headers(recipient),
+    });
+    const response = await report(recipient, sender.user.id, published.id);
+    expect(response.statusCode, response.body).toBe(201);
+    expect(response.json()).toMatchObject({
+      id: expect.any(String),
+      createdAt: expect.any(String),
+    });
+    const stored = (
+      await db.query<{ evidence: { deck: { id: string } } }>(
+        'SELECT evidence FROM recollect.content_reports WHERE id=$1',
+        [response.json().id],
+      )
+    ).rows[0]!;
+    expect(stored.evidence.deck.id).toBe(deck.deckId);
+    expect((await report(recipient, sender.user.id, randomUUID())).statusCode).toBe(404);
+    expect(
+      (await app.inject({ method: 'GET', url: '/v1/community/reports', headers: headers(sender) }))
+        .statusCode,
+    ).toBe(404);
+  });
+
+  it('rejects shared threats while keeping the private source deck and educational subjects intact', async () => {
+    const sender = await login(),
+      recipient = await login();
+    await connect(sender, recipient);
+    const deck = await library(sender, 'I will kill you', 1);
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/community/shares',
+      headers: headers(sender),
+      payload: {
+        operationId: randomUUID(),
+        friendId: recipient.user.id,
+        deckId: deck.deckId,
+        shareProgress: false,
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('content_not_allowed');
+    expect((await snapshot(sender)).decks.some((item) => item.id === deck.deckId)).toBe(true);
+    expect(
+      (
+        await app.inject({
+          method: 'PATCH',
+          url: '/v1/profile',
+          headers: headers(sender),
+          payload: { name: 'Go kill yourself' },
+        })
+      ).json().error.code,
+    ).toBe('content_not_allowed');
+    const safe = await library(sender, 'Italian', 1);
+    expect((await share(sender, recipient, safe.deckId)).id).toBeTruthy();
+  });
+
   it('rejects oversized or empty decks explicitly instead of silently truncating shared content', async () => {
     const sender = await login(),
       recipient = await login();

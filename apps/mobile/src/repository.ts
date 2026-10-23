@@ -142,13 +142,57 @@ function target(operation: SyncOperation): { entity: EntityKind; id: string } {
  * A failed request never deletes a user's mutation.
  */
 export class Repository {
+  readonly db: SqlDatabase;
+  private retired = false;
+  private operations = new Set<Promise<unknown>>();
   constructor(
-    readonly db: SqlDatabase,
+    private readonly storage: SqlDatabase,
     readonly ownerId: string,
     readonly deviceId: string,
     private readonly uuid: () => string,
     private readonly now: () => string = () => new Date().toISOString(),
-  ) {}
+  ) {
+    const assertLive = () => {
+      if (this.retired) throw new Error('This account’s local library is closed.');
+    };
+    const tracked = <T>(work: () => Promise<T>): Promise<T> => {
+      const task = Promise.resolve().then(() => {
+        assertLive();
+        return work();
+      });
+      this.operations.add(task);
+      void task.then(
+        () => this.operations.delete(task),
+        () => this.operations.delete(task),
+      );
+      return task;
+    };
+    const guarded = (source: SqlExecutor): SqlExecutor => ({
+      exec: (sql) => tracked(() => source.exec(sql)),
+      run: (sql, params) => tracked(() => source.run(sql, params)),
+      all: <T>(sql: string, params?: unknown[]) => tracked(() => source.all<T>(sql, params)),
+    });
+    this.db = {
+      ...guarded(storage),
+      transaction: (work) =>
+        tracked(() =>
+          storage.transaction(async (tx) => {
+            assertLive();
+            const result = await work(guarded(tx));
+            assertLive();
+            return result;
+          }),
+        ),
+    };
+  }
+  /** Prevent any late profile, generation, or sync task from repopulating deleted storage. */
+  retire() {
+    this.retired = true;
+  }
+  async retireAndDrain() {
+    this.retire();
+    while (this.operations.size) await Promise.allSettled([...this.operations]);
+  }
   async initialize() {
     await initializeSchema(this.db);
   }
@@ -754,6 +798,26 @@ export class Repository {
       workflowReceipts,
     };
   }
+}
+
+export async function eraseOwnerData(db: SqlDatabase, ownerId: string): Promise<void> {
+  if (!ownerId || ownerId === '__installation__')
+    throw new Error('A verified account is required for local deletion.');
+  await db.exec('PRAGMA secure_delete=ON;');
+  await db.transaction(async (tx) => {
+    for (const table of [
+      'entities',
+      'remote_entities',
+      'reviews',
+      'remote_reviews',
+      'outbox',
+      'metadata',
+      'recovery_archive',
+      'workflow_receipts',
+    ])
+      await tx.run('DELETE FROM ' + table + ' WHERE owner=?', [ownerId]);
+  });
+  await db.exec('PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
 }
 
 export function activeDeck(deck: Deck, now = Date.now()) {

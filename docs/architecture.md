@@ -82,7 +82,7 @@ The original device store lacks owner columns and some AI-generated local IDs di
 4. **Gate writers and cut over.** Release the recovery-capable client, enforce the reviewed minimum version, stop incompatible legacy writes, take the final backup, import a stable snapshot, then switch routing. New `/api/*` endpoints deliberately return an upgrade response. Do not operate independent Python and TypeScript schedulers on one account.
 5. **Operate and retire deliberately.** Monitor auth rejection, session reuse, sync conflicts/rejections, pending outboxes, import failures/counts, queue age, provider errors and restore readiness. Retain a compatible previous TypeScript build and all new writes. Snapshot rollback can erase newly accepted reviews; replay them or fix forward. OTA rollback does not undo SQLite migrations.
 
-Retire Python and the native reader only after the supported-client/recovery windows close. Verified billing, account deletion across legacy archives, notifications, Android auth and complete superset semantics need separate product behavior before being presented as available.
+Retire Python and the native reader only after the supported-client/recovery windows close. [Account deletion](account-deletion.md) disables access immediately and tracks Apple revocation and supported server/legacy erasure durably. Unsupported legacy schema or identity conflicts remain pending for review. Original device recovery stores and exported files are separate from the current owner-scoped local cleanup. Verify production revocation credentials and actual completion before public release. Verified billing, notifications, Android auth and complete superset semantics need separate product behavior before being presented as available.
 
 ## Verification
 

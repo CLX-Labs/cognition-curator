@@ -11,8 +11,14 @@ import { AppState } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import type { Session } from '@recollect/contracts';
 import { openDatabase } from './database';
-import { Repository, dueCards, installationDeviceId, type LocalSnapshot } from './repository';
-import { api } from './api';
+import {
+  Repository,
+  dueCards,
+  eraseOwnerData,
+  installationDeviceId,
+  type LocalSnapshot,
+} from './repository';
+import { api, type AccountDeletionRecovery } from './api';
 import { SyncEngine } from './sync';
 import { publishWidget, setWidgetOwner } from '../modules/recollect-widget';
 import { WidgetCoordinator } from './widget-coordinator';
@@ -34,6 +40,11 @@ type AppStore = {
   sync(options?: { silent?: boolean }): Promise<void>;
   mutate(action: (repository: Repository) => Promise<unknown>): Promise<void>;
   signOut(): Promise<void>;
+  deletionRecovery: AccountDeletionRecovery | null;
+  deletionBusy: boolean;
+  deletionError: string | null;
+  requestAccountDeletion(ownerId: string): Promise<void>;
+  retryAccountDeletion(): Promise<void>;
 };
 const Context = createContext<AppStore | null>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
@@ -45,6 +56,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [widgetError, setWidgetError] = useState<string | null>(null);
   const [syncState, setSyncState] = useState<AppStore['syncState']>('idle');
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [deletionRecovery, setDeletionRecovery] = useState<AccountDeletionRecovery | null>(null);
+  const [deletionBusy, setDeletionBusy] = useState(false);
+  const [deletionError, setDeletionError] = useState<string | null>(null);
+  const deleting = useRef(false);
   const engine = useRef<SyncEngine | null>(null);
   const liveRepository = useRef<Repository | null>(null);
   const ownerEpoch = useRef(0);
@@ -65,8 +80,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const previous = snapshot.current?.repository === current ? snapshot.current : null;
     let shared = previous ? shareSnapshot(previous.data, next) : next;
     // Due cards can change with the clock even when SQLite content is unchanged.
-    if (previous && shared === previous.data && previous.dueIds !== dueIds)
-      shared = { ...shared };
+    if (previous && shared === previous.data && previous.dueIds !== dueIds) shared = { ...shared };
     snapshot.current = { repository: current, data: shared, dueIds };
     setData(shared);
     const first = due[0];
@@ -91,14 +105,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((error) => {
         if (liveRepository.current === current)
-          setWidgetError(
-            error instanceof Error ? error.message : 'The widget could not refresh.',
-          );
+          setWidgetError(error instanceof Error ? error.message : 'The widget could not refresh.');
       });
   }, []);
   const refresh = useMemo(() => createRefreshQueue(readSnapshot), [readSnapshot]);
   const sync = useCallback(
     (options: { silent?: boolean } = {}) => {
+      const deletion = api.deletionRecovery();
+      if (deletion && !deletion.localCleared) return Promise.resolve();
       const active = engine.current;
       if (!active) return Promise.resolve();
       if (!options.silent) setSyncState('syncing');
@@ -130,6 +144,95 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [refresh],
   );
 
+  const finishLocalDeletion = useCallback(async (record: AccountDeletionRecovery) => {
+    if (!record.receipt || record.receipt.ownerId !== record.ownerId)
+      throw new Error('Confirm the deletion request before removing local data.');
+    await api.assertDeletionOwner(record.ownerId);
+    if (api.session && api.session.user.id !== record.ownerId)
+      throw new Error('Another account is signed in. Its data has not been changed.');
+    const current = liveRepository.current;
+    if (current && current.ownerId !== record.ownerId)
+      throw new Error('The active local library belongs to another account.');
+    ++ownerEpoch.current;
+    engine.current?.stop();
+    engine.current = null;
+    current?.retire();
+    liveRepository.current = null;
+    snapshot.current = null;
+    setRepository(null);
+    setData(empty);
+    await syncFlight.current?.promise.catch(() => undefined);
+    await current?.retireAndDrain();
+    await api.assertDeletionOwner(record.ownerId);
+    await widgets.clearOwner(record.ownerId);
+    const db = await openDatabase();
+    await installationDeviceId(db, Crypto.randomUUID);
+    await eraseOwnerData(db, record.ownerId);
+    await api.forgetDeletedAccount(record.ownerId);
+    await api.finishDeletionRecovery(record.ownerId);
+    setDeletionRecovery(api.deletionRecovery(record.ownerId));
+    setSession(api.session);
+    setSyncError(null);
+    setWidgetError(null);
+    setDeletionError(null);
+  }, []);
+  const requestAccountDeletion = useCallback(
+    async (ownerId: string) => {
+      if (deleting.current) return;
+      if (api.session && api.session.user.id !== ownerId)
+        throw new Error('The signed-in account changed.');
+      deleting.current = true;
+      setDeletionBusy(true);
+      setDeletionError(null);
+      const previous = api.deletionRecovery(ownerId);
+      try {
+        await api.requestAccountDeletion(
+          ownerId,
+          previous?.operationId ?? Crypto.randomUUID(),
+          (record) => {
+            setDeletionRecovery(record);
+          },
+        );
+        const record = api.deletionRecovery(ownerId);
+        if (!record?.receipt)
+          throw new Error('The deletion receipt could not be saved. Retry with Apple.');
+        setDeletionRecovery(record);
+        await finishLocalDeletion(record);
+      } catch (cause) {
+        setDeletionRecovery(api.deletionRecovery());
+        const message =
+          cause instanceof Error
+            ? cause.message
+            : 'The deletion request could not be confirmed. Try again.';
+        setDeletionError(message);
+        throw cause;
+      } finally {
+        deleting.current = false;
+        setDeletionBusy(false);
+      }
+    },
+    [finishLocalDeletion],
+  );
+  const retryAccountDeletion = useCallback(async () => {
+    const record = api.deletionRecovery();
+    if (!record || deleting.current) return;
+    if (record.receipt && !record.localCleared) {
+      deleting.current = true;
+      setDeletionBusy(true);
+      setDeletionError(null);
+      try {
+        await finishLocalDeletion(record);
+      } catch (cause) {
+        setDeletionError(
+          cause instanceof Error ? cause.message : 'Local cleanup did not finish. Try again.',
+        );
+      } finally {
+        deleting.current = false;
+        setDeletionBusy(false);
+      }
+    } else await requestAccountDeletion(record.ownerId).catch(() => undefined);
+  }, [finishLocalDeletion, requestAccountDeletion]);
+
   useEffect(() => {
     let active = true;
     const unsubscribe = api.subscribe((next) => {
@@ -137,8 +240,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     });
     api
       .initialize()
-      .then((next) => {
+      .then(async (next) => {
         if (!active) return;
+        const recovery = api.deletionRecovery();
+        setDeletionRecovery(recovery);
+        if (recovery?.receipt && !recovery.localCleared) {
+          setDeletionBusy(true);
+          try {
+            await finishLocalDeletion(recovery);
+          } catch (cause) {
+            setDeletionError(
+              cause instanceof Error ? cause.message : 'Local deletion cleanup did not finish.',
+            );
+          } finally {
+            setDeletionBusy(false);
+          }
+        }
         setSession(next);
         setReady(true);
       })
@@ -153,7 +270,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [finishLocalDeletion]);
   useEffect(() => {
     const epoch = ++ownerEpoch.current;
     engine.current?.stop();
@@ -234,6 +351,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [repository, refresh, sync]);
   const mutate = useCallback(
     async (action: (repo: Repository) => Promise<unknown>) => {
+      const deletion = api.deletionRecovery();
+      if (deletion && !deletion.localCleared)
+        throw new Error(
+          'Finish checking the account deletion request before changing this library.',
+        );
       const current = liveRepository.current;
       if (!current) throw new Error('Your local library is still opening.');
       await action(current);
@@ -252,9 +374,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     await widgets
       .setOwner(null)
       .catch((error) =>
-        setWidgetError(
-          error instanceof Error ? error.message : 'The widget could not be cleared.',
-        ),
+        setWidgetError(error instanceof Error ? error.message : 'The widget could not be cleared.'),
       );
     await api.logout();
   }, []);
@@ -274,6 +394,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         sync,
         mutate,
         signOut,
+        deletionRecovery,
+        deletionBusy,
+        deletionError,
+        requestAccountDeletion,
+        retryAccountDeletion,
       }}
     >
       {children}

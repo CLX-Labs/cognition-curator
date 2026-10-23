@@ -7,6 +7,7 @@ import { initialSchedule } from '@recollect/scheduler';
 import { Repository, type LocalSnapshot } from '../src/repository';
 import { TestDatabase } from './sqlite';
 import type { GenerationWorkflow } from '../src/generation';
+import { saveAIConsent } from '../src/ai-consent';
 
 const rig = vi.hoisted(() => ({
   params: {} as { deckId?: string; fromDeck?: string },
@@ -145,6 +146,7 @@ beforeEach(async () => {
   db = new TestDatabase();
   rig.repo = new Repository(db, randomUUID(), randomUUID(), randomUUID);
   await rig.repo.initialize();
+  await saveAIConsent(rig.repo, true);
   decks = ['Biology', 'World history'].map((name) => ({
     id: randomUUID(),
     ownerId: rig.repo!.ownerId,

@@ -15,12 +15,14 @@ import {
 import { Back, Button, Field, Panel, Screen, colors, s, Text } from '../../src/ui';
 import { useAppActive, usePolling } from '../../src/polling';
 import { BrandPattern } from '../../src/brand-patterns';
+import { AIPermissionPanel, useAIConsent } from '../../src/ai-consent-ui';
 
 export default function GenerateScreen() {
   const focused = useIsFocused();
   const active = useAppActive();
   const params = useLocalSearchParams<{ deckId?: string; fromDeck?: string }>();
   const { repository, data, sync, refresh } = useStore();
+  const consent = useAIConsent(repository);
   const [deckId, setDeckId] = useState(params.deckId ?? '');
   const [newDeck, setNewDeck] = useState(!params.deckId);
   const [fromDeck, setFromDeck] = useState(params.fromDeck === 'true');
@@ -128,7 +130,13 @@ export default function GenerateScreen() {
 
   const resume = useCallback(
     async (poll = false) => {
-      if (!repository || !current.current || inFlight.current) return;
+      if (
+        !repository ||
+        !current.current ||
+        inFlight.current ||
+        (!current.current.job && !consent.allowed)
+      )
+        return;
       inFlight.current = true;
       const epoch = scope.current;
       if (!poll) setBusy(true);
@@ -158,7 +166,7 @@ export default function GenerateScreen() {
         }
       }
     },
-    [repository, sync, refresh],
+    [repository, sync, refresh, consent.allowed],
   );
   usePolling(
     focused &&
@@ -168,6 +176,7 @@ export default function GenerateScreen() {
       !state.accepted &&
       (!state.job || ['queued', 'running'].includes(state.job.status)) &&
       !busy &&
+      (!!state.job || consent.allowed) &&
       !error,
     async () => {
       await resume(true);
@@ -175,7 +184,7 @@ export default function GenerateScreen() {
   );
 
   async function create(replacement?: { deckId: string; topic: string; count: number }) {
-    if (!repository || inFlight.current) return;
+    if (!repository || inFlight.current || !consent.allowed) return;
     if (
       current.current &&
       (!replacement || (current.current.acceptance && !current.current.accepted))
@@ -409,6 +418,7 @@ export default function GenerateScreen() {
         ) : undefined
       }
     >
+      <AIPermissionPanel consent={consent} />
       {!loaded && !error && <ActivityIndicator color={colors.ink} />}
       {requestedDeck && state && (
         <Panel tint>
@@ -610,7 +620,7 @@ export default function GenerateScreen() {
           <Button
             title="Suggest cards"
             loading={busy}
-            disabled={(!newDeck && !deckId) || !prompt.trim()}
+            disabled={(!newDeck && !deckId) || !prompt.trim() || !consent.allowed}
             onPress={() => void create()}
           />
           <Text style={[s.caption, { textAlign: 'center' }]}>
@@ -656,7 +666,12 @@ export default function GenerateScreen() {
             />
           )}
           {!state.job && !busy && !error && (
-            <Button title="Continue saved request" size="compact" onPress={() => void resume()} />
+            <Button
+              title="Continue saved request"
+              size="compact"
+              disabled={!consent.allowed}
+              onPress={() => void resume()}
+            />
           )}
         </Panel>
       )}
@@ -666,6 +681,7 @@ export default function GenerateScreen() {
           <Text style={s.body}>{state.job.error?.message ?? 'This request was canceled.'}</Text>
           <Button
             title="Try this topic again"
+            disabled={!consent.allowed}
             loading={busy}
             onPress={() =>
               void create({
@@ -841,6 +857,7 @@ export default function GenerateScreen() {
           />
           <Button
             title="Generate more cards"
+            disabled={!consent.allowed}
             variant="secondary"
             loading={busy}
             onPress={() =>

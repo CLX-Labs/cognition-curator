@@ -279,3 +279,23 @@ export const sharedCardMappings = recollect.table(
     unique().on(t.shareId, t.recipientCardId),
   ],
 );
+
+// No account FK: the minimal deletion receipt prevents restoration of erased
+// identities by old backups/imports after the user's personal rows are gone.
+export const accountDeletionRequests = recollect.table('account_deletion_requests', {
+  id: uuid().primaryKey(),
+  ownerId: uuid('owner_id').notNull().unique(),
+  operationId: uuid('operation_id').notNull(),
+  appleSubjectHash: text('apple_subject_hash').notNull(),
+  status: text().notNull().default('pending'),
+  requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  estimatedCompletionDays: integer('estimated_completion_days'),
+  appleTokenCiphertext: text('apple_token_ciphertext'),
+  appleTokenKind: text('apple_token_kind'),
+  appleCodeCreatedAt: timestamp('apple_code_created_at', { withTimezone: true }),
+  appleRevokedAt: timestamp('apple_revoked_at', { withTimezone: true }),
+  errorCode: text('error_code'),
+  attempts: integer().notNull().default(0),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+});

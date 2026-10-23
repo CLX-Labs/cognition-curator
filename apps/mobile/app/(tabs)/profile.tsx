@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
+import { router } from 'expo-router';
 import {
   importResponseSchema,
   type ImportRequest,
@@ -186,6 +187,18 @@ export default function ProfileScreen() {
             <Text style={s.caption}>Cards to remember</Text>
           </View>
         </View>
+      </Panel>
+      <Panel>
+        <Text style={s.sectionTitle}>Learn with friends</Text>
+        <Text style={s.body}>
+          Exchange decks and explore the recall history you choose to share.
+        </Text>
+        <Button
+          title="Friends & shared decks"
+          variant="secondary"
+          size="compact"
+          onPress={() => router.push('/friends')}
+        />
       </Panel>
       <ReleasePanel />
       <Panel>

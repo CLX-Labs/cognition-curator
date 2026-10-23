@@ -213,3 +213,69 @@ export const rateBuckets = recollect.table(
   },
   (t) => [primaryKey({ columns: [t.scope, t.bucket] })],
 );
+
+export const friendships = recollect.table(
+  'friendships',
+  {
+    userA: uuid('user_a')
+      .notNull()
+      .references(() => users.id),
+    userB: uuid('user_b')
+      .notNull()
+      .references(() => users.id),
+    connectedAt: timestamp('connected_at', { withTimezone: true }).notNull().defaultNow(),
+    active: boolean().notNull().default(true),
+  },
+  (t) => [primaryKey({ columns: [t.userA, t.userB] })],
+);
+export const friendInvites = recollect.table('friend_invites', {
+  id: uuid().primaryKey(),
+  ownerId: uuid('owner_id')
+    .notNull()
+    .references(() => users.id),
+  codeHash: text('code_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  consumedBy: uuid('consumed_by').references(() => users.id),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+export const deckShares = recollect.table(
+  'deck_shares',
+  {
+    id: uuid().primaryKey(),
+    senderId: uuid('sender_id')
+      .notNull()
+      .references(() => users.id),
+    recipientId: uuid('recipient_id')
+      .notNull()
+      .references(() => users.id),
+    operationId: uuid('operation_id').notNull(),
+    payloadHash: text('payload_hash').notNull(),
+    sourceDeckId: uuid('source_deck_id').notNull(),
+    snapshot: jsonb().notNull(),
+    sourceRevision: bigint('source_revision', { mode: 'bigint' }).notNull(),
+    recipientDeckId: uuid('recipient_deck_id'),
+    recipientRevision: bigint('recipient_revision', { mode: 'bigint' }),
+    senderSharesProgress: boolean('sender_shares_progress').notNull().default(false),
+    recipientSharesProgress: boolean('recipient_shares_progress').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (t) => [unique().on(t.senderId, t.operationId)],
+);
+export const sharedCardMappings = recollect.table(
+  'shared_card_mappings',
+  {
+    shareId: uuid('share_id')
+      .notNull()
+      .references(() => deckShares.id, { onDelete: 'cascade' }),
+    sourceCardId: uuid('source_card_id').notNull(),
+    recipientCardId: uuid('recipient_card_id').notNull(),
+    contentHash: text('content_hash').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.shareId, t.sourceCardId] }),
+    unique().on(t.shareId, t.recipientCardId),
+  ],
+);

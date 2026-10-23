@@ -17,6 +17,7 @@ import { SyncService } from './sync.js';
 import { GenerationService } from './generations.js';
 import { importDevice } from './imports.js';
 import { ProfileService } from './profile.js';
+import { CommunityService } from './community.js';
 
 function generationLog(job: GenerationJob) {
   return {
@@ -44,6 +45,7 @@ export async function buildApp(options: {
   const auth = new AuthService(db, config, options.appleVerifier),
     sync = new SyncService(db),
     profile = new ProfileService(db),
+    community = new CommunityService(db),
     generation = new GenerationService(db, config.dailyGenerationCards);
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError)
@@ -123,6 +125,47 @@ export async function buildApp(options: {
     secured.patch('/v1/profile', (request) =>
       profile.update(request.identity!.ownerId, request.body),
     );
+    secured.get('/v1/insights', (request) =>
+      community.ownInsights(request.identity!.ownerId, request.query),
+    );
+    secured.get('/v1/community', (request) => community.overview(request.identity!.ownerId));
+    secured.post('/v1/community/invites', (request) =>
+      community.createInvite(request.identity!.ownerId),
+    );
+    secured.post('/v1/community/invites/accept', (request) =>
+      community.acceptInvite(request.identity!.ownerId, request.body),
+    );
+    secured.delete('/v1/community/friends/:id', (request) => {
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      return community.removeFriend(request.identity!.ownerId, id);
+    });
+    secured.get('/v1/community/friends/:id/insights', (request) => {
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      return community.friendInsights(request.identity!.ownerId, id, request.query);
+    });
+    secured.post('/v1/community/shares', (request) =>
+      community.createShare(request.identity!.ownerId, request.body),
+    );
+    secured.get('/v1/community/shares/:id', (request) => {
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      return community.detail(request.identity!.ownerId, id);
+    });
+    secured.post('/v1/community/shares/:id/accept', (request) => {
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      return community.acceptShare(request.identity!.ownerId, id, request.body);
+    });
+    secured.patch('/v1/community/shares/:id/progress', (request) => {
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      return community.setProgress(request.identity!.ownerId, id, request.body);
+    });
+    secured.delete('/v1/community/shares/:id', (request) => {
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      return community.revokeShare(request.identity!.ownerId, id);
+    });
+    secured.get('/v1/community/shares/:id/insights/:userId', (request) => {
+      const { id, userId } = z.object({ id: z.uuid(), userId: z.uuid() }).parse(request.params);
+      return community.shareInsights(request.identity!.ownerId, id, userId, request.query);
+    });
     secured.get('/v1/me', async (request) => (await sync.snapshot(request.identity!.ownerId)).user);
     secured.get('/v1/snapshot', (request) => sync.snapshot(request.identity!.ownerId));
     secured.get('/v1/sync/snapshot', (request) => sync.snapshot(request.identity!.ownerId));

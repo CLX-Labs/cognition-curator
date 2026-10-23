@@ -294,3 +294,6 @@ export function cardInput(card: Card | CardInput): CardInput {
   const { id, deckId, front, back, hint, explanation, tags, aiGenerated } = card;
   return { id, deckId, front, back, hint, explanation, tags, aiGenerated };
 }
+
+export * from './community.ts';
+export * from './insights.ts';

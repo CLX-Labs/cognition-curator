@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#f0eee6" />
+    <title>A little curiosity, shared — Recollect</title>
+    <meta
+      name="description"
+      content="Join a friend on Recollect. Get the iPhone app, share decks, and make room for a little curiosity together."
+    />
+    <link rel="canonical" href="https://recollect-ai.netlify.app/friends/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://recollect-ai.netlify.app/friends/" />
+    <meta property="og:title" content="A little curiosity, shared — Recollect" />
+    <meta property="og:description" content="Share a deck. Follow a curiosity. Learn together." />
+    <meta property="og:image" content="https://recollect-ai.netlify.app/assets/app-icon.png" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" type="image/png" href="/assets/app-icon.png" />
+    <link rel="apple-touch-icon" href="/assets/app-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/friend-invite.css" />
+    <script src="/site-config.js" defer></script>
+    <script src="/friend-invite.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to invitation</a>
+    <header class="site-header">
+      <div class="nav-wrap wrap">
+        <a class="wordmark" href="/" aria-label="Recollect home">
+          <img src="/assets/app-icon.png" width="32" height="32" alt="" />recollect<span
+            class="wordmark-dot"
+            >.</span
+          >
+        </a>
+        <a class="text-link invite-home-link" href="/">For the curious <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+    <main id="main" class="invite-page wrap">
+      <div class="edition-line"><span>GOOD THINGS, SHARED.</span><span>Recollect for iPhone</span></div>
+      <div class="invite-grid">
+        <section class="invite-intro" aria-labelledby="invite-title">
+          <span class="eyebrow">A LITTLE INVITATION</span>
+          <h1 id="invite-title">Curiosity, <br />in good <br /><em>company.</em></h1>
+          <p class="invite-lede">A shared deck. A new rabbit hole. A friend to figure it out with.</p>
+          <p class="invite-description">Connect on Recollect to share decks and follow each other’s progress when you choose to share it.</p>
+          <div class="invite-art" aria-hidden="true">
+            <img src="/assets/patterns/orbit.svg" width="240" height="240" alt="" />
+            <span>ROOM FOR<br />ANOTHER<br />CURIOUS MIND ↗</span>
+          </div>
+        </section>
+        <div class="invite-details">
+          <section class="invite-sheet" aria-labelledby="invite-sheet-title">
+            <div class="invite-sheet-topline"><span>01 / THE CONNECTION</span><span aria-hidden="true">↗</span></div>
+            <h2 id="invite-sheet-title">Your invitation.</h2>
+            <p id="invite-introduction">Already have Recollect? Open the original invitation on your iPhone, or enter its code in <strong>You → Friends</strong>.</p>
+            <div id="invite-ready" hidden>
+              <a class="button invite-open" id="invite-open" referrerpolicy="no-referrer">Open Recollect <span aria-hidden="true">↗</span></a>
+              <label for="invite-code">Your invite code</label>
+              <textarea id="invite-code" rows="2" readonly spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="invite-code-note"></textarea>
+              <button class="invite-copy" id="invite-copy" type="button">Copy invite code <span aria-hidden="true">⧉</span></button>
+              <p class="invite-copy-status invite-small" id="invite-copy-status" role="status" aria-live="polite"></p>
+              <p class="invite-small" id="invite-code-note">Keep this code until you connect. Opening this page doesn’t accept the invitation.</p>
+              <p class="invite-small">If the app doesn’t open, install it first. Then come back to this invitation, or paste the code in <strong>You → Friends</strong> after signing in.</p>
+            </div>
+            <p class="invite-invalid" id="invite-invalid" hidden>This invitation is missing a valid code. Ask your friend to send a new invite link or code.</p>
+            <noscript><p class="invite-small">To use the invitation without JavaScript, copy the text after <strong>?invite=</strong> in this page’s address. After installing Recollect and signing in, paste it in <strong>You → Friends</strong>. Keep the original link so you can return to it.</p></noscript>
+          </section>
+          <section class="invite-install" aria-labelledby="install-title">
+            <div class="invite-sheet-topline"><span>02 / GET RECOLLECT</span><span aria-hidden="true">✳</span></div>
+            <h2 id="install-title">New around here?</h2>
+            <p id="invite-download-note">Recollect is in beta for iPhone. A public download link isn’t available yet. Request access, then return to this invitation when you have the app.</p>
+            <a class="button invite-install-link" id="invite-download" href="/#get-recollect" referrerpolicy="no-referrer" target="_blank" rel="noopener noreferrer">Get beta access <span aria-hidden="true">↗</span></a>
+            <p class="invite-small" id="invite-install-return">Installing the app won’t automatically accept this invitation. Come back here afterward, or enter your invite code in <strong>You → Friends</strong>.</p>
+          </section>
+        </div>
+      </div>
+      <footer class="invite-footer"><span>A HOME FOR WHAT CATCHES YOUR MIND</span><a href="/">Explore Recollect ↗</a></footer>
+    </main>
+  </body>
+</html>

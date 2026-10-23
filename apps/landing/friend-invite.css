@@ -1,0 +1,285 @@
+.invite-page {
+  padding-bottom: 28px;
+}
+.invite-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+.invite-intro {
+  position: relative;
+  padding: 42px 55px 42px 0;
+}
+.invite-intro > .eyebrow {
+  display: block;
+  margin-bottom: 32px;
+  color: var(--blue);
+}
+.invite-intro h1 {
+  font-size: clamp(58px, 5.7vw, 87px);
+  letter-spacing: -5px;
+  line-height: 1;
+  margin-bottom: 37px;
+}
+.invite-intro h1 em {
+  margin-top: 3px;
+  font-size: 1.42em;
+}
+.invite-lede {
+  max-width: 370px;
+  font-size: 19px;
+  line-height: 1.65;
+}
+.invite-description {
+  max-width: 365px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.invite-art {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  margin-top: 32px;
+}
+.invite-art img {
+  width: 145px;
+  height: 145px;
+  border-radius: 50%;
+}
+.invite-art span,
+.invite-sheet-topline,
+.invite-footer {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.4px;
+  line-height: 1.6;
+}
+.invite-details {
+  border-left: 1px solid var(--ink);
+}
+.invite-sheet,
+.invite-install {
+  padding: 29px 34px 32px;
+}
+.invite-sheet {
+  background: #f8f7f1;
+}
+.invite-sheet-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 17px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid var(--line);
+}
+.invite-sheet-topline > span:last-child {
+  color: var(--blue);
+  font-size: 18px;
+  line-height: 1;
+}
+.invite-details h2 {
+  font-family: var(--serif);
+  font-size: 43px;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  margin: 0 0 17px;
+}
+.invite-details p {
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0 0 23px;
+}
+.invite-details strong {
+  font-weight: 700;
+}
+#invite-ready label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+#invite-code {
+  display: block;
+  width: 100%;
+  resize: none;
+  min-height: 73px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+#invite-code:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
+}
+.invite-details .invite-small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+  margin-block: 13px 0;
+}
+.invite-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 46px;
+  padding: 7px 0;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+}
+.invite-copy span {
+  font-size: 19px;
+}
+.invite-details .invite-copy-status {
+  margin: 0;
+}
+.invite-copy-status:empty {
+  display: none;
+}
+.invite-open,
+.invite-install-link {
+  display: flex;
+  margin-top: 23px;
+}
+.invite-open {
+  background: var(--blue);
+  border-color: var(--blue);
+  margin-top: 0;
+  margin-bottom: 23px;
+}
+.invite-open:hover {
+  background: var(--blue-dark);
+  border-color: var(--blue-dark);
+}
+.invite-install {
+  border-top: 1px solid var(--ink);
+  background: var(--yellow);
+}
+.invite-install .invite-sheet-topline {
+  border-color: rgb(32 34 30 / 25%);
+}
+.invite-details .invite-invalid {
+  padding: 16px 18px;
+  margin-bottom: 0;
+  border-left: 3px solid var(--blue);
+  background: var(--lilac);
+}
+.invite-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding-top: 23px;
+}
+.invite-footer a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (max-width: 1150px) {
+  .invite-intro {
+    padding-right: 32px;
+  }
+  .invite-intro h1 {
+    font-size: 64px;
+    letter-spacing: -4px;
+  }
+  .invite-intro h1 em {
+    letter-spacing: -3px;
+  }
+  .invite-sheet,
+  .invite-install {
+    padding-inline: 26px;
+  }
+}
+@media (max-width: 760px) {
+  .invite-page > .edition-line {
+    padding-block: 14px;
+    font-size: 8px;
+  }
+  .invite-grid {
+    grid-template-columns: 1fr;
+  }
+  .invite-intro {
+    padding: 22px 0 23px;
+  }
+  .invite-intro > .eyebrow {
+    display: none;
+  }
+  .invite-intro h1 {
+    max-width: 450px;
+    font-size: clamp(34px, 6vw, 43px);
+    letter-spacing: -1.6px;
+    line-height: 1.05;
+    margin-bottom: 0;
+  }
+  .invite-intro h1 br {
+    display: none;
+  }
+  .invite-intro h1 em {
+    display: inline;
+    font-size: 1.35em;
+    letter-spacing: -1.5px;
+    margin: 0;
+  }
+  .invite-lede,
+  .invite-description,
+  .invite-art {
+    display: none;
+  }
+  .invite-details {
+    border-left: 0;
+    border-top: 1px solid var(--ink);
+  }
+  .invite-sheet,
+  .invite-install {
+    padding: 22px 22px 28px;
+  }
+  .invite-sheet > .invite-sheet-topline {
+    display: none;
+  }
+  .invite-details h2 {
+    font-size: 35px;
+    margin-bottom: 12px;
+  }
+  #invite-introduction {
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+  .invite-open {
+    margin-bottom: 20px;
+  }
+  #invite-code {
+    height: 58px;
+    min-height: 58px;
+    font-size: 11px;
+  }
+  .invite-footer {
+    font-size: 8px;
+    gap: 20px;
+  }
+}
+@media (max-width: 360px) {
+  .invite-home-link {
+    font-size: 10px;
+    gap: 6px;
+  }
+  .invite-intro h1 {
+    font-size: 33px;
+    letter-spacing: -1.5px;
+  }
+  .invite-sheet,
+  .invite-install {
+    padding-inline: 17px;
+  }
+}

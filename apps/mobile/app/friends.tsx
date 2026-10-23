@@ -7,28 +7,20 @@ import { CommunityFeedback, SharedDeckSummary } from '../src/deck-sharing';
 import { BrandPattern } from '../src/brand-patterns';
 import Avatar from '../src/avatar';
 import { Back, Button, Empty, Field, Panel, Screen, Text, colors, s } from '../src/ui';
-
-export function invitationCode(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed.includes('://')) return trimmed;
-  try {
-    return new URL(trimmed).searchParams.get('invite')?.trim() ?? '';
-  } catch {
-    return '';
-  }
-}
+import { friendInviteMessage, invitationCode } from '../src/friend-invite';
 
 export default function FriendsScreen() {
-  const params = useLocalSearchParams<{ invite?: string }>();
+  const params = useLocalSearchParams<{ invite?: string | string[] }>();
+  const incomingCode = typeof params.invite === 'string' ? invitationCode(params.invite) : '';
   const community = useCommunityResource('community', communityApi.overview);
-  const [code, setCode] = useState(params.invite ?? '');
+  const [code, setCode] = useState(incomingCode);
   const [invitation, setInvitation] = useState<{ ownerId: string; value: FriendInvite } | null>(
     null,
   );
   const [connected, setConnected] = useState<{ ownerId: string; name: string } | null>(null);
   useEffect(() => {
-    if (params.invite) setCode(params.invite);
-  }, [params.invite]);
+    if (params.invite !== undefined) setCode(incomingCode);
+  }, [params.invite, incomingCode]);
   const savedInvite = invitation?.ownerId === community.ownerId ? invitation.value : null;
   async function invite() {
     const created = await community.run('invite', communityApi.invite);
@@ -42,12 +34,7 @@ export default function FriendsScreen() {
     await community.run('send', () =>
       Share.share({
         title: 'Learn together on Recollect',
-        message:
-          'Join me on Recollect to share decks and learn together. Open this link on your phone: cognitioncurator://friends?invite=' +
-          encodeURIComponent(value.code) +
-          '\n\nOr paste this one-use invite code in You → Friends: ' +
-          value.code +
-          '\nThe invite expires in 7 days. If you need the app, ask me for TestFlight access first.',
+        message: friendInviteMessage(value),
       }),
     );
   }

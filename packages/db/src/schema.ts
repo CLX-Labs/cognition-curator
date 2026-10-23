@@ -11,7 +11,10 @@ import {
   unique,
   uuid,
   date,
+  check,
+  index,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import type { Card, Deck, ReviewEvent, ScheduleState, SyncReceipt } from '@recollect/contracts';
 export const recollect = pgSchema('recollect');
 export const users = recollect.table('users', {
@@ -277,6 +280,125 @@ export const sharedCardMappings = recollect.table(
   (t) => [
     primaryKey({ columns: [t.shareId, t.sourceCardId] }),
     unique().on(t.shareId, t.recipientCardId),
+  ],
+);
+
+export const marketplaceListings = recollect.table(
+  'marketplace_listings',
+  {
+    id: uuid().primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sourceDeckId: uuid('source_deck_id').notNull(),
+    version: integer().notNull(),
+    snapshot: jsonb().notNull(),
+    isPublished: boolean('is_published').notNull().default(true),
+    showDownloadCount: boolean('show_download_count').notNull().default(false),
+    showUsageStats: boolean('show_usage_stats').notNull().default(false),
+    publishedAt: timestamp('published_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.ownerId, t.sourceDeckId),
+    check('marketplace_listings_version_check', sql`${t.version} > 0`),
+    index('marketplace_catalog')
+      .on(t.publishedAt.desc(), t.id.desc())
+      .where(sql`${t.isPublished}`),
+  ],
+);
+export const marketplaceVersions = recollect.table(
+  'marketplace_versions',
+  {
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => marketplaceListings.id, { onDelete: 'cascade' }),
+    version: integer().notNull(),
+    snapshot: jsonb().notNull(),
+    sourceRevision: bigint('source_revision', { mode: 'bigint' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.listingId, t.version] })],
+);
+export const marketplacePublishOperations = recollect.table(
+  'marketplace_publish_operations',
+  {
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    operationId: uuid('operation_id').notNull(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => marketplaceListings.id, { onDelete: 'cascade' }),
+    version: integer().notNull(),
+    payloadHash: text('payload_hash').notNull(),
+    rightsPolicyVersion: integer('rights_policy_version').notNull().default(1),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.ownerId, t.operationId] })],
+);
+export const marketplaceDownloads = recollect.table(
+  'marketplace_downloads',
+  {
+    id: uuid().primaryKey(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => marketplaceListings.id, { onDelete: 'cascade' }),
+    recipientId: uuid('recipient_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    recipientDeckId: uuid('recipient_deck_id').notNull(),
+    version: integer().notNull(),
+    recipientRevision: bigint('recipient_revision', { mode: 'bigint' }).notNull(),
+    consentSince: timestamp('consent_since', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.recipientId, t.listingId),
+    index('marketplace_download_listing').on(t.listingId),
+  ],
+);
+export const marketplaceCardMappings = recollect.table(
+  'marketplace_card_mappings',
+  {
+    downloadId: uuid('download_id')
+      .notNull()
+      .references(() => marketplaceDownloads.id, { onDelete: 'cascade' }),
+    sourceCardId: uuid('source_card_id').notNull(),
+    recipientCardId: uuid('recipient_card_id').notNull(),
+    contentHash: text('content_hash').notNull(),
+    content: jsonb().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.downloadId, t.sourceCardId] }),
+    unique().on(t.downloadId, t.recipientCardId),
+  ],
+);
+export const marketplaceReports = recollect.table(
+  'marketplace_reports',
+  {
+    id: uuid().primaryKey(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => marketplaceListings.id, { onDelete: 'cascade' }),
+    reporterId: uuid('reporter_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    targetUserId: uuid('target_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    version: integer().notNull(),
+    reason: text().notNull(),
+    details: text().notNull().default(''),
+    evidence: jsonb().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [
+    check(
+      'marketplace_reports_reason_check',
+      sql`${t.reason} IN ('inappropriate','harassment','spam','other')`,
+    ),
   ],
 );
 

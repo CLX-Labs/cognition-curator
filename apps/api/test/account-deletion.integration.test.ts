@@ -4,12 +4,14 @@ import type { FastifyInstance } from 'fastify';
 import {
   ALGORITHM_VERSION,
   accountDeletionReceiptSchema,
+  marketplaceSnapshotValue,
   sessionSchema,
+  snapshotSchema,
   type AccountDeletionRequest,
   type Session,
   type SyncOperation,
 } from '@recollect/contracts';
-import { createDatabase, secretHash, type Database } from '@recollect/db';
+import { createDatabase, hash, secretHash, type Database } from '@recollect/db';
 import { migrate } from '@recollect/db/migrate';
 import { importLegacy } from '../../../packages/db/src/import-legacy.js';
 import { buildApp } from '../src/app.js';
@@ -975,6 +977,117 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('verified whole-account deletion
     });
     expect(JSON.stringify(tombstone)).not.toContain(subjects.get(owner.user.id));
   });
+
+  it.each(['publisher', 'learner'] as const)(
+    'erases marketplace provenance for the deleted %s and preserves other people’s independent copies',
+    async (target) => {
+      const publisher = await login(),
+        learner = await login();
+      const source = await library(publisher);
+      const current = snapshotSchema.parse(
+        (await app.inject({ url: '/v1/snapshot', headers: headers(publisher) })).json(),
+      );
+      const reviewedDeck = current.decks.find((deck) => deck.id === source.deckId)!;
+      const expectedContentHash = hash(
+        marketplaceSnapshotValue(
+          reviewedDeck,
+          current.cards.filter((card) => card.deckId === source.deckId && !card.deletedAt),
+        ),
+      );
+      const publication = await app.inject({
+        method: 'POST',
+        url: '/v1/marketplace/listings',
+        headers: headers(publisher),
+        payload: {
+          operationId: randomUUID(),
+          deckId: source.deckId,
+          rightsAccepted: true,
+          expectedContentHash,
+          showDownloadCount: true,
+          showUsageStats: true,
+        },
+      });
+      expect(publication.statusCode, publication.body).toBe(200);
+      const listingId = publication.json().id;
+      const downloaded = await app.inject({
+        method: 'POST',
+        url: `/v1/marketplace/listings/${listingId}/download`,
+        headers: headers(learner),
+        payload: {},
+      });
+      expect(downloaded.statusCode, downloaded.body).toBe(200);
+      const independentId = downloaded.json().deckId;
+      expect(
+        (
+          await app.inject({
+            method: 'PATCH',
+            url: `/v1/marketplace/listings/${listingId}/usage`,
+            headers: headers(learner),
+            payload: { enabled: true },
+          })
+        ).statusCode,
+      ).toBe(200);
+      expect(
+        (
+          await app.inject({
+            method: 'POST',
+            url: `/v1/marketplace/listings/${listingId}/reports`,
+            headers: headers(learner),
+            payload: { reason: 'other', details: 'Private report' },
+          })
+        ).statusCode,
+      ).toBe(201);
+      const deleted = target === 'publisher' ? publisher : learner;
+      await confirm(deleted);
+      expect(await processAccountDeletions(db, config, { apple: apple() })).toEqual({
+        completed: 1,
+        pending: 0,
+      });
+      for (const table of [
+        'marketplace_downloads',
+        'marketplace_card_mappings',
+        'marketplace_reports',
+      ])
+        expect(
+          (await db.query(`SELECT count(*)::integer AS n FROM recollect.${table}`)).rows[0].n,
+          table,
+        ).toBe(0);
+      for (const table of [
+        'marketplace_listings',
+        'marketplace_versions',
+        'marketplace_publish_operations',
+      ])
+        expect(
+          (await db.query(`SELECT count(*)::integer AS n FROM recollect.${table}`)).rows[0].n,
+          table,
+        ).toBe(target === 'publisher' ? 0 : 1);
+      const survivor = target === 'publisher' ? learner : publisher;
+      const survivingDeck = target === 'publisher' ? independentId : source.deckId;
+      expect(
+        (
+          await db.query('SELECT 1 FROM recollect.decks WHERE owner_id=$1 AND id=$2', [
+            survivor.user.id,
+            survivingDeck,
+          ])
+        ).rowCount,
+      ).toBe(1);
+      expect(
+        (
+          await db.query(
+            'SELECT count(*)::integer AS n FROM recollect.cards WHERE owner_id=$1 AND deck_id=$2',
+            [survivor.user.id, survivingDeck],
+          )
+        ).rows[0].n,
+      ).toBe(1);
+      expect(
+        (
+          await db.query('SELECT 1 FROM recollect.rate_buckets WHERE scope LIKE $1', [
+            'marketplace:%:' + deleted.user.id,
+          ])
+        ).rowCount,
+      ).toBe(0);
+    },
+  );
 
   it('fails closed on legacy identity mismatch and cross-owner history instead of erasing another person', async () => {
     const owner = await login(),

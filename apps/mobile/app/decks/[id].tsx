@@ -6,6 +6,7 @@ import { activeDeck, deckContent, dueCards } from '../../src/repository';
 import DeckForm from '../../src/deck-form';
 import { DeckArtwork } from '../../src/brand-patterns';
 import DeckSharing from '../../src/deck-sharing';
+import DeckMarketplace from '../../src/deck-marketplace';
 import {
   Back,
   Button,
@@ -63,7 +64,7 @@ export default function DeckDetail() {
     if (!displayed) return;
     Alert.alert(
       'Delete ' + displayed.name + '?',
-      'The deck and its cards will be removed from your library and synchronized to your account.',
+      'The deck and its cards will be removed from your library and synchronized to your account. Any published marketplace snapshot stays published until you unpublish it in Marketplace → My publications. Other people’s downloaded copies stay in their libraries.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -154,6 +155,7 @@ export default function DeckDetail() {
         </View>
       )}
       <DeckSharing key={deck.id} deckId={deck.id} />
+      <DeckMarketplace key={'marketplace:' + deck.id} deckId={deck.id} />
       <Button
         title="Deck insights →"
         variant="ghost"

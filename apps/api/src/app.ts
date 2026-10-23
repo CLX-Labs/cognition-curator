@@ -19,6 +19,7 @@ import { importDevice } from './imports.js';
 import { ProfileService } from './profile.js';
 import { CommunityService } from './community.js';
 import { CommunitySafetyService } from './community-safety.js';
+import { MarketplaceService } from './marketplace.js';
 
 function generationLog(job: GenerationJob) {
   return {
@@ -43,11 +44,15 @@ export async function buildApp(options: {
     bodyLimit: 8 * 1024 * 1024,
   });
   const { db, config } = options;
+  app.addHook('onRequest', async (request, reply) => {
+    if (request.url.startsWith('/v1/marketplace')) reply.header('Cache-Control', 'no-store');
+  });
   const auth = new AuthService(db, config, options.appleVerifier),
     sync = new SyncService(db),
     profile = new ProfileService(db),
     community = new CommunityService(db),
     safety = new CommunitySafetyService(db),
+    marketplace = new MarketplaceService(db),
     generation = new GenerationService(db, config.dailyGenerationCards);
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError)
@@ -131,6 +136,45 @@ export async function buildApp(options: {
       community.ownInsights(request.identity!.ownerId, request.query),
     );
     secured.get('/v1/community', (request) => community.overview(request.identity!.ownerId));
+    secured.get('/v1/marketplace', (request) =>
+      marketplace.catalog(request.identity!.ownerId, request.query),
+    );
+    secured.get('/v1/marketplace/mine', (request) => marketplace.mine(request.identity!.ownerId));
+    secured.get('/v1/marketplace/downloads', (request) =>
+      marketplace.downloads(request.identity!.ownerId),
+    );
+    secured.post('/v1/marketplace/listings', (request) =>
+      marketplace.publish(request.identity!.ownerId, request.body),
+    );
+    secured.get('/v1/marketplace/listings/:id', (request) => {
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
+      return marketplace.detail(request.identity!.ownerId, id);
+    });
+    secured.patch('/v1/marketplace/listings/:id', (request) => {
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
+      return marketplace.settings(request.identity!.ownerId, id, request.body);
+    });
+    secured.post('/v1/marketplace/listings/:id/download', (request) => {
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
+      z.strictObject({}).parse(request.body ?? {});
+      return marketplace.download(request.identity!.ownerId, id);
+    });
+    secured.patch('/v1/marketplace/listings/:id/usage', (request) => {
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
+      return marketplace.setUsage(request.identity!.ownerId, id, request.body);
+    });
+    secured.post('/v1/marketplace/listings/:id/reports', async (request, reply) => {
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
+      return reply
+        .code(201)
+        .send(await marketplace.report(request.identity!.ownerId, id, request.body));
+    });
+    secured.post('/v1/marketplace/listings/:id/block-publisher', async (request, reply) => {
+      const { id } = z.object({ id: z.uuid().toLowerCase() }).parse(request.params);
+      z.strictObject({}).parse(request.body ?? {});
+      await marketplace.blockPublisher(request.identity!.ownerId, id);
+      return reply.code(204).send();
+    });
     secured.get('/v1/community/blocks', (request) => safety.blocked(request.identity!.ownerId));
     secured.post('/v1/community/blocks/:userId', async (request, reply) => {
       const { userId } = z.object({ userId: z.uuid().toLowerCase() }).parse(request.params);

@@ -447,6 +447,22 @@ async function purgeAccount(db: Database, request: DeletionRow) {
       await tx.query('DELETE FROM recollect.user_blocks WHERE blocker_id=$1 OR blocked_id=$1', [
         request.owner_id,
       ]);
+    // Marketplace provenance is removable without touching independently owned
+    // downloaded decks/cards. Cascades remove snapshots, mappings and receipts.
+    if (
+      (await tx.query("SELECT to_regclass('recollect.marketplace_listings') AS name")).rows[0]?.name
+    ) {
+      await tx.query(
+        'DELETE FROM recollect.marketplace_reports WHERE reporter_id=$1 OR target_user_id=$1',
+        [request.owner_id],
+      );
+      await tx.query('DELETE FROM recollect.marketplace_downloads WHERE recipient_id=$1', [
+        request.owner_id,
+      ]);
+      await tx.query('DELETE FROM recollect.marketplace_listings WHERE owner_id=$1', [
+        request.owner_id,
+      ]);
+    }
     await tx.query('DELETE FROM recollect.deck_shares WHERE sender_id=$1 OR recipient_id=$1', [
       request.owner_id,
     ]);
@@ -474,6 +490,9 @@ async function purgeAccount(db: Database, request: DeletionRow) {
       await tx.query(`DELETE FROM recollect.${table} WHERE owner_id=$1`, [request.owner_id]);
     await tx.query('DELETE FROM recollect.rate_buckets WHERE scope LIKE $1', [
       'community:%:' + request.owner_id,
+    ]);
+    await tx.query('DELETE FROM recollect.rate_buckets WHERE scope LIKE $1', [
+      'marketplace:%:' + request.owner_id,
     ]);
     await tx.query('DELETE FROM recollect.users WHERE id=$1', [request.owner_id]);
     await tx.query(

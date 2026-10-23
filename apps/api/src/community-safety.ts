@@ -81,6 +81,11 @@ export class CommunitySafetyService {
         [owner, target],
       );
       await tx.query(
+        `UPDATE recollect.marketplace_downloads d SET consent_since=NULL FROM recollect.marketplace_listings l
+         WHERE d.listing_id=l.id AND ((d.recipient_id=$1 AND l.owner_id=$2) OR (d.recipient_id=$2 AND l.owner_id=$1))`,
+        [owner, target],
+      );
+      await tx.query(
         'UPDATE recollect.friendships SET active=false WHERE user_a=LEAST($1::uuid,$2::uuid) AND user_b=GREATEST($1::uuid,$2::uuid)',
         [owner, target],
       );

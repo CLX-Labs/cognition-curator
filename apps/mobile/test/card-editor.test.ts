@@ -64,6 +64,9 @@ vi.mock('../src/answer-generator', () => ({
 }));
 vi.mock('../src/brand-patterns', () => ({ BrandPattern: () => null, DeckArtwork: () => null }));
 vi.mock('../src/deck-sharing', () => ({ default: () => null }));
+// Publishing has its own lifecycle suite; keep this fixture focused on local card editing.
+vi.mock('../src/deck-marketplace', () => ({ default: () => null }));
+vi.mock('../src/marketplace-ui', () => ({ MarketplaceEntry: () => null }));
 vi.mock('../src/ui', () => ({
   Text: ({ children, ...props }: { children: React.ReactNode }) =>
     React.createElement('text', props, children),

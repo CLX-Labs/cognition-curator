@@ -299,3 +299,4 @@ export function cardInput(card: Card | CardInput): CardInput {
 export * from './community.ts';
 export * from './community-safety.ts';
 export * from './insights.ts';
+export * from './marketplace.ts';

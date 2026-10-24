@@ -204,6 +204,25 @@ export default function ProfileScreen() {
           onPress={() => router.push('/friends')}
         />
       </Panel>
+      <Panel>
+        <Text style={s.sectionTitle}>Your marketplace</Text>
+        <Text style={s.body}>
+          Manage public decks and choose whether your downloaded cards contribute to broad practice
+          trends.
+        </Text>
+        <Button
+          title="Marketplace & publications"
+          variant="secondary"
+          size="compact"
+          onPress={() => router.push('/marketplace')}
+        />
+        <Button
+          title="Downloads & practice privacy"
+          variant="ghost"
+          size="compact"
+          onPress={() => router.push('/marketplace/downloads')}
+        />
+      </Panel>
       <ReleasePanel />
       <AIPermissionPanel consent={aiConsent} settings />
       <Panel>

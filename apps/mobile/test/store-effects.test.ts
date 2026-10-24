@@ -322,6 +322,30 @@ it('manual sync joins an ongoing background request and shows loading only for t
   expect(rig.request).toHaveBeenCalledTimes(2);
 });
 
+it('default sync resolves an offline pull while a strict caller joining the same flight rejects', async () => {
+  await mount();
+  const held = deferred();
+  rig.request.mockImplementationOnce(() => held.promise);
+  let background!: Promise<void>, strict!: Promise<void>;
+  await act(async () => {
+    background = store.sync({ silent: true });
+    strict = store.sync({ throwOnError: true });
+  });
+  const strictResult = strict.then(
+    () => null,
+    (cause: Error) => cause.message,
+  );
+  await act(async () => {
+    held.reject(new Error('Could not pull current cards'));
+    await background;
+  });
+  expect(await strictResult).toBe('Could not pull current cards');
+  await expect(background).resolves.toBeUndefined();
+  expect(store.syncState).toBe('offline');
+  expect(store.syncError).toBe('Could not pull current cards');
+  expect(rig.request).toHaveBeenCalledTimes(2);
+});
+
 it('a late failure from a previous account cannot replace the new account with an error/loading screen', async () => {
   await mount();
   const held = deferred();

@@ -68,6 +68,8 @@ The API and worker use the `recollect` PostgreSQL schema. pg-boss owns `recollec
 - Protected export of the supported old SwiftData schema, explicit ownership confirmation, archival history and schedule-checkpoint import.
 - Original Home Screen and Control Center widget identities generated from committed source.
 
+The isolated marketplace first pass is described in [Deck marketplace](docs/marketplace.md): explicit published snapshots, independent downloads, creator-controlled metric visibility, and learner-controlled aggregate practice contribution. It is not deployed by this feature branch.
+
 The old subscriptions simulated purchases. This branch does not expose a fake paid entitlement. Verified billing, notifications, Android Apple OAuth, and complete superset membership remain separate product work. Uninspected legacy schemas require review before erasure; original device recovery stores and exported files remain separate from the current signed-in library. Compatibility with older uninspected shipped native schemas remains a release investigation.
 
 ## Verify changes

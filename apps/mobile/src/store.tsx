@@ -37,7 +37,7 @@ type AppStore = {
   initializationError: string | null;
   widgetError: string | null;
   refresh(): Promise<void>;
-  sync(options?: { silent?: boolean }): Promise<void>;
+  sync(options?: { silent?: boolean; throwOnError?: boolean }): Promise<void>;
   mutate(action: (repository: Repository) => Promise<unknown>): Promise<void>;
   signOut(): Promise<void>;
   deletionRecovery: AccountDeletionRecovery | null;
@@ -63,7 +63,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const engine = useRef<SyncEngine | null>(null);
   const liveRepository = useRef<Repository | null>(null);
   const ownerEpoch = useRef(0);
-  const syncFlight = useRef<{ engine: SyncEngine; promise: Promise<void> } | null>(null);
+  const syncFlight = useRef<{
+    engine: SyncEngine;
+    promise: Promise<void>;
+    observed: Promise<void>;
+  } | null>(null);
   const snapshot = useRef<{
     repository: Repository;
     data: LocalSnapshot;
@@ -110,36 +114,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const refresh = useMemo(() => createRefreshQueue(readSnapshot), [readSnapshot]);
   const sync = useCallback(
-    (options: { silent?: boolean } = {}) => {
+    (options: { silent?: boolean; throwOnError?: boolean } = {}) => {
       const deletion = api.deletionRecovery();
-      if (deletion && !deletion.localCleared) return Promise.resolve();
+      if (deletion && !deletion.localCleared)
+        return options.throwOnError
+          ? Promise.reject(new Error('Account deletion is in progress.'))
+          : Promise.resolve();
       const active = engine.current;
-      if (!active) return Promise.resolve();
+      if (!active)
+        return options.throwOnError
+          ? Promise.reject(new Error('Wait for your signed-in library to open before publishing.'))
+          : Promise.resolve();
       if (!options.silent) setSyncState('syncing');
-      if (syncFlight.current?.engine === active) return syncFlight.current.promise;
+      if (syncFlight.current?.engine === active)
+        return options.throwOnError ? syncFlight.current.promise : syncFlight.current.observed;
       const task: Promise<void> = (async () => {
         try {
           await active.run();
-          if (engine.current !== active) return;
+          if (engine.current !== active) throw new Error('The signed-in account changed.');
           await refresh();
-          if (engine.current !== active) return;
+          if (engine.current !== active) throw new Error('The signed-in account changed.');
           setSyncState('idle');
           setSyncError(null);
         } catch (error) {
-          if (engine.current !== active) return;
-          setSyncState('offline');
-          setSyncError(
-            error instanceof Error
-              ? error.message
-              : 'Connection interrupted. Your changes are saved on this device.',
-          );
-          await refresh().catch(() => undefined);
+          if (engine.current === active) {
+            setSyncState('offline');
+            setSyncError(
+              error instanceof Error
+                ? error.message
+                : 'Connection interrupted. Your changes are saved on this device.',
+            );
+            await refresh().catch(() => undefined);
+          }
+          throw error;
         }
       })().finally(() => {
         if (syncFlight.current?.promise === task) syncFlight.current = null;
       });
-      syncFlight.current = { engine: active, promise: task };
-      return task;
+      // Keep a single raw flight for strict callers, and a shared caught view for normal UI sync.
+      const observed = task.catch(() => undefined);
+      syncFlight.current = { engine: active, promise: task, observed };
+      return options.throwOnError ? task : observed;
     },
     [refresh],
   );

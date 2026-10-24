@@ -8,6 +8,7 @@ import { ReleaseStamp } from '../../src/release-panel';
 import { useProfile } from '../../src/profile';
 import Avatar from '../../src/avatar';
 import { BrandPattern, DeckArtwork } from '../../src/brand-patterns';
+import { MarketplaceEntry } from '../../src/marketplace-ui';
 
 export default function Home() {
   const { data } = useStore();
@@ -177,6 +178,7 @@ export default function Home() {
           }
         />
       )}
+      <MarketplaceEntry />
       <ReleaseStamp />
     </Screen>
   );

@@ -5,6 +5,7 @@ import { useStore } from '../../src/store';
 import { activeDeck, dueCards } from '../../src/repository';
 import { Button, Empty, Field, Panel, Screen, colors, s, Text } from '../../src/ui';
 import { DeckArtwork } from '../../src/brand-patterns';
+import { MarketplaceEntry } from '../../src/marketplace-ui';
 
 export default function Decks() {
   const { data } = useStore();
@@ -22,6 +23,7 @@ export default function Decks() {
       subtitle={data.decks.length + (data.decks.length === 1 ? ' deck' : ' decks')}
       action={<Button title="+ New deck" size="compact" onPress={create} />}
     >
+      <MarketplaceEntry />
       <Field
         label="Search decks"
         placeholder="Name or subject"

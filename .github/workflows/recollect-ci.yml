@@ -56,6 +56,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: node --test scripts/test-release-pipeline.mjs
+      - run: node --test scripts/test-release-delivery.mjs
       - run: node --test scripts/test-release-metadata.mjs
       - run: node --test scripts/test-release-policy.mjs
       - run: node --test scripts/test-release-notifications.mjs

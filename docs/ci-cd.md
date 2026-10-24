@@ -89,12 +89,13 @@ in the latest successful release tag. Local source
 has an explicit `local` placeholder; a manually built unstamped release is shown
 as **Unversioned release** rather than implying it came from main.
 
-`apps/mobile/.eas/workflows/testflight-release.yml` compares the iOS native
-fingerprint against a successful store build on channel `testflight`. The source
-branch selects OTA or native as described above.
-Native delivery uses the standard EAS `submit` job to upload the signed binary to
-App Store Connect for TestFlight processing. The advanced `testflight` job's
-`build_id` upload requires a paid Expo plan and is not used here.
+`scripts/release-delivery.mjs` runs EAS CLI directly from GitHub Actions. For an
+OTA, it computes the fingerprint using the `testflight` profile and requires a
+completed store build with the same fingerprint, native version and channel.
+The source branch selects OTA or native as described above. Native delivery waits
+for EAS Build, then submits that exact build ID with EAS Submit and waits for
+submission success. It does not use the EAS Workflows scheduler or its CI-minute
+allowance. Separate EAS Build and Update service quotas still apply.
 The first release needs a store build. The existing ad hoc
 `preview` installation cannot serve as the TestFlight baseline.
 
@@ -131,8 +132,8 @@ The app uses `@collectsoftware/recollect-ai`, project ID
 `2d6f42f7-8c17-4f27-9c69-7ce868abdb74`. The `testflight` profile uses store
 distribution, automatic build-number increments, the `testflight` channel, the
 `preview` environment, SDK 57 and Node 24.21.0. Production remains a separate
-channel. GitHub uploads the checked-out source using `eas workflow:run`; an Expo
-GitHub integration is optional. Do not add a second direct EAS push trigger,
+channel. GitHub uploads the checked-out source with `eas build` or `eas update`;
+an Expo GitHub integration is optional. Do not add a second direct EAS push trigger,
 which would duplicate the app release workflow.
 
 ## Release notifications
@@ -152,8 +153,10 @@ configuration or a notification failure does not block deployment.
 
 GitHub continues to wait for EAS to finish before recording a successful release
 tag. This avoids announcing success when a queued build or Apple submission later
-fails. The existing EAS TestFlight workflow handles both build and submission;
-no one needs to download/upload the binary manually. The app's update prompt uses
+fails. GitHub orchestrates both cloud build and submission with the existing
+`EXPO_TOKEN` and Expo-stored signing/submission credentials; no one needs to
+download/upload the binary manually. The helper logs selected build/update IDs
+without dumping CLI JSON that can contain signed artifact URLs. The app's update prompt uses
 Expo's native download state, so no backend notification service is required.
 
 ## Apple setup and activation
@@ -176,9 +179,13 @@ workflow into `main`. Configure required checks and branch protection. Feature
 branches and PRs run checks; main runs deployment and app release.
 
 If a native submission fails, retry the existing signed build before the next OTA
-release. From `apps/mobile`, run `eas workflow:run .eas/workflows/submit-existing.yml
---input build_id=<EAS_BUILD_UUID> --input asc_app_id=<ASC_APP_ID> --non-interactive --wait`.
-This uploads that exact binary without incrementing its version or rebuilding.
+release. Use a clean release checkout, temporarily apply the App Store ID with
+`ASC_APP_ID=<ASC_APP_ID> node scripts/release-pipeline.mjs configure-app`, then
+from `apps/mobile` run `eas submit --platform ios --profile testflight
+--id <EAS_BUILD_UUID> --non-interactive --wait`. Restore the original `eas.json`
+after submission, before any later build or OTA. This uploads that exact binary
+without incrementing its version or rebuilding. CLI 24.12.1 submission does not
+accept `--json`; its waited exit status reports success/failure.
 After verified delivery, record the original successful release plan with
 `RELEASE_PLAN_FILE=<original-plan.json> node scripts/release-policy.mjs record`
 from the repository root, so the next release continues from the delivered version.
@@ -188,19 +195,22 @@ main with `release_type=native` to bump the major version, build and submit a fr
 binary. Failed app checks or Expo build/update/submission steps prevent release.
 
 The commit SHA appears in Railway, EAS build and OTA messages. Use GitHub Actions and
-EAS workflow logs to diagnose failed releases. OTA rollback
+EAS Build/Submit/Update dashboards to diagnose failed releases. The old
+`apps/mobile/.eas/workflows/*.yml` files remain optional legacy workflows; they
+consume EAS Workflows minutes and are not invoked by normal main releases. OTA rollback
 does not undo SQLite/PostgreSQL migrations or restore records.
 
 ## Validation
 
 ```sh
-node --test scripts/test-release-pipeline.mjs scripts/test-release-metadata.mjs scripts/test-release-policy.mjs scripts/test-release-notifications.mjs
+node --test scripts/test-release-pipeline.mjs scripts/test-release-delivery.mjs scripts/test-release-metadata.mjs scripts/test-release-policy.mjs scripts/test-release-notifications.mjs
 npm run typecheck
 cd apps/mobile
 npm exec --yes --package=node@24 --package=eas-cli@24.12.1 -- eas workflow:validate .eas/workflows/testflight-release.yml --non-interactive
 ```
 
-References: [Expo release workflows](https://docs.expo.dev/eas/workflows/examples/deploy-to-production/),
+References: [EAS Build from GitHub/other CI](https://docs.expo.dev/build/building-on-ci/),
+[EAS Submit from CI](https://docs.expo.dev/submit/ios/),
 [EAS Updates](https://docs.expo.dev/eas-update/how-it-works/).
 
 The notification and update-prompt design is adapted from [Somethings’ release pipeline](https://blog.somethings.com/blog/release-pipeline), while preserving this app’s enhancement/minor and feature/major rules and single main-to-TestFlight flow.

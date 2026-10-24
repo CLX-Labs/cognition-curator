@@ -93,13 +93,9 @@ jobs:
           eas env:set preview --name EXPO_PUBLIC_ENABLE_DEV_AUTH --value false --visibility plaintext --scope project --non-interactive
       - name: Release OTA or build and submit to TestFlight
         id: delivery
-        working-directory: apps/mobile
-        run: |
-          eas workflow:run .eas/workflows/testflight-release.yml \
-            --input release_type="$RELEASE_TYPE" --input release_version="$RELEASE_VERSION" --input release_sha="$GITHUB_SHA" \
-            --input asc_app_id="$ASC_APP_ID" \
-            --input release_id="${{ steps.metadata.outputs.release_id }}" \
-            --non-interactive --wait
+        env:
+          RELEASE_ID: ${{ steps.metadata.outputs.release_id }}
+        run: node scripts/release-delivery.mjs
       - name: Record the successfully delivered version
         run: node scripts/release-policy.mjs record
     outputs:

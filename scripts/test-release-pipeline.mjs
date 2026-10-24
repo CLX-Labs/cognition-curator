@@ -17,25 +17,21 @@ test('rejects temporary or credential-bearing API origins in the app configurati
     assert.throws(() => validateConfig({ ...env, API_URL: url }), /stable HTTPS/);
 });
 
-test('App Store submission settings are applied only after the native build, preserving OTA fingerprints', async () => {
+test('GitHub delivers through direct EAS commands and records a version only after delivery succeeds', async () => {
   const github = parse(await readFile(new URL('../.github/workflows/recollect-release.yml', import.meta.url), 'utf8'));
-  const expo = parse(await readFile(new URL('../apps/mobile/.eas/workflows/testflight-release.yml', import.meta.url), 'utf8'));
-  const commands = github.jobs.release.steps.map(step => step.run ?? '').join('\n');
+  const steps = github.jobs.release.steps;
+  const commands = steps.map(step => step.run ?? '').join('\n');
   assert.doesNotMatch(commands, /configure-app/, 'Do not mutate fingerprinted eas.json before uploading the app.');
-  assert.match(commands, /--input asc_app_id="\$ASC_APP_ID"/);
-  assert.equal(expo.on.workflow_dispatch.inputs.asc_app_id.required, true);
-  const submission = expo.jobs.submit_testflight;
-  assert.equal(submission.type, 'submit', 'Binary upload must work without the paid TestFlight job.');
-  assert.deepEqual(Object.keys(submission.params).sort(), ['build_id', 'profile']);
-  assert.deepEqual(submission.needs, ['native_build']);
-  assert.equal(submission.env.ASC_APP_ID, '${{ inputs.asc_app_id }}');
-  assert.match(submission.hooks.after_checkout[0].run, /release-pipeline\.mjs configure-app/);
-  for (const [name, job] of Object.entries(expo.jobs)) {
-    if (name !== 'submit_testflight') assert.doesNotMatch(JSON.stringify(job), /configure-app/);
-  }
+  assert.doesNotMatch(commands, /workflow:run/, 'Normal releases must not consume EAS Workflows CI minutes.');
+  const delivery = steps.find(step => step.id === 'delivery');
+  assert.equal(delivery.run, 'node scripts/release-delivery.mjs');
+  assert.equal(delivery.env.RELEASE_ID, '${{ steps.metadata.outputs.release_id }}');
+  assert.ok(steps.indexOf(delivery) < steps.findIndex(step => step.run === 'node scripts/release-policy.mjs record'));
+  assert.equal(github.jobs.release.env.EXPO_TOKEN, '${{ secrets.EXPO_TOKEN }}');
+  assert.equal(github.jobs.release.env.ASC_APP_ID, '${{ vars.ASC_APP_ID }}');
 });
 
-test('a failed upload can retry the same native build without rebuilding or publishing an OTA', async () => {
+test('the optional legacy submission workflow still targets an exact existing build', async () => {
   const expo = parse(await readFile(new URL('../apps/mobile/.eas/workflows/submit-existing.yml', import.meta.url), 'utf8'));
   assert.equal(expo.on.workflow_dispatch.inputs.build_id.required, true);
   assert.equal(expo.on.workflow_dispatch.inputs.asc_app_id.required, true);

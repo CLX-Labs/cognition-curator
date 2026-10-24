@@ -152,7 +152,13 @@ export default function Home() {
           >
             <Panel>
               <View style={s.row}>
-                <DeckArtwork id={deck.id} color={deck.color} icon={deck.icon} size={56} />
+                <DeckArtwork
+                  id={deck.id}
+                  color={deck.color}
+                  icon={deck.icon}
+                  imageDataUrl={deck.imageDataUrl}
+                  size={56}
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={[s.label, { fontSize: 17, lineHeight: 23 }]}>{deck.name}</Text>
                   <Text style={s.caption}>

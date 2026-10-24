@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { deckImageSchema } from './deck-image.ts';
 
 // Keep these wire contracts independent of the index module: the index re-exports
 // them alongside the core sync contracts.
@@ -35,6 +36,7 @@ export const sharedDeckSummarySchema = z.strictObject({
   description: z.string().max(10_000),
   color: z.string().regex(/^#[a-fA-F0-9]{6}$/),
   icon: z.string().max(50),
+  imageDataUrl: deckImageSchema.nullable().optional(),
 });
 export type SharedDeckSummary = z.infer<typeof sharedDeckSummarySchema>;
 export const sharedCardSchema = z.strictObject({

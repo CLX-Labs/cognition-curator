@@ -31,6 +31,7 @@ import {
 } from '@recollect/db';
 import { initialSchedule } from '@recollect/scheduler';
 import { assertShareableText, lockCommunityPair, requireUnblocked } from './community-safety.js';
+import { assertDeckImage } from './deck-images.js';
 
 type Snapshot = { deck: SharedDeckSummary; cards: SharedCard[] };
 type ListingRow = {
@@ -385,6 +386,7 @@ export class MarketplaceService {
         )
       ).rows[0]?.data;
       if (!deck) return unavailable();
+      assertDeckImage(deck.imageDataUrl);
       const size = (
         await tx.query<{ count: number; bytes: string }>(
           `SELECT count(*)::integer AS count,COALESCE(sum(octet_length((jsonb_build_object('id',c.data->'id') || ${contentSql('c')})::text)),0)::text AS bytes
@@ -416,6 +418,7 @@ export class MarketplaceService {
           description: deck.description,
           color: deck.color,
           icon: deck.icon,
+          ...(deck.imageDataUrl !== undefined ? { imageDataUrl: deck.imageDataUrl } : {}),
         },
         cards,
       };

@@ -77,7 +77,13 @@ function MarketplaceDetailForAccount({ id }: { id: string }) {
       leading={<Back label="Marketplace" onPress={() => router.dismissTo('/marketplace')} />}
       action={
         listing ? (
-          <DeckArtwork id={id} color={listing.deck.color} icon={listing.deck.icon} size={60} />
+          <DeckArtwork
+            id={id}
+            color={listing.deck.color}
+            icon={listing.deck.icon}
+            imageDataUrl={listing.deck.imageDataUrl}
+            size={60}
+          />
         ) : undefined
       }
       subtitle={

@@ -77,6 +77,33 @@ async function fixture(db = database()) {
 }
 
 describe('durable owner-isolated SQLite repository', () => {
+  it('keeps custom deck images in offline edits, durable outbox and acknowledged state', async () => {
+    const { repo, db, owner, device, deck } = await fixture();
+    const imageDataUrl = 'data:image/jpeg;base64,/9j/2Q==';
+    await repo.saveDeck({ ...deckContent(deck), imageDataUrl }, deck);
+    expect((await repo.snapshot()).decks[0]?.imageDataUrl).toBe(imageDataUrl);
+    const reopened = new Repository(db, owner, device, randomUUID, () => timestamp);
+    await reopened.initialize();
+    const operation = (await reopened.nextOperation())!;
+    expect(operation.type).toBe('deck.upsert');
+    expect(operation.payload).toMatchObject({ imageDataUrl });
+    const canonical = { ...deck, imageDataUrl, version: 2 };
+    await reopened.applyReceipt({
+      operationId: operation.operationId,
+      status: 'accepted',
+      canonical: { entity: 'deck', data: canonical },
+    });
+    expect((await reopened.snapshot()).decks[0]?.imageDataUrl).toBe(imageDataUrl);
+    await reopened.saveDeck({ ...deckContent(canonical), name: 'Renamed' }, canonical);
+    expect((await reopened.nextOperation())?.payload).toMatchObject({ imageDataUrl });
+  });
+  it('queues an explicit null when restoring default artwork without adding fields to legacy decks', async () => {
+    const { repo, deck } = await fixture();
+    expect(deckContent(deck)).not.toHaveProperty('imageDataUrl');
+    await repo.saveDeck({ ...deckContent(deck), imageDataUrl: null }, deck);
+    expect((await repo.nextOperation())?.payload).toMatchObject({ imageDataUrl: null });
+    expect((await repo.snapshot()).decks[0]?.imageDataUrl).toBeNull();
+  });
   it('persists review, scheduling, sequence and outbox together across reopening', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'recollect-mobile-'));
     directories.push(directory);

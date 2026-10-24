@@ -20,6 +20,7 @@ import { ProfileService } from './profile.js';
 import { CommunityService } from './community.js';
 import { CommunitySafetyService } from './community-safety.js';
 import { MarketplaceService } from './marketplace.js';
+import { legacyDeckImageResponse } from './deck-images.js';
 
 function generationLog(job: GenerationJob) {
   return {
@@ -108,6 +109,13 @@ export async function buildApp(options: {
   );
   await auth.routes(app);
   await app.register(async (secured) => {
+    secured.addHook('preSerialization', async (request, reply, payload) => {
+      const vary = reply.getHeader('Vary');
+      reply.header('Vary', [vary, 'X-Recollect-Deck-Images'].filter(Boolean).join(', '));
+      return request.headers['x-recollect-deck-images'] === '1'
+        ? payload
+        : legacyDeckImageResponse(payload);
+    });
     secured.addHook('preHandler', (request) => auth.authenticate(request));
     secured.addHook('preHandler', async (request) => {
       if (request.headers['x-recollect-scheduler'] === ALGORITHM_VERSION) return;

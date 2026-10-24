@@ -36,6 +36,7 @@ import {
 } from '@recollect/db';
 import { initialSchedule } from '@recollect/scheduler';
 import { assertShareableText, lockCommunityPair, requireUnblocked } from './community-safety.js';
+import { assertDeckImage } from './deck-images.js';
 
 type ShareSnapshot = { deck: SharedDeckSummary; cards: SharedCard[] };
 type ShareRow = {
@@ -332,6 +333,7 @@ export class CommunityService {
         )
       ).rows[0]?.data;
       if (!deck) return notFound();
+      assertDeckImage(deck.imageDataUrl);
       const cards = (
         await tx.query<{ data: Card }>(
           `SELECT data FROM recollect.cards WHERE owner_id=$1 AND deck_id=$2 AND data->>'deletedAt' IS NULL
@@ -349,6 +351,7 @@ export class CommunityService {
           description: deck.description,
           color: deck.color,
           icon: deck.icon,
+          ...(deck.imageDataUrl !== undefined ? { imageDataUrl: deck.imageDataUrl } : {}),
         },
         cards,
       };

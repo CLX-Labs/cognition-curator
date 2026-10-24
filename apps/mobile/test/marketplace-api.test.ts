@@ -189,6 +189,33 @@ it('requires review again if strict synchronization replaces the approved cards 
   expect(await repo.getState('marketplace-publication:' + deck.id)).toBeNull();
 });
 
+it('requires review again when synchronization changes the cover image before publication', async () => {
+  const { repo, ownerId, deck } = await fixture();
+  let state = { ...(await repo.snapshot()), pending: 0 };
+  const reviewed = reviewedMarketplaceSnapshot(state, deck.id);
+  vi.spyOn(repo, 'snapshot').mockImplementation(async () => state);
+  await expect(
+    publishMarketplaceDeck(
+      repo,
+      ownerId,
+      deck.id,
+      { showDownloadCount: false, showUsageStats: false },
+      async () => {
+        state = {
+          ...state,
+          decks: state.decks.map((item) => ({
+            ...item,
+            imageDataUrl: 'data:image/jpeg;base64,/9j/2Q==',
+          })),
+        };
+      },
+      reviewed.json,
+    ),
+  ).rejects.toThrow('changed since you reviewed');
+  expect(request).not.toHaveBeenCalled();
+  expect(await repo.getState('marketplace-publication:' + deck.id)).toBeNull();
+});
+
 it('clears a definitively rejected content precondition without discarding an ambiguous request', async () => {
   const { repo, ownerId, deck } = await fixture();
   vi.spyOn(repo, 'snapshot').mockResolvedValue({ ...(await repo.snapshot()), pending: 0 });

@@ -111,6 +111,7 @@ export function deckContent(deck: Deck | DeckInput): DeckInput {
     description: deck.description,
     color: deck.color,
     icon: deck.icon,
+    ...(deck.imageDataUrl !== undefined ? { imageDataUrl: deck.imageDataUrl } : {}),
     isSilenced: deck.isSilenced,
     silencedUntil: deck.silencedUntil,
   };

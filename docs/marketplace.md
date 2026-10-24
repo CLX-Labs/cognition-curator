@@ -1,6 +1,6 @@
 # Deck marketplace: first pass
 
-Work is isolated on `feature/deck-marketplace`. This is a free, signed-in deck catalog inside Recollect. Publishing a deck is separate from sharing it privately with a friend. This branch is an evaluation pass, not a public marketplace deployment. Returning to `main` restores the existing product; this branch has not applied migrations to production.
+This is a free, signed-in deck catalog inside Recollect, introduced in PR #35. Publishing a deck is separate from sharing it privately with a friend. Main deploys the API to Railway and delivers the app to TestFlight; the marketplace is available for beta testing.
 
 ## Ownership model
 
@@ -19,6 +19,27 @@ flowchart LR
 - A download creates new recipient-owned deck/card identifiers and fresh review schedules through the normal server sync feed. It never imports the creator's review history or schedule.
 - One technical receipt per learner/listing makes double taps, lost responses, and multiple devices return the same copy. A new published version does not overwrite an existing learner's edits. Restoring a removed copy or opting into an updated copy is separate future work.
 - Unpublishing prevents subsequent discovery and new downloads. Existing independent copies remain usable. Account deletion removes the creator's listings and marketplace attribution, while retaining other learners' own libraries.
+
+## Deck images
+
+Authors can tap a deck's image or open **Settings → Edit deck details** to choose,
+replace, or remove a photo. The system picker selects one image; the app crops and
+normalizes it into a bounded square JPEG without keeping its original metadata.
+Removing a custom image restores the generated pattern artwork. Changes save
+offline in the normal deck outbox and sync to the author's account.
+
+A cover belongs to the deck's content. Publishing or updating a publication
+includes that reviewed image in the versioned snapshot and content hash. Private
+edits do not replace a published cover automatically. New downloads and friend
+shares retain their snapshot's cover, while existing downloaded copies keep their
+own image and remain editable by the recipient.
+
+Images are capped at 180,000 encoded characters. Clients advertise
+`X-Recollect-Deck-Images: 1` to receive them. Older clients keep their original
+strict response shape, and an older deck edit that omits the image preserves the
+stored cover. An explicit `null` removes it. No storage service, new native module,
+or database migration is required; the optional field lives in existing JSONB
+deck and snapshot records.
 
 ## Settings and permissions
 

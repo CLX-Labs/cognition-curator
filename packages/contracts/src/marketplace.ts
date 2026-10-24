@@ -15,6 +15,9 @@ export function marketplaceSnapshotValue(deck: SharedDeckSummary, cards: readonl
       description: deck.description,
       color: deck.color,
       icon: deck.icon,
+      // Explicit null clears a cover in sync but represents the same reviewed
+      // content as an older deck that never had this optional field.
+      ...(typeof deck.imageDataUrl === 'string' ? { imageDataUrl: deck.imageDataUrl } : {}),
     },
     cards: cards
       .map((card) => ({

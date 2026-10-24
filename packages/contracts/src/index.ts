@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { deckImageSchema } from './deck-image.ts';
+export * from './deck-image.ts';
 export * from './account-deletion.ts';
 
 /** Wire format is deliberately explicit: UUIDs, UTC/offset ISO dates, seconds for intervals. */
@@ -74,6 +76,7 @@ export const deckInputSchema = z.strictObject({
   description: z.string().max(10_000),
   color: z.string().regex(/^#[a-fA-F0-9]{6}$/),
   icon: z.string().max(50),
+  imageDataUrl: deckImageSchema.nullable().optional(),
   isSilenced: z.boolean(),
   silencedUntil: dateTimeSchema.nullable(),
 });
@@ -288,8 +291,17 @@ export type ImportResponse = z.infer<typeof importResponseSchema>;
 
 /** Never spread a server record into a command: ownership and schedule are server-owned. */
 export function deckInput(deck: Deck | DeckInput): DeckInput {
-  const { id, name, description, color, icon, isSilenced, silencedUntil } = deck;
-  return { id, name, description, color, icon, isSilenced, silencedUntil };
+  const { id, name, description, color, icon, imageDataUrl, isSilenced, silencedUntil } = deck;
+  return {
+    id,
+    name,
+    description,
+    color,
+    icon,
+    ...(imageDataUrl !== undefined ? { imageDataUrl } : {}),
+    isSilenced,
+    silencedUntil,
+  };
 }
 export function cardInput(card: Card | CardInput): CardInput {
   const { id, deckId, front, back, hint, explanation, tags, aiGenerated } = card;

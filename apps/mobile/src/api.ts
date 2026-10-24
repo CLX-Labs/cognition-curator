@@ -161,6 +161,7 @@ export class ApiClient {
         headers: {
           Accept: 'application/json',
           'X-Recollect-Scheduler': ALGORITHM_VERSION,
+          'X-Recollect-Deck-Images': '1',
           ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
           ...(options.token ? { Authorization: 'Bearer ' + options.token } : {}),
         },

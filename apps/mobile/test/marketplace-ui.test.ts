@@ -44,7 +44,10 @@ vi.mock('../src/store', () => ({
   }),
 }));
 vi.mock('../src/profile', () => ({ useProfile: () => ({ profile: { name: 'Nico' } }) }));
-vi.mock('../src/brand-patterns', () => ({ BrandPattern: () => null, DeckArtwork: () => null }));
+vi.mock('../src/brand-patterns', () => ({
+  BrandPattern: () => null,
+  DeckArtwork: (props: object) => React.createElement('deck-art', props),
+}));
 vi.mock('../src/ui', () => ({
   Screen: ({ children, ...props }: { children: React.ReactNode }) =>
     React.createElement('screen', props, children),
@@ -167,11 +170,13 @@ it('requires a deliberate rights acknowledgement and keeps the publication form 
   expect(rig.request.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(
     0,
   );
-  await act(async () => toggle('I have the rights to share this deck').props.onValueChange(true));
+  await act(async () =>
+    toggle('I have the rights to share this deck and image').props.onValueChange(true),
+  );
   await press('Publish public copy');
   expect(body()).toContain('Connection interrupted');
   expect(body()).toContain('every card’s question');
-  expect(toggle('I have the rights to share this deck').props.value).toBe(true);
+  expect(toggle('I have the rights to share this deck and image').props.value).toBe(true);
   expect(button('Retry saved publication').props.disabled).toBe(false);
   expect(toggle('Show download count').props.disabled).toBe(true);
   expect(body()).toContain('previous publication response was interrupted');
@@ -182,6 +187,24 @@ it('requires a deliberate rights acknowledgement and keeps the publication form 
     showDownloadCount: false,
     showUsageStats: false,
   });
+});
+it('shows the reviewed image and explicitly includes it in public visibility and rights consent', async () => {
+  const photo = 'data:image/jpeg;base64,/9j/2Q==';
+  rig.data.decks[0]!.imageDataUrl = photo;
+  rig.request.mockImplementation(async (path) => {
+    if (path === '/v1/marketplace/mine') return { listings: [] };
+    if (path === '/v1/marketplace/downloads') return { downloads: [] };
+    throw new Error('Unexpected request');
+  });
+  await mount(React.createElement(DeckMarketplace, { deckId }));
+  await act(async () => renderer!.root.findByType('pressable').props.onPress());
+  await press('Publish this deck…');
+  expect(renderer!.root.findByType('deck-art').props.imageDataUrl).toBe(photo);
+  expect(body()).toContain('deck image');
+  expect(body()).toContain('cover image');
+  expect(toggle('I have the rights to share this deck and image').props.value).toBe(false);
+  expect(button('Publish public copy').props.disabled).toBe(true);
+  expect(rig.request.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
 });
 
 it('does not substitute zero or leak returned metrics when the owner hides either metric', async () => {
@@ -218,7 +241,9 @@ it('freezes the reviewed publication and requires a new acknowledgement when its
   await mount(React.createElement(DeckMarketplace, { deckId }));
   await act(async () => renderer!.root.findByType('pressable').props.onPress());
   await press('Publish this deck…');
-  await act(async () => toggle('I have the rights to share this deck').props.onValueChange(true));
+  await act(async () =>
+    toggle('I have the rights to share this deck and image').props.onValueChange(true),
+  );
   rig.data = {
     ...rig.data,
     decks: rig.data.decks.map((deck) => ({ ...deck, name: 'Unseen remote title' })),
@@ -235,7 +260,7 @@ it('freezes the reviewed publication and requires a new acknowledgement when its
   );
   await press('Review latest cards');
   expect(body()).toContain('Unseen remote title');
-  expect(toggle('I have the rights to share this deck').props.value).toBe(false);
+  expect(toggle('I have the rights to share this deck and image').props.value).toBe(false);
   expect(button('Publish public copy').props.disabled).toBe(true);
 });
 

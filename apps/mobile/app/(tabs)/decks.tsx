@@ -59,7 +59,13 @@ export default function Decks() {
             >
               <Panel style={{ padding: 20, borderLeftWidth: 4, borderLeftColor: deck.color }}>
                 <View style={[s.row, { alignItems: 'flex-start' }]}>
-                  <DeckArtwork id={deck.id} color={deck.color} icon={deck.icon} size={68} />
+                  <DeckArtwork
+                    id={deck.id}
+                    color={deck.color}
+                    icon={deck.icon}
+                    imageDataUrl={deck.imageDataUrl}
+                    size={68}
+                  />
                   <View style={{ flex: 1, gap: 5 }}>
                     <Text style={[s.sectionTitle, { fontSize: 18 }]}>{deck.name}</Text>
                     {!!deck.description && (

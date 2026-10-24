@@ -20,6 +20,7 @@ import {
   type Database,
   type Transaction,
 } from '@recollect/db';
+import { assertDeckImage } from './deck-images.js';
 
 export async function getDeck(
   tx: Transaction,
@@ -46,6 +47,7 @@ export async function getCard(
   ).rows[0]?.data;
 }
 export async function saveDeck(tx: Transaction, deck: Deck): Promise<void> {
+  assertDeckImage(deck.imageDataUrl);
   await tx.query(
     'INSERT INTO recollect.decks(owner_id,id,data) VALUES($1,$2,$3) ON CONFLICT(owner_id,id) DO UPDATE SET data=excluded.data',
     [deck.ownerId, deck.id, deck],
@@ -113,6 +115,9 @@ export async function applyOperation(
     } else
       deck = {
         ...op.payload,
+        ...(op.payload.imageDataUrl === undefined && existing?.imageDataUrl !== undefined
+          ? { imageDataUrl: existing.imageDataUrl }
+          : {}),
         ownerId: owner,
         createdAt: existing?.createdAt ?? op.createdAt,
         updatedAt: now,

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import weave from '../../landing/assets/patterns/weave.png';
 import flow from '../../landing/assets/patterns/flow.png';
 import orbit from '../../landing/assets/patterns/orbit.png';
 import { colors } from './brand';
+import { MAX_DECK_IMAGE_LENGTH } from '@recollect/contracts';
 
 export type BrandPatternVariant = 'weave' | 'flow' | 'orbit';
 
@@ -44,12 +45,22 @@ export function DeckArtwork({
   color,
   icon,
   size = 72,
+  imageDataUrl,
 }: {
   id: string;
   color: string;
   icon: string | null | undefined;
   size?: number;
+  imageDataUrl?: string | null;
 }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const photo =
+    typeof imageDataUrl === 'string' &&
+    imageDataUrl.startsWith('data:image/jpeg;base64,') &&
+    imageDataUrl.length <= MAX_DECK_IMAGE_LENGTH &&
+    imageDataUrl !== failed
+      ? imageDataUrl
+      : null;
   const hash = Array.from(id).reduce(
     (value, character) => (value * 31 + character.charCodeAt(0)) | 0,
     0,
@@ -64,7 +75,17 @@ export function DeckArtwork({
       importantForAccessibility="no-hide-descendants"
       style={[styles.deck, { width: size, height: size }]}
     >
-      <BrandPattern variant={variant} width={size} height={size} />
+      {photo ? (
+        <Image
+          source={{ uri: photo }}
+          accessible={false}
+          resizeMode="cover"
+          style={{ width: size, height: size }}
+          onError={() => setFailed(photo)}
+        />
+      ) : (
+        <BrandPattern variant={variant} width={size} height={size} />
+      )}
       <View
         style={[
           styles.icon,

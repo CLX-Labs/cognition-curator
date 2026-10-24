@@ -76,6 +76,9 @@ describe('rotating authentication and account race boundaries', () => {
     expect(fetcher.mock.calls[0][0]).toBe(
       'https://cognition-curator-production.up.railway.app/v1/generations',
     );
+    expect((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].headers).toMatchObject({
+      'X-Recollect-Deck-Images': '1',
+    });
   });
   it('turns a native hostname error into a retryable connection error without losing the session', async () => {
     const client = new ApiClient();

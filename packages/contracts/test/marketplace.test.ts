@@ -64,6 +64,10 @@ describe('marketplace privacy contracts', () => {
       hash(marketplaceSnapshotValue(deck, cards)),
     );
     expect(marketplaceSnapshotJson(deck, [...cards].reverse())).toBe(json);
+    expect(marketplaceSnapshotJson({ ...deck, imageDataUrl: null }, cards)).toBe(json);
+    expect(
+      marketplaceSnapshotJson({ ...deck, imageDataUrl: 'data:image/jpeg;base64,/9j/2Q==' }, cards),
+    ).not.toBe(json);
     const withMetadata = cards.map((card) => ({
       ...card,
       ownerId: randomUUID(),

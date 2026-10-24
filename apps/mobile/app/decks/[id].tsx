@@ -102,7 +102,25 @@ export default function DeckDetail() {
           </Pressable>
         </View>
       }
-      action={<DeckArtwork id={deck.id} color={deck.color} icon={deck.icon} size={56} />}
+      action={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Change deck image"
+          style={{ minWidth: 56, minHeight: 56 }}
+          onPress={() => {
+            setSettingsOpen(true);
+            setEditing(true);
+          }}
+        >
+          <DeckArtwork
+            id={deck.id}
+            color={deck.color}
+            icon={deck.icon}
+            imageDataUrl={deck.imageDataUrl}
+            size={56}
+          />
+        </Pressable>
+      }
       subtitle={
         cards.length + ' cards · ' + (activeDeck(deck) ? due.length + ' due' : 'Reviews paused')
       }
@@ -117,51 +135,6 @@ export default function DeckDetail() {
         </View>
       }
     >
-      {!!deck.description && (
-        <Text numberOfLines={2} style={[s.body, { fontSize: 14, lineHeight: 20 }]}>
-          {deck.description}
-        </Text>
-      )}
-      {cards.length > 0 && (
-        <View style={s.row}>
-          {due.length > 0 && (
-            <View style={{ flex: 1 }}>
-              <Button
-                title={'Review ' + due.length + ' due'}
-                variant="secondary"
-                size="compact"
-                onPress={() =>
-                  router.push({
-                    pathname: '/review',
-                    params: { deckId: deck.id, practice: 'false' },
-                  })
-                }
-              />
-            </View>
-          )}
-          <View style={{ flex: 1 }}>
-            <Button
-              title={due.length ? 'Practice all' : 'Practice this deck'}
-              variant="secondary"
-              size="compact"
-              onPress={() =>
-                router.push({
-                  pathname: '/review',
-                  params: { deckId: deck.id, practice: 'true' },
-                })
-              }
-            />
-          </View>
-        </View>
-      )}
-      <DeckSharing key={deck.id} deckId={deck.id} />
-      <DeckMarketplace key={'marketplace:' + deck.id} deckId={deck.id} />
-      <Button
-        title="Deck insights →"
-        variant="ghost"
-        size="compact"
-        onPress={() => router.push({ pathname: '/insights', params: { deckId: deck.id } })}
-      />
       {settingsOpen && (
         <Panel style={{ padding: 18 }}>
           {editing ? (
@@ -209,6 +182,51 @@ export default function DeckDetail() {
           )}
         </Panel>
       )}
+      {!!deck.description && (
+        <Text numberOfLines={2} style={[s.body, { fontSize: 14, lineHeight: 20 }]}>
+          {deck.description}
+        </Text>
+      )}
+      {cards.length > 0 && (
+        <View style={s.row}>
+          {due.length > 0 && (
+            <View style={{ flex: 1 }}>
+              <Button
+                title={'Review ' + due.length + ' due'}
+                variant="secondary"
+                size="compact"
+                onPress={() =>
+                  router.push({
+                    pathname: '/review',
+                    params: { deckId: deck.id, practice: 'false' },
+                  })
+                }
+              />
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Button
+              title={due.length ? 'Practice all' : 'Practice this deck'}
+              variant="secondary"
+              size="compact"
+              onPress={() =>
+                router.push({
+                  pathname: '/review',
+                  params: { deckId: deck.id, practice: 'true' },
+                })
+              }
+            />
+          </View>
+        </View>
+      )}
+      <DeckSharing key={deck.id} deckId={deck.id} />
+      <DeckMarketplace key={'marketplace:' + deck.id} deckId={deck.id} />
+      <Button
+        title="Deck insights →"
+        variant="ghost"
+        size="compact"
+        onPress={() => router.push({ pathname: '/insights', params: { deckId: deck.id } })}
+      />
       {cards.length > 0 && (
         <Field
           label="Search cards"

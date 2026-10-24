@@ -64,6 +64,7 @@ vi.mock('../src/answer-generator', () => ({
 }));
 vi.mock('../src/brand-patterns', () => ({ BrandPattern: () => null, DeckArtwork: () => null }));
 vi.mock('../src/deck-sharing', () => ({ default: () => null }));
+vi.mock('../src/deck-photo', () => ({ chooseDeckPhoto: async () => null }));
 // Publishing has its own lifecycle suite; keep this fixture focused on local card editing.
 vi.mock('../src/deck-marketplace', () => ({ default: () => null }));
 vi.mock('../src/marketplace-ui', () => ({ MarketplaceEntry: () => null }));
@@ -335,6 +336,17 @@ it('hands generation an explicit deck destination and keeps Add card one tap awa
     pathname: '/cards/[id]',
     params: { id: 'new', deckId: 'deck-id' },
   });
+});
+it('opens the image editor by tapping the deck header artwork', async () => {
+  rig.params = { id: 'deck-id' };
+  await act(async () => {
+    renderer = create(React.createElement(DeckDetail));
+  });
+  const action = renderer!.root.findByType('screen').props.action;
+  expect(action.props.accessibilityLabel).toBe('Change deck image');
+  await act(async () => action.props.onPress());
+  expect(button('Choose image')).toBeDefined();
+  expect(button('Save changes')).toBeDefined();
 });
 it('opens a deck from the entire row and matches its description in library search', async () => {
   rig.deck = { ...rig.deck!, description: 'Fiction and authors' };

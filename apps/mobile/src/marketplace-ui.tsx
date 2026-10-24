@@ -106,6 +106,7 @@ export function MarketplaceListingCard({ listing }: { listing: MarketplaceListin
             id={listing.id}
             color={listing.deck.color}
             icon={listing.deck.icon}
+            imageDataUrl={listing.deck.imageDataUrl}
             size={60}
           />
           <View style={{ flex: 1, gap: 4 }}>

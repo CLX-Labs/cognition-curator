@@ -94,6 +94,7 @@ export function SharedDeckSummary({
             id={share.deck.id}
             color={share.deck.color}
             icon={share.deck.icon}
+            imageDataUrl={share.deck.imageDataUrl}
             size={48}
           />
           <View style={{ flex: 1, gap: 3 }}>
@@ -333,6 +334,7 @@ export function SharedDeckPreview({
               id={share.deck.id}
               color={share.deck.color}
               icon={share.deck.icon}
+              imageDataUrl={share.deck.imageDataUrl}
               size={56}
             />
             <View style={{ flex: 1, gap: 4 }}>

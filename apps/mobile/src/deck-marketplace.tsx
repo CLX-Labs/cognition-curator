@@ -20,6 +20,8 @@ import {
   MarketplaceUsageConsent,
 } from './marketplace-ui';
 import { Button, Panel, Text, colors, s } from './ui';
+import { type SharedDeckSummary } from '@recollect/contracts';
+import { DeckArtwork } from './brand-patterns';
 
 export default function DeckMarketplace({ deckId }: { deckId: string }) {
   const { data, repository, sync } = useStore();
@@ -58,6 +60,10 @@ export default function DeckMarketplace({ deckId }: { deckId: string }) {
   }, [data.decks, data.cards, deckId]);
   const reviewChanged = confirm && !pendingPublication && reviewed?.json !== currentReview?.json;
   const listing = result.data?.listing;
+  const reviewedDeck = useMemo(
+    () => (reviewed ? (JSON.parse(reviewed.json) as { deck: SharedDeckSummary }).deck : null),
+    [reviewed],
+  );
   const copy = result.data?.download;
   async function publish() {
     if (!repository || !rights || !reviewed || reviewChanged) return;
@@ -255,7 +261,8 @@ export default function DeckMarketplace({ deckId }: { deckId: string }) {
             <>
               <Text style={s.body}>
                 Publish a snapshot of this deck so other people can download their own copy. Your
-                private edits and review history are never published automatically.
+                private edits, deck image changes and review history are never published
+                automatically.
               </Text>
               <Button
                 title="Publish this deck…"
@@ -281,11 +288,29 @@ export default function DeckMarketplace({ deckId }: { deckId: string }) {
                 {pendingPublication?.reviewedCardCount ?? reviewed?.cardCount} cards · Published as{' '}
                 {profile.name}
               </Text>
+              {!!reviewedDeck && !pendingPublication && (
+                <View style={[s.row, { alignItems: 'center', gap: 16 }]}>
+                  <DeckArtwork
+                    id={reviewedDeck.id}
+                    color={reviewedDeck.color}
+                    icon={reviewedDeck.icon}
+                    imageDataUrl={reviewedDeck.imageDataUrl}
+                    size={96}
+                  />
+                  <View style={{ flex: 1, gap: 5 }}>
+                    <Text style={s.label}>Cover in this snapshot</Text>
+                    <Text style={s.caption}>
+                      This image becomes visible in the marketplace and is included in new
+                      downloaded copies.
+                    </Text>
+                  </View>
+                </View>
+              )}
               <Text style={s.body}>
-                Your display name, deck name, description, and every card’s question, answer, hint,
-                explanation, and tags will be visible to all signed-in users. Review them for
-                personal information and accuracy. Downloads become independent copies that you
-                cannot recall.
+                Your display name, deck name, description, deck image, and every card’s question,
+                answer, hint, explanation, and tags will be visible to all signed-in users. Review
+                them for personal information and accuracy. Downloads become independent copies that
+                you cannot recall.
               </Text>
               {reviewChanged && (
                 <>
@@ -308,7 +333,8 @@ export default function DeckMarketplace({ deckId }: { deckId: string }) {
                   current edits will not be published. Its saved download count is{' '}
                   {pendingPublication.showDownloadCount ? 'visible' : 'hidden'} and practice trends
                   are {pendingPublication.showUsageStats ? 'visible when eligible' : 'hidden'}. You
-                  can change those settings after recovering the publication.
+                  can change those settings after recovering the publication. Its saved cover may
+                  differ from your current private deck image.
                 </Text>
               )}
               {!!listing && (
@@ -337,8 +363,8 @@ export default function DeckMarketplace({ deckId }: { deckId: string }) {
                 </>
               )}
               <MarketplaceToggle
-                title="I have the rights to share this deck"
-                detail="I have reviewed these cards and agree to the community guidelines. I have permission to publish this material."
+                title="I have the rights to share this deck and image"
+                detail="I have reviewed the cards and image and agree to the community guidelines. I have permission to publish this material, including the cover image."
                 value={rights}
                 disabled={!!result.busy}
                 onChange={setRights}

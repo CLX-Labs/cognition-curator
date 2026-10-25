@@ -848,6 +848,30 @@ it.each(['cardId', 'id'] as const)(
   },
 );
 
+it('opens and rates the widget’s specific future-due card even when no cards are due', async () => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+  const future = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  rig.data = {
+    ...rig.data!,
+    cards: [first, second].map((item) => ({
+      ...item,
+      schedule: { ...item.schedule, dueAt: future },
+    })),
+  };
+  // This is the route supplied by cognitioncurator://review/<card-id>.
+  rig.params = { id: second.id };
+  await mount();
+  expect(text()).toContain(second.front);
+  expect(text()).not.toContain(first.front);
+  expect(text()).not.toContain('All caught up.');
+  await flip();
+  expect(text()).toContain(second.back);
+  await press('I remember →');
+  expect(rig.rate).toHaveBeenCalledExactlyOnceWith(second.id, 'good', 0);
+  expect(text()).toContain('SESSION COMPLETE');
+  expect(random).not.toHaveBeenCalled();
+});
+
 it('saving never inserts sync or storage-status banners into the next card or completion', async () => {
   rig.mutate.mockImplementation(async (work) => {
     await work({ rateCard: rig.rate } as unknown as Repository);

@@ -71,6 +71,16 @@ Retain the reader for the supported upgrade window. Removing it needs evidence a
 
 Home Screen small/medium widgets retain open-to-review behavior. The Control Center button opens the same review route. Both read an owner-scoped, atomically encoded snapshot. They perform no network requests and do not apply reviews in a widget process. The due count is a snapshot from the app, not a guarantee of continuous background recalculation. The platform decides when requested refreshes appear; an already rendered timeline cannot be remotely erased synchronously.
 
+The app supplies the next due card when one exists. With nothing due, it supplies
+a random saved card, including cards scheduled for later or in paused decks. That
+fallback stays selected across unchanged refreshes and is replaced if removed;
+a newly due card takes priority. The due count remains accurate at zero during
+this fallback, and tapping opens the selected card directly. A truly empty library
+or a signed-out account has no personal card to display. Logout and account
+switches still clear the previous owner's content. Preview text is bounded before
+crossing the native bridge so long multilingual cards cannot exceed its payload
+limit. These selection changes use the existing snapshot format and support OTA.
+
 The plugin declares the extension and App Group in EAS app-extension metadata, adds source/resource and embed phases, and assigns entitlement files in both Debug and Release. The generated target is `CognitionCuratorWidget`; installed continuity depends on the preserved bundle/kind rather than the old Xcode target's display name. The plugin refuses a different main bundle identity instead of accidentally attaching the old group's data to a new application.
 
 The source uses a small retained Swift WidgetKit target instead of making installed-widget survival depend on switching widget frameworks at the same time as changing storage. A future Expo Widgets replacement can be evaluated after continuity is proven. Native targets, modules, entitlements, and these widget Swift sources require a new binary; a JS OTA update alone cannot install them.

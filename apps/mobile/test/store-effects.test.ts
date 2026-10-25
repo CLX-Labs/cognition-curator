@@ -407,6 +407,7 @@ it('real library changes update the UI while preserving the mounted editor draft
 });
 
 it('the clock still updates due-card state without a database edit or navigation remount', async () => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0.99);
   const timestamp = new Date().toISOString();
   const deck: Deck = {
     id: 'deck',
@@ -436,18 +437,40 @@ it('the clock still updates due-card state without a database edit or navigation
     createdAt: timestamp,
     updatedAt: timestamp,
     deletedAt: null,
-    schedule: initialSchedule(new Date(Date.now() + 10_000).toISOString()),
+    schedule: initialSchedule(new Date(Date.now() + 60_000).toISOString()),
   };
-  rig.snapshots.set('owner-a', { ...empty(), decks: [deck], cards: [card] });
+  const future = {
+    ...card,
+    id: 'future-card',
+    front: 'A future question',
+    schedule: initialSchedule(new Date(Date.now() + 120_000).toISOString()),
+  };
+  rig.snapshots.set('owner-a', { ...empty(), decks: [deck], cards: [card, future] });
   await mount();
   const before = store.data;
+  expect(rig.publishWidget.mock.calls.at(-1)?.[0]).toMatchObject({
+    dueCount: 0,
+    hasCards: true,
+    topCard: { id: future.id, question: future.front },
+  });
+  const writes = rig.publishWidget.mock.calls.length;
+  const selections = random.mock.calls.length;
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(45_000);
+  });
+  expect(store.data).toBe(before);
+  expect(rig.publishWidget).toHaveBeenCalledTimes(writes);
+  expect(random).toHaveBeenCalledTimes(selections);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(15_000);
   });
   expect(store.data).not.toBe(before);
   expect(store.data.cards).toBe(before.cards);
   expect(store.data.decks).toBe(before.decks);
-  expect(rig.publishWidget.mock.calls.at(-1)?.[0]).toMatchObject({ dueCount: 1 });
+  expect(rig.publishWidget.mock.calls.at(-1)?.[0]).toMatchObject({
+    dueCount: 1,
+    topCard: { id: card.id },
+  });
   expect(mounts).toBe(1);
 });
 

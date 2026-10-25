@@ -22,6 +22,7 @@ import { api, type AccountDeletionRecovery } from './api';
 import { SyncEngine } from './sync';
 import { publishWidget, setWidgetOwner } from '../modules/recollect-widget';
 import { WidgetCoordinator } from './widget-coordinator';
+import { selectWidgetCard, widgetCardPreview } from './widget-card';
 import { createRefreshQueue, shareSnapshot } from './store-refresh';
 
 const widgets = new WidgetCoordinator({ publishWidget, setWidgetOwner });
@@ -72,6 +73,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     repository: Repository;
     data: LocalSnapshot;
     dueIds: string;
+    widgetFallbackId: string | null;
   } | null>(null);
 
   const readSnapshot = useCallback(async () => {
@@ -85,9 +87,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let shared = previous ? shareSnapshot(previous.data, next) : next;
     // Due cards can change with the clock even when SQLite content is unchanged.
     if (previous && shared === previous.data && previous.dueIds !== dueIds) shared = { ...shared };
-    snapshot.current = { repository: current, data: shared, dueIds };
+    const first = selectWidgetCard(next, due, previous?.widgetFallbackId);
+    snapshot.current = {
+      repository: current,
+      data: shared,
+      dueIds,
+      widgetFallbackId: due.length ? null : (first?.id ?? null),
+    };
     setData(shared);
-    const first = due[0];
     // Native widget work must not block hydration, editing, or synchronization.
     void widgets
       .publish({
@@ -96,12 +103,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         hasCards: next.cards.length > 0,
         updatedAt: new Date().toISOString(),
         topCard: first
-          ? {
-              id: first.id,
-              question: first.front,
-              answer: first.back,
-              deckName: next.decks.find((d) => d.id === first.deckId)?.name ?? 'Your cards',
-            }
+          ? widgetCardPreview(
+              first,
+              next.decks.find((d) => d.id === first.deckId)?.name ?? 'Your cards',
+            )
           : null,
       })
       .then(() => {

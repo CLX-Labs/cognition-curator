@@ -229,13 +229,13 @@
       revealed = !revealed;
       elements['demo-answer'].hidden = !revealed;
       elements['demo-prompt'].hidden = revealed;
-      elements['demo-flip-label'].textContent = revealed ? 'Show question' : 'Show answer';
+      elements['demo-flip-label'].textContent = revealed ? 'Hide answer' : 'Show answer';
       card.classList.toggle('is-revealed', revealed);
       card.setAttribute('aria-pressed', String(revealed));
       card.setAttribute(
         'aria-label',
         revealed
-          ? `${currentCard().front}. ${currentCard().back} Show question.`
+          ? `${currentCard().front}. ${currentCard().back} Hide answer.`
           : `${currentCard().front}. Show answer.`,
       );
       elements['demo-announcement'].textContent = revealed ? currentCard().back : describeCard();
@@ -370,6 +370,16 @@
         note.textContent = beta
           ? 'Available in TestFlight for iPhone.'
           : 'Available on the App Store for iPhone.';
+      const downloadFaq = document.getElementById('download-faq');
+      if (downloadFaq)
+        downloadFaq.textContent = beta
+          ? 'Recollect is available to test on iPhone through TestFlight. Use “Join the iPhone beta” to check whether places are available.'
+          : 'Recollect is available on the App Store for iPhone. Choose “Get Recollect for iPhone” to download it.';
+      const availabilityDescription = document.getElementById('availability-description');
+      if (availabilityDescription)
+        availabilityDescription.textContent = beta
+          ? 'Try Recollect on iPhone through TestFlight, or join the waitlist for availability updates.'
+          : 'Get Recollect for iPhone, or join the waitlist for availability updates.';
     } catch {
       // Keep the preview links when a public download URL has not been configured.
     }

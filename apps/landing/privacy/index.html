@@ -23,7 +23,7 @@
     <main id="main" class="information-page wrap">
       <span class="eyebrow">YOUR INFORMATION</span>
       <h1>Privacy policy.</h1>
-      <p class="information-date">Last updated: October 23, 2026</p>
+      <p class="information-date">Last updated: October 26, 2026</p>
       <p class="information-lede">Recollect is a place for your learning, provided by Collect Software. This policy explains what the Recollect app and website handle, why, and what happens when you share.</p>
       <p>For questions about this policy or your information, use our <a href="/support/">support page</a> or email <a data-support-email href="mailto:collectsoftwarev2@gmail.com">collectsoftwarev2@gmail.com</a>.</p>
       <section aria-labelledby="information-title">
@@ -31,7 +31,7 @@
         <ul>
           <li><strong>Your account:</strong> your Sign in with Apple identifier, the email address Apple provides (which may be a private relay address), your name, and an optional profile photo. We don’t receive your Apple password.</li>
           <li><strong>Your learning content:</strong> decks, cards, answers, hints, edits, AI drafts and requests, review ratings and times, scheduling information, and synchronization records. Imports can also include older learning content and recovery records.</li>
-          <li><strong>Your connections and safety choices:</strong> friend invitations, accepted connections, shared deck snapshots, progress-sharing permissions, blocked accounts, and reports you submit. Reports can include your description and a snapshot of an identified shared deck for private review.</li>
+          <li><strong>Your connections, publications, and safety choices:</strong> friend invitations, accepted connections, shared and Marketplace deck snapshots, publication settings, download records, progress-sharing and practice-contribution permissions, blocked accounts, and reports you submit. Reports can include your description and a snapshot of an identified deck for private review.</li>
           <li><strong>Support and website forms:</strong> the email address and message you submit for support, or your email and optional learning interest when you join the availability waitlist.</li>
           <li><strong>Service diagnostics:</strong> technical request and error information used to operate, secure, and troubleshoot the API, website, and app update delivery.</li>
         </ul>
@@ -50,11 +50,18 @@
       </section>
       <section aria-labelledby="sharing-title">
         <h2 id="sharing-title">Sharing with friends</h2>
-        <p>Your library is not a public directory. Friend connections use invitations, and sharing a deck publishes a snapshot to the chosen friend. A recipient who accepts gets their own copy of those cards.</p>
+        <p>Your library stays private unless you choose to share a deck or publish it in Marketplace. Friend connections use invitations, and sharing a deck sends a snapshot to the chosen friend. A recipient who accepts gets their own copy of those cards.</p>
         <p>Detailed progress sharing is a separate choice. When you enable it for a shared deck, the other participant can see the allowed cards’ review history and recall patterns, including earlier and future reviews covered by that permission. These are self-reported “remembered” or “not sure” ratings, not objective test scores.</p>
         <p>You can stop progress sharing, revoke a shared deck, or remove a connection to stop future access through the sharing feature. Copies already accepted into another person’s library are separate content and are not recalled by revoking a share.</p>
         <p>You can report a concern or block a person from their page in Friends. Reports go to a private queue for operator review and are not published to other users. Blocking removes the connection, revokes shared-deck and progress access, and prevents new invitations or shares between the accounts. Unblocking allows a new invitation; it does not restore the earlier friendship or permissions.</p>
         <p>Keep invite links private. The invitation webpage does not accept an invite automatically, store its code in browser storage, or include the code in its social preview metadata.</p>
+      </section>
+      <section aria-labelledby="marketplace-title">
+        <h2 id="marketplace-title">Publishing and downloading decks</h2>
+        <p>Marketplace publication is separate from friend sharing. Your published snapshot, including its cards, deck image, and publisher name, is available to signed-in learners. Downloads become independent copies. Private edits or deletion of your original deck do not change the published snapshot; publish an update to change it, or unpublish it to stop new downloads. Existing copies remain with the people who downloaded them.</p>
+        <p>Publishers can show or hide download counts and aggregate practice trends. Both are hidden by default. Each learner separately chooses whether reviews of a downloaded deck contribute to practice trends; contribution is off by default. Trends cover the last 30 days and appear only when at least five eligible learners contribute reviews. They show activity ranges and recall patterns, without names or individual review histories.</p>
+        <p>Change your contribution choice in <strong>You → Downloads &amp; practice privacy</strong>. Turning it off removes your past and future contribution from subsequent results. Turning it back on starts a new permission period; earlier activity is not included. Download records remain for duplicate prevention even when counts are hidden. Information already seen or saved by someone else cannot be recalled.</p>
+        <p>On a Marketplace listing, choose <strong>Report this deck</strong> or <strong>Block</strong> followed by the publisher’s name. Reports include the reported snapshot for private operator review. Blocking prevents Marketplace access between the accounts and stops your practice contribution to that publisher. It also ends any friendship and shared progress access between you; independent downloaded copies remain in your libraries.</p>
       </section>
       <section aria-labelledby="providers-title">
         <h2 id="providers-title">Services that help Recollect run</h2>
@@ -78,7 +85,7 @@
         <h2 id="deletion-title">Deleting your account</h2>
         <p>In <strong>You → Delete account</strong>, you can export your library first, type <strong>DELETE</strong>, and confirm with a fresh Apple sign-in. When the server accepts the request, account access is disabled. The app distinguishes an accepted request that is still pending from completed permanent deletion. If the connection ends before confirmation, the app keeps a recovery record so you can check or retry the same request.</p>
         <p>After an accepted receipt, the app removes the current account’s local library, drafts, profile cache, and widget data from that device. Server erasure is processed separately and remains pending until the Apple sign-in connection is revoked and owned server records are removed. The app shows an estimated completion time only when one has been configured; otherwise it shows the pending status and any action needed.</p>
-        <p>Server erasure removes owned account and learning data, sharing access, and associated community records. Friends may keep independent deck copies they already accepted. A minimal deletion record, including request references, status, and a hashed Apple sign-in identifier, is retained to recognize retries and prevent the erased account from being restored by an older sign-in.</p>
+        <p>Server erasure removes owned account and learning data, Marketplace listings, sharing access, and associated community records. Other people keep independent deck copies they already downloaded or accepted. A minimal deletion record, including request references, status, and a hashed Apple sign-in identifier, is retained to recognize retries and prevent the erased account from being restored by an older sign-in.</p>
         <p>Exports you saved elsewhere and older native recovery files whose ownership has not been confirmed are separate from the current account’s local library. Contact <a href="/support/">support</a> for help with those files or a pending deletion, and include your request reference if one is shown.</p>
       </section>
       <section aria-labelledby="changes-title">

@@ -39,7 +39,7 @@
   }
 
   // This is a public, owner-configured destination, never an invite parameter.
-  // A missing or invalid link keeps the honest beta-access fallback in the HTML.
+  // A missing or invalid link keeps the availability-waitlist fallback in the HTML.
   const downloadUrl = window.RECOLLECT_SITE?.downloadUrl;
   if (typeof downloadUrl !== 'string') return;
   try {
@@ -50,7 +50,7 @@
     downloadLink.href = url.href;
     downloadLink.textContent = beta ? 'Join the iPhone beta ↗' : 'Get Recollect for iPhone ↗';
     downloadNote.textContent = beta
-      ? 'Install Recollect through TestFlight, then come back to this invitation. If the beta is full, request access on the Recollect homepage.'
+      ? 'Install Recollect through TestFlight, then come back to this invitation. If the beta is full, join the waitlist on the Recollect homepage for availability updates.'
       : 'Download Recollect from the App Store, then come back to this invitation to connect with your friend.';
   } catch {
     // Keep the useful local fallback when a public Apple link is not ready.

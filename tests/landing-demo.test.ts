@@ -88,6 +88,8 @@ function setup(
     'demo-flip-label',
     'demo-progress',
     'demo-feedback',
+    'download-faq',
+    'availability-description',
     'year',
   ];
   const elements = Object.fromEntries(ids.map((id) => [id, new Element()]));
@@ -101,6 +103,10 @@ function setup(
   const downloadLinks = [new Element(), new Element()];
   const availability = [new Element()];
   const downloadNote = new Element();
+  availability[0]!.textContent = 'Existing availability label.';
+  downloadNote.textContent = 'Existing download note.';
+  el('download-faq').textContent = 'Existing FAQ copy.';
+  el('availability-description').textContent = 'Existing availability description.';
   const selectors: Record<string, Element[]> = {
     '[data-deck]': deckButtons,
     '[data-demo-deck]': tiles,
@@ -174,6 +180,8 @@ describe('landing flashcard preview', () => {
     expect(page.card.classes.has('is-revealed')).toBe(true);
     expect(page.card.attributes.get('aria-pressed')).toBe('true');
     expect(page.card.attributes.get('aria-label')).toContain('Good morning; hello during the day.');
+    expect(page.card.attributes.get('aria-label')).toContain('Hide answer.');
+    expect(page.el('demo-flip-label').textContent).toBe('Hide answer');
     expect(page.el('demo-announcement').textContent).toBe('Good morning; hello during the day.');
     page.card.dispatch('click', { detail: 0 });
     expect(page.el('demo-answer').hidden).toBe(true);
@@ -359,22 +367,36 @@ describe('landing public download configuration', () => {
       url: 'https://testflight.apple.com/join/Example1',
       label: 'Join the iPhone beta ↗',
       note: 'Available in TestFlight for iPhone.',
+      availability: 'In beta for iPhone',
+      faq: 'Recollect is available to test on iPhone through TestFlight. Use “Join the iPhone beta” to check whether places are available.',
+      description:
+        'Try Recollect on iPhone through TestFlight, or join the waitlist for availability updates.',
     },
     {
       url: 'https://apps.apple.com/us/app/recollect/id123456',
       label: 'Get Recollect for iPhone ↗',
       note: 'Available on the App Store for iPhone.',
+      availability: 'Made for iPhone',
+      faq: 'Recollect is available on the App Store for iPhone. Choose “Get Recollect for iPhone” to download it.',
+      description: 'Get Recollect for iPhone, or join the waitlist for availability updates.',
     },
-  ])('uses an official public Apple link: $url', ({ url, label, note }) => {
-    const page = setup({ downloadUrl: url });
-    expect(
-      page.downloadLinks.every((link) => link.href === url && link.textContent === label),
-    ).toBe(true);
-    expect(page.downloadNote.textContent).toBe(note);
-  });
+  ])(
+    'uses an official public Apple link: $url',
+    ({ url, label, note, availability, faq, description }) => {
+      const page = setup({ downloadUrl: url });
+      expect(
+        page.downloadLinks.every((link) => link.href === url && link.textContent === label),
+      ).toBe(true);
+      expect(page.downloadNote.textContent).toBe(note);
+      expect(page.availability[0]!.textContent).toBe(availability);
+      expect(page.el('download-faq').textContent).toBe(faq);
+      expect(page.el('availability-description').textContent).toBe(description);
+    },
+  );
 
   it.each([
     undefined,
+    null,
     '',
     false,
     'not a url',
@@ -388,7 +410,12 @@ describe('landing public download configuration', () => {
   ])('keeps the preview link for unsafe or missing configuration: %s', (downloadUrl) => {
     const page = setup({ downloadUrl });
     expect(page.downloadLinks.every((link) => link.href === '#get-recollect')).toBe(true);
-    expect(page.downloadNote.textContent).toBe('');
+    expect(page.downloadNote.textContent).toBe('Existing download note.');
+    expect(page.availability[0]!.textContent).toBe('Existing availability label.');
+    expect(page.el('download-faq').textContent).toBe('Existing FAQ copy.');
+    expect(page.el('availability-description').textContent).toBe(
+      'Existing availability description.',
+    );
     expect(page.el('demo-answer').hidden).toBe(true);
   });
 
@@ -398,6 +425,12 @@ describe('landing public download configuration', () => {
       downloadUrl: 'https://testflight.apple.com/join/Example1',
     });
     expect(page.downloadLinks[0]!.href).toBe('https://testflight.apple.com/join/Example1');
+    expect(page.el('download-faq').textContent).toContain(
+      'available to test on iPhone through TestFlight',
+    );
+    expect(page.el('availability-description').textContent).toBe(
+      'Try Recollect on iPhone through TestFlight, or join the waitlist for availability updates.',
+    );
     expect(page.el('year').textContent).toBe(String(new Date().getFullYear()));
   });
 });

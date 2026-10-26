@@ -2,7 +2,13 @@
 
 A buildless, responsive landing page. Publish this directory as the site root; the API and mobile application are separate.
 
-The visual direction is artful and editorial: Manrope and Instrument Serif, warm paper, cobalt, yellow, and an original transparent sculpture of collected cards. The design choices, palette, image prompt, and future mobile guidelines are in [the visual direction notes](../../docs/recollect-visual-direction.md).
+The visual direction is artful and editorial: Manrope and Instrument Serif, warm paper, cobalt, yellow, original geometric deck covers, and a working flashcard in the hero. The original sculpture appears in the offline-practice section. The design choices, palette, image prompt, and mobile guidelines are in [the visual direction notes](../../docs/recollect-visual-direction.md).
+
+The editorial website experiment is on `enhancement/editorial-website-preview`.
+Its homepage styles live in `editorial.css` and are scoped to `editorial-home`;
+shared support, privacy, thanks and friend-invitation layouts retain `styles.css`.
+The new cover artwork is a website design study, not a claim that downloaded app
+decks already use these covers.
 
 ## Preview
 
@@ -36,7 +42,13 @@ Before the first live deployment, enable **Forms → Enable form detection** in 
 
 The enhanced submission locks while saving, preserves entries on failure, and confirms signup only after the server accepts it. Email addresses are never logged or put in analytics, URLs, or browser storage. This tracks submitted interest; anonymous traffic and demo interactions are not instrumented.
 
-The interactive cards are illustrative examples. They run entirely in browser memory and do not call the production API, collect user information, or save review schedules.
+The interactive cards use three sample cards from each of seven official starter
+decks. Tap or press Enter/Space to flip; swipe right to remember or left when
+unsure. Visible buttons offer the same responses. Selecting a cover changes the
+sample deck and returns to the hero. Vertical gestures remain page scrolling;
+cancelled gestures never advance. Reduced motion disables drag transforms.
+This demonstration runs entirely in browser memory and does not call the
+production API, collect user information, or save review schedules.
 
 The original app icon is copied without changes from `apps/mobile/assets/icon.png`. Fonts are served by Google Fonts, with system and Georgia fallbacks. Security headers for Netlify are declared in `_headers`.
 

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="440" viewBox="0 0 600 440" fill="none">
+  <defs><clipPath id="frame"><path fill="#fff" d="M0 0h600v440H0z"/></clipPath><clipPath id="globe"><circle cx="393" cy="238" r="179"/></clipPath></defs>
+  <g clip-path="url(#frame)">
+    <path fill="#F0CB50" d="M0 0h600v440H0z"/>
+    <g stroke="#ED5737" stroke-width="5">
+      <path d="M-63-29c226 3 58 141 206 159s106 160-1 166S1 419 105 484"/>
+      <path d="M-75-7c224-2 59 139 206 161s97 133-3 140S-17 416 83 489"/>
+      <path d="M-90 17C127 10-31 154 113 177s94 102-5 111S-38 413 58 492"/>
+      <path d="M-99 41C102 32-49 170 94 201s89 72-4 82S-62 411 33 495"/>
+      <path d="M-113 65C87 58-64 191 78 226s73 42-8 51S-84 407 9 498"/>
+    </g>
+    <circle cx="402" cy="247" r="179" fill="#20231F"/>
+    <circle cx="393" cy="238" r="179" fill="#293DCB"/>
+    <g clip-path="url(#globe)">
+      <path fill="#F4EBDD" d="m272 71 49 28 2 36 35 22-9 30-41-1-6 40-43-8-24-47-33-9 7-43 63-48Z"/>
+      <path fill="#F4EBDD" d="m325 234 52-18 41 24 12 42-32 35-2 58-34 29-17-58-30-47 10-65Z"/>
+      <path fill="#F4EBDD" d="m447 106 69-4 61 51-3 76-52 5-33-31-44 11-27-37 29-71Z"/>
+      <path fill="#F4EBDD" d="m483 312 42-11 40 32-8 38-58 7-26-31 10-35Z"/>
+      <g stroke="#F0CB50" stroke-width="2.5">
+        <ellipse cx="393" cy="238" rx="77" ry="179"/>
+        <ellipse cx="393" cy="238" rx="137" ry="179"/>
+        <path d="M214 238h358M235 154h316M235 322h316"/>
+        <ellipse cx="393" cy="238" rx="179" ry="78"/>
+      </g>
+    </g>
+    <circle cx="393" cy="238" r="179" stroke="#20231F" stroke-width="3"/>
+    <path d="m168 42 14 46 14-46-14 10-14-10Z" fill="#20231F"/>
+    <path d="M154 65h56M182 37v57" stroke="#20231F" stroke-width="2"/>
+    <path d="M526 28h40m-20-20v40" stroke="#ED5737" stroke-width="4"/>
+    <circle cx="186" cy="374" r="8" fill="#F4EBDD" stroke="#20231F" stroke-width="3"/>
+    <path d="M186 382v39" stroke="#20231F" stroke-width="3"/>
+  </g>
+</svg>

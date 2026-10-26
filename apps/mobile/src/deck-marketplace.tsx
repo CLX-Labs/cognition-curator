@@ -206,9 +206,9 @@ export default function DeckMarketplace({ deckId }: { deckId: string }) {
                 Published snapshot · Version {listing.version} · {listing.cardCount} cards
               </Text>
               <Text style={s.body}>
-                Edits in this deck stay private. Use “Update published copy” when you want to share
-                them. This saved public snapshot stays published until you unpublish it, even if you
-                delete your original deck.
+                Edits in this deck do not update your publication. Use “Update published copy” to
+                share them. This saved public snapshot stays published until you unpublish it, even
+                if you delete your original deck.
               </Text>
               <MarketplaceToggle
                 title="Published in marketplace"
@@ -219,14 +219,14 @@ export default function DeckMarketplace({ deckId }: { deckId: string }) {
               />
               <MarketplaceToggle
                 title="Show download count"
-                detail="Make this deck’s unique download count visible in the marketplace. You can hide it at any time."
+                detail="Show how many active accounts have downloaded this deck. Each account counts once. Hiding this count does not delete download records."
                 value={listing.showDownloadCount}
                 disabled={!!result.busy}
                 onChange={(enabled) => void settings({ showDownloadCount: enabled })}
               />
               <MarketplaceToggle
-                title="Show aggregate practice activity"
-                detail="Show broad trends from consenting learners over the last 30 days, once at least 5 qualify. Individual progress is never public. You can hide these trends at any time."
+                title="Show practice trends"
+                detail="Show broad trends from consenting learners over the last 30 days, once at least 5 qualify. These trends do not show individual progress. Hiding them does not stop contributions or delete anyone’s reviews."
                 value={listing.showUsageStats}
                 disabled={!!result.busy}
                 onChange={(enabled) => void settings({ showUsageStats: enabled })}
@@ -348,14 +348,14 @@ export default function DeckMarketplace({ deckId }: { deckId: string }) {
                 <>
                   <MarketplaceToggle
                     title="Show download count"
-                    detail="Off by default. You can change this later."
+                    detail="Off by default. Counts active accounts that downloaded this deck, once per account. You can show or hide it later."
                     value={pendingPublication?.showDownloadCount ?? downloadCount}
                     disabled={!!result.busy || !!pendingPublication}
                     onChange={setDownloadCount}
                   />
                   <MarketplaceToggle
-                    title="Show aggregate practice activity"
-                    detail="Off by default. Only broad, opted-in trends with at least 5 contributing learners can appear."
+                    title="Show practice trends"
+                    detail="Off by default. Shows broad trends from the last 30 days with at least 5 consenting learners. Hiding trends does not stop contributions or delete reviews."
                     value={pendingPublication?.showUsageStats ?? usageStats}
                     disabled={!!result.busy || !!pendingPublication}
                     onChange={setUsageStats}

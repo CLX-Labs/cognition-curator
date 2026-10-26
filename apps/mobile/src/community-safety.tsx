@@ -51,7 +51,7 @@ export function FriendSafety({
   function block() {
     Alert.alert(
       'Block ' + name + '?',
-      'This removes your connection, stops shared recall access, and prevents new invites or shares between you. Imported deck copies stay in your libraries. Unblocking will not restore the friendship.',
+      'This removes your friendship and shared recall access, and prevents new invites or shares between you. You will no longer see each other’s marketplace decks, and practice contributions between you stop. Imported deck copies stay in your libraries. Unblocking will not restore the friendship or sharing permissions.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -203,7 +203,7 @@ export function BlockedPeople() {
           ))}
           <Text style={s.caption}>
             Unblocking allows a new invite. Previous friendships and sharing permissions stay
-            removed.
+            removed. Marketplace practice contributions stay off until enabled again.
           </Text>
         </>
       )}

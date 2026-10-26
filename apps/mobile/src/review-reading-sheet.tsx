@@ -25,10 +25,8 @@ export function ReviewReadingSheet({
       : section === 'context'
         ? 'A little more context'
         : revealed
-          ? 'The answer'
-          : card.aiGenerated
-            ? 'The concept'
-            : 'The question';
+          ? 'Answer'
+          : 'Front';
   const content =
     section === 'hint'
       ? card.hint

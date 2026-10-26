@@ -79,7 +79,8 @@ export default function Login() {
             curious.
           </Text>
           <Text style={[s.body, { fontSize: 17, lineHeight: 26 }]}>
-            Keep what catches your mind. Turn it into cards. Make a little more of it stay.
+            Flashcards for whatever catches your mind. Choose a subject, shape the cards, and
+            come back to what you want to remember.
           </Text>
         </View>
         <View style={{ backgroundColor: colors.lilac, borderRadius: 8, padding: 12 }}>
@@ -105,8 +106,12 @@ export default function Login() {
         }}
       >
         {[
-          ['01', 'Make it yours', 'Write a card or turn any subject into a deck with AI.'],
-          ['02', 'Keep it fresh', 'Practice a few cards at a time, even when you are offline.'],
+          ['01', 'Make the cards yours', 'Write your own cards or review drafts suggested by AI.'],
+          [
+            '02',
+            'Come back to what matters',
+            'Review saved cards offline. Connect to generate or sync.',
+          ],
         ].map(([number, title, detail]) => (
           <View key={number} style={[s.row, { alignItems: 'flex-start', gap: 14 }]}>
             <View

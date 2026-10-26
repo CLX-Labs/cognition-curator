@@ -10,7 +10,7 @@ describe('friend invitation links', () => {
     expect(invitationCode(link)).toBe(code);
     const message = friendInviteMessage({ code, expiresAt: '2026-10-30T00:00:00Z' });
     expect(message).toContain(link);
-    expect(message).toContain('After installing, return to the link');
+    expect(message).toContain('Once you have the app, return to this link');
     expect(message).toContain('You → Friends: ' + code);
     expect(message).not.toContain('cognitioncurator://');
   });

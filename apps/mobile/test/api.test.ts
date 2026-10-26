@@ -97,7 +97,7 @@ describe('rotating authentication and account race boundaries', () => {
       await expect(client.request('/v1/generations')).rejects.toMatchObject({
         status: 0,
         code: 'network_unavailable',
-        message: expect.stringContaining('Your request is saved'),
+        message: 'Cannot connect to Recollect. Check your connection and try again.',
       });
       expect(client.session).toBe(original);
       expect(warning).toHaveBeenCalledWith('[Recollect API]', {

@@ -136,24 +136,54 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     setReading(section);
   }
 
-  if (!card)
+  if (!card) {
+    const deckUnavailable =
+      !!params.deckId && !data.decks.some((deck) => deck.id === params.deckId);
+    const unavailable = deckUnavailable || (!!specific && !queue.length) || index < queue.length;
+    const completed = !unavailable && queue.length > 0;
+    const hasCards = data.cards.some((item) => !params.deckId || item.deckId === params.deckId);
+    const backToDeck = !!params.deckId && !deckUnavailable;
     return (
       <Screen
         syncFeedback="errors"
-        title={queue.length ? 'Nicely done.' : 'All caught up.'}
-        eyebrow={practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE'}
+        title={
+          unavailable
+            ? deckUnavailable
+              ? 'This deck is unavailable'
+              : 'This card is unavailable'
+            : completed
+              ? 'Nicely done.'
+              : !hasCards
+                ? 'No cards to review yet'
+                : 'All caught up.'
+        }
+        eyebrow={
+          unavailable
+            ? 'REVIEW UNAVAILABLE'
+            : completed
+              ? practice
+                ? 'PRACTICE COMPLETE'
+                : 'SESSION COMPLETE'
+              : practice
+                ? 'EXTRA PRACTICE'
+                : 'DAILY REVIEW'
+        }
         action={<BrandPattern variant="orbit" width={56} height={56} />}
         subtitle={
-          queue.length
-            ? 'A little practice, a lasting memory.'
-            : 'Your next cards will be here when they are ready.'
+          unavailable
+            ? 'It may have been removed on another device. Open your library to choose another card.'
+            : completed
+              ? 'A little practice, a lasting memory.'
+              : !hasCards
+                ? 'Add cards to a deck to start practicing.'
+                : 'No cards are due right now. You can still choose extra practice.'
         }
         footer={
           <>
             <Button
-              title={params.deckId ? 'Back to deck' : 'Back to today'}
+              title={backToDeck ? 'Back to deck' : 'Back to today'}
               onPress={() =>
-                params.deckId
+                backToDeck
                   ? router.dismissTo({ pathname: '/decks/[id]', params: { id: params.deckId } })
                   : router.dismissTo('/')
               }
@@ -162,17 +192,22 @@ function ReviewSession({ params }: { params: ReviewParams }) {
           </>
         }
       >
-        <Panel tint>
-          <Text style={[s.metric, { fontSize: 72 }]}>{index}</Text>
-          <Text style={s.body}>
-            {practice
-              ? 'cards practiced. Your next review dates are saved.'
-              : 'cards reviewed. Your next review dates are saved.'}
-          </Text>
-        </Panel>
-        <Text style={s.editorial}>A little more stays.</Text>
-        {!queue.length &&
-          data.cards.some((item) => !params.deckId || item.deckId === params.deckId) && (
+        {completed && (
+          <>
+            <Panel tint>
+              <Text style={[s.metric, { fontSize: 72 }]}>{index}</Text>
+              <Text style={s.body}>
+                {practice
+                  ? 'cards practiced. Your next review dates are saved.'
+                  : 'cards reviewed. Your next review dates are saved.'}
+              </Text>
+            </Panel>
+            <Text style={s.editorial}>A little more stays.</Text>
+          </>
+        )}
+        {!unavailable && !completed && hasCards && (
+          <>
+            <Text style={s.body}>Extra practice also updates your next review dates.</Text>
             <Button
               title="Practice anytime"
               variant="secondary"
@@ -183,9 +218,18 @@ function ReviewSession({ params }: { params: ReviewParams }) {
                 })
               }
             />
-          )}
+          </>
+        )}
+        {(unavailable || (!completed && !hasCards)) && (
+          <Button
+            title="Open decks"
+            variant="secondary"
+            onPress={() => router.dismissTo('/decks')}
+          />
+        )}
       </Screen>
     );
+  }
 
   const deck = data.decks.find((d) => d.id === card.deckId);
   const intervals = previewIntervals(
@@ -200,7 +244,8 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       syncFeedback="errors"
       title={deck?.name ?? 'Your review'}
       appearance="focus"
-      eyebrow={practice ? 'FREE PRACTICE' : 'DAILY REVIEW'}
+      eyebrow={practice ? 'EXTRA PRACTICE' : 'DAILY REVIEW'}
+      subtitle={practice ? 'Your responses update the next review dates.' : undefined}
       leading={
         <View style={s.between}>
           <Back label="Finish later" color={colors.paper} />
@@ -232,7 +277,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
             </View>
           </View>
           <Text style={[s.caption, { textAlign: 'center', color: colors.paper }]}>
-            {'Not sure: ' +
+            {'Next review · Not sure: ' +
               duration(intervals.again) +
               ' · Remembered: ' +
               duration(intervals.good)}

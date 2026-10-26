@@ -4,18 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f0eee6" />
-    <title>Recollect — For the curious.</title>
+    <title>Recollect — Flashcards for the curious</title>
     <meta
       name="description"
-      content="A home for the things that catch your mind. Turn your next curiosity into flashcards, make them your own, and keep the good bits with Recollect for iPhone."
+      content="Flashcards for whatever catches your mind. Choose a subject, shape your cards, and practice with Recollect for iPhone."
     />
     <link rel="canonical" href="https://recollect-ai.netlify.app/" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://recollect-ai.netlify.app/" />
-    <meta property="og:title" content="Recollect — For the curious." />
+    <meta property="og:title" content="Recollect — Flashcards for the curious" />
     <meta
       property="og:description"
-      content="Your next obsession. A little practice. Something that stays."
+      content="Choose a subject. Make the cards yours. Remember a little more with Recollect for iPhone."
     />
     <meta property="og:image" content="https://recollect-ai.netlify.app/assets/app-icon.png" />
     <meta name="twitter:card" content="summary" />
@@ -64,18 +64,17 @@
             <div class="hero-marker" aria-hidden="true">✳</div>
             <h1 id="hero-title">FOR THE<br /><em>curious.</em></h1>
             <p class="hero-description">
-              A new language. A big idea. That thing you fell into at 2 a.m. Give it a home. Keep
-              the good bits.
+              Flashcards for whatever catches your mind.
             </p>
             <p class="hero-product">
-              Your curiosities, turned into flashcards.<br />A little practice, built around you.
+              Choose a subject, shape the cards, and come back to what you want to remember.
             </p>
             <div class="hero-actions">
               <a class="button" href="#get-recollect" data-download-link
                 >Join the waitlist <span aria-hidden="true">↗</span></a
               >
               <a class="text-link" href="#try"
-                >Take a little look <span aria-hidden="true">↓</span></a
+                >Try the cards <span aria-hidden="true">↓</span></a
               >
             </div>
           </div>
@@ -128,7 +127,7 @@
               <li>
                 <span class="step-number">01</span>
                 <div>
-                  <h3>Follow the thread.</h3>
+                  <h3>Choose a subject.</h3>
                   <p>
                     Start with a subject or a deck title. AI drafts 5–10 cards to get you going.
                   </p>
@@ -137,7 +136,7 @@
               <li>
                 <span class="step-number">02</span>
                 <div>
-                  <h3>Put your name on it.</h3>
+                  <h3>Make the cards yours.</h3>
                   <p>
                     Choose the good suggestions. Edit the details. Add your own cards. Make the deck
                     yours.
@@ -147,10 +146,10 @@
               <li>
                 <span class="step-number">03</span>
                 <div>
-                  <h3>Come back to it.</h3>
+                  <h3>Practice and review.</h3>
                   <p>
-                    Practice a few cards. Tell Recollect what you remember. Let your daily reviews
-                    take shape.
+                    Tap a card to see the answer. Mark it “I remember” or “Not sure” to plan its
+                    next review.
                   </p>
                 </div>
               </li>
@@ -205,7 +204,8 @@
                 </button>
               </div>
               <p class="demo-note">
-                Interactive preview · example cards<br />Your choices here aren’t saved.
+                Interactive preview · example cards<br />Your choices here aren’t saved. Review
+                intervals are examples for new cards; they change as you practice in the app.
               </p>
             </div>
             <div class="demo-stage">
@@ -216,16 +216,17 @@
                     <span id="demo-deck">Italian essentials</span
                     ><span class="card-counter" id="demo-counter">01 / 03</span>
                   </div>
-                  <div class="card-content">
+                  <button class="card-content" id="demo-flip" type="button" aria-expanded="false" aria-controls="demo-answer" aria-label="Show answer for Buongiorno" disabled>
                     <span class="eyebrow card-label" id="demo-label">A LITTLE ITALIAN</span>
-                    <h3 id="demo-front">Buongiorno</h3>
-                    <p class="card-prompt" id="demo-prompt">A new day. A new word.</p>
-                    <div class="card-answer" id="demo-answer" hidden>
+                    <span class="card-front" id="demo-front">Buongiorno</span>
+                    <span class="card-prompt" id="demo-prompt">A new day. A new word.</span>
+                    <span class="card-answer" id="demo-answer" hidden>
                       <span class="eyebrow">THE MEANING</span>
-                      <p id="demo-back">Good morning. Or simply, good day.</p>
-                    </div>
-                  </div>
+                      <span class="card-answer-text" id="demo-back">Good morning. Or simply, good day.</span>
+                    </span>
+                  </button>
                   <div class="card-controls">
+                    <p class="rating-label" id="demo-instruction">Tap the card to show the answer.</p>
                     <div class="choice-actions" id="choice-actions">
                       <button type="button" class="choice-button" data-confidence="unsure" disabled>
                         Not sure</button
@@ -235,31 +236,14 @@
                         data-confidence="known"
                         disabled
                       >
-                        I know it
-                      </button>
-                    </div>
-                    <div id="rating-actions" hidden>
-                      <p class="rating-label">How did that feel?</p>
-                      <div class="choice-actions">
-                        <button type="button" class="choice-button" id="rating-first" disabled>
-                          Good · 10m</button
-                        ><button
-                          type="button"
-                          class="choice-button choice-primary"
-                          id="rating-second"
-                          disabled
-                        >
-                          Easy · 4d
-                        </button>
-                      </div>
-                      <button type="button" class="change-choice" id="change-choice" disabled>
-                        Change choice
+                        I remember
                       </button>
                     </div>
                   </div>
                 </article>
               </div>
               <p class="sr-only" id="demo-announcement" aria-live="polite"></p>
+              <p class="demo-note" id="demo-feedback">In the app, swipe left for “Not sure” or right for “I remember.”</p>
               <noscript
                 ><p class="demo-note">Enable JavaScript to try the example cards.</p></noscript
               >
@@ -316,6 +300,17 @@
               </div>
               <span aria-hidden="true">↗</span>
             </article>
+            <article>
+              <span class="why-number">04</span>
+              <div>
+                <h3>A curiosity, shared.</h3>
+                <p>
+                  Invite friends, share decks, and choose whether to share your progress. Or find
+                  a deck in the marketplace and save your own copy.
+                </p>
+              </div>
+              <span aria-hidden="true">↗</span>
+            </article>
           </div>
         </div>
       </section>
@@ -347,9 +342,9 @@
                 How is practice different from daily reviews?<span aria-hidden="true">+</span>
               </summary>
               <p>
-                Daily reviews use your ratings to plan when a card comes back. Practice lets you go
-                through a deck whenever you want, including another pass at uncertain cards, without
-                changing your review schedule.
+                Reviews show cards that are due. Practice lets you choose a deck and go through its
+                cards whenever you want. In both modes, “I remember” and “Not sure” update the next
+                review date.
               </p>
             </details>
             <details>
@@ -381,8 +376,7 @@
             <div class="closing-copy">
               <h2 id="closing-title">Your next<br /><em>aha awaits.</em></h2>
               <p>
-                Recollect is in testing on iPhone. Leave your email and we’ll let you know when it’s
-                ready for you.
+                Recollect is in testing on iPhone. Join the waitlist for an email when it’s available.
               </p>
               <p class="closing-availability" data-download-note>Until then, stay curious.</p>
             </div>
@@ -428,7 +422,7 @@
                   <option value="other">Something else</option>
                 </select>
                 <button class="button" id="waitlist-submit" type="submit">
-                  Keep me posted <span aria-hidden="true">↗</span>
+                  Join the waitlist <span aria-hidden="true">↗</span>
                 </button>
                 <p class="waitlist-note" id="waitlist-note">
                   Sign up for emails about Recollect availability.

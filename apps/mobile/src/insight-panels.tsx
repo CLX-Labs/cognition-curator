@@ -51,9 +51,9 @@ export function InsightRange({
 }
 
 export function trendLabel(trend: RecallTrend) {
-  if (trend.direction === 'insufficient') return 'Building a history';
+  if (trend.direction === 'insufficient') return 'Not enough responses to compare';
   if (trend.direction === 'steady') return 'Holding steady';
-  return `${trend.direction === 'improving' ? '↑ Improving' : '↓ More uncertainty'} · ${Math.abs(Math.round(trend.changePoints ?? 0))} points`;
+  return `${trend.direction === 'improving' ? '↑ Improving' : '↓ More uncertainty'} · ${Math.abs(Math.round(trend.changePoints ?? 0))} percentage points`;
 }
 
 export function InsightSummary({ insights }: { insights: RecallInsights }) {
@@ -74,9 +74,10 @@ export function InsightSummary({ insights }: { insights: RecallInsights }) {
         </View>
         <Text style={s.label}>{trendLabel(summary.trend)}</Text>
         <Text style={s.caption}>
+          {`Trend compares the last ${summary.trend.comparisonDays} days with the ${summary.trend.comparisonDays} days before them. `}
           {summary.trend.direction === 'insufficient'
-            ? 'A trend needs at least three responses in both this period and the previous period.'
-            : `Compared with the preceding ${summary.trend.comparisonDays} days. Recall reflects how responses were rated.`}
+            ? 'At least three responses are needed in each period.'
+            : 'Recall reflects how responses were rated.'}
         </Text>
       </Panel>
       <View style={[s.row, { alignItems: 'stretch' }]}>
@@ -101,11 +102,11 @@ export function InsightSummary({ insights }: { insights: RecallInsights }) {
         <Text style={s.sectionTitle}>Recall over time</Text>
         <Text style={s.caption}>
           Weekly responses ·{' '}
-          {periods.length > 0
+          {summary.reviewCount > 0
             ? 'up to the last eight weeks in this range'
-            : 'your history will appear here'}
+            : 'no responses in this period'}
         </Text>
-        {periods.length > 0 ? (
+        {summary.reviewCount > 0 ? (
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, minHeight: 130 }}>
             {periods.map((period) => (
               <View
@@ -144,7 +145,7 @@ export function InsightSummary({ insights }: { insights: RecallInsights }) {
             ))}
           </View>
         ) : (
-          <Text style={s.body}>Complete a few reviews to start seeing patterns.</Text>
+          <Text style={s.body}>Try another time range, or review some cards to add responses.</Text>
         )}
         <Text style={s.caption}>Cobalt: remembered · Lilac: unsure</Text>
       </Panel>
@@ -195,12 +196,12 @@ export function InsightCards({
         <Text style={s.caption}>{cards.length} cards</Text>
       </View>
       <Text style={s.caption}>
-        Repeatedly unsure: at least two of the last three responses. Consistent: at least three
-        remembered in a row, within this range.
+        Within this period: repeatedly unsure means at least two of the last three responses
+        were unsure. Consistent means at least three remembered in a row.
       </Text>
       <Field
         label="Find a card"
-        placeholder="Card title, answer, or deck"
+        placeholder="Card front, answer, or deck"
         value={search}
         onChangeText={(value) => {
           setSearch(value);
@@ -298,7 +299,10 @@ export function InsightCards({
         </Pressable>
       ))}
       {!cards.length && (
-        <Empty title="No cards in this view" detail="Try another time range or filter." />
+        <Empty
+          title="No cards match this view"
+          detail="Try another time range or filter, or clear your search."
+        />
       )}
       {cards.length > limit && (
         <Button
@@ -323,7 +327,7 @@ export function InsightCardHistory({ card }: { card: RecallCardInsights }) {
       <Panel>
         <Text style={s.sectionTitle}>
           {card.recallRate === null
-            ? 'No recall history yet'
+            ? 'No responses in this period'
             : `${Math.round(card.recallRate)}% self-reported recall`}
         </Text>
         <Text style={s.body}>
@@ -332,7 +336,7 @@ export function InsightCardHistory({ card }: { card: RecallCardInsights }) {
         </Text>
         <Text style={s.label}>{trendLabel(card.trend)}</Text>
         <Text style={s.caption}>
-          Current run:{' '}
+          Latest run in this period:{' '}
           {card.rememberedStreak
             ? `${card.rememberedStreak} remembered`
             : card.unsureStreak
@@ -366,7 +370,7 @@ export function InsightCardHistory({ card }: { card: RecallCardInsights }) {
       ))}
       {!events.length && (
         <Empty
-          title="A fresh start"
+          title="No responses in this period"
           detail="This card has no recorded responses in the selected period."
         />
       )}

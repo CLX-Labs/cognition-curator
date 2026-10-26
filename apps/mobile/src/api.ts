@@ -176,8 +176,8 @@ export class ApiClient {
         });
         throw new ApiError(
           code === 'request_timeout'
-            ? 'Recollect took too long to respond. Your request is saved; try again.'
-            : 'Cannot connect to Recollect. Your request is saved. Check your connection and try again.',
+            ? 'Recollect took too long to respond. Check your connection and try again.'
+            : 'Cannot connect to Recollect. Check your connection and try again.',
           0,
           code,
         );

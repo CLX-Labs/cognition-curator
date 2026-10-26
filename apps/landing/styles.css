@@ -647,6 +647,11 @@ h1 em {
   white-space: nowrap;
 }
 .card-content {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: inherit;
   min-height: 300px;
   display: flex;
   flex-direction: column;
@@ -657,7 +662,7 @@ h1 em {
   color: #5c6055;
   font-size: 9px;
 }
-.card-content h3 {
+.card-front {
   font-family: var(--serif);
   font-size: 53px;
   font-weight: 400;
@@ -681,7 +686,8 @@ h1 em {
   font-size: 8px;
   color: var(--muted);
 }
-.card-answer p {
+.card-answer-text {
+  display: block;
   font-size: 17px;
   line-height: 1.65;
   margin: 8px 0 0;
@@ -732,16 +738,8 @@ h1 em {
   text-align: center;
   margin: 0 0 10px;
 }
-.change-choice {
-  display: block;
-  min-height: 30px;
-  border: 0;
-  background: transparent;
-  margin: 6px auto 0;
-  padding: 5px 10px;
-  font-size: 10px;
-  text-decoration: underline;
-  text-underline-offset: 4px;
+.demo-stage > .demo-note {
+  min-height: 3.6em;
 }
 .why-grid {
   display: grid;
@@ -1118,7 +1116,7 @@ h1 em {
   .play-copy > p {
     font-size: 14px;
   }
-  .card-content h3 {
+  .card-front {
     font-size: 46px;
   }
   .flashcard {
@@ -1264,10 +1262,10 @@ h1 em {
   .card-counter {
     font-size: 9px;
   }
-  .card-content h3 {
+  .card-front {
     font-size: 39px;
   }
-  .card-answer p {
+  .card-answer-text {
     font-size: 15px;
   }
   .card-content {
@@ -1563,13 +1561,13 @@ h1 em {
   .card-topline {
     font-size: 11px;
   }
-  .card-content h3 {
+  .card-front {
     font-size: 45px;
   }
   .card-content {
     min-height: 294px;
   }
-  .card-answer p {
+  .card-answer-text {
     font-size: 16px;
   }
   .choice-button {
@@ -1745,13 +1743,13 @@ h1 em {
   .flashcard {
     padding-inline: 18px;
   }
-  .card-content h3 {
+  .card-front {
     font-size: 39px;
   }
   .card-content {
     min-height: 310px;
   }
-  .card-answer p {
+  .card-answer-text {
     font-size: 15px;
   }
   .card-topline {

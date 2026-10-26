@@ -244,7 +244,7 @@ it('preserves the reviewed selection and exact acceptance receipt across a lost 
   const saved = workflow(job(decks[0]!.id));
   await rig.repo!.setState('generation', saved);
   await mount();
-  await press('Clear all');
+  await press('Deselect all');
   const check = renderer!.root
     .findAllByType('pressable')
     .find((node) => node.props.accessibilityRole === 'checkbox')!;
@@ -260,7 +260,7 @@ it('preserves the reviewed selection and exact acceptance receipt across a lost 
   await act(async () => {
     renderer!.root
       .findAllByType('field')
-      .find((node) => node.props.label === 'Title')!
+      .find((node) => node.props.label === 'Front')!
       .props.onChangeText('Reviewed question');
   });
   rig.request.mockRejectedValueOnce(new Error('Connection lost after saving'));
@@ -287,7 +287,7 @@ it('preserves the reviewed selection and exact acceptance receipt across a lost 
   expect((await rig.repo!.snapshot()).cards.find((item) => item.id === original.id)!.front).toBe(
     'Reviewed question',
   );
-  await press('Generate for World history');
+  await press('Switch to World history');
   expect(renderer!.root.findByType('field').props.value).toBe('World history');
 });
 
@@ -380,7 +380,7 @@ it('can set an unfinished answer aside to unlock manual saving while retaining a
     );
   });
   expect(pendingChanged).toHaveBeenLastCalledWith(true);
-  await press('Restore saved question');
+  await press('Restore saved front');
   expect(restore).toHaveBeenCalledWith('Saved question');
   await press('Set request aside');
   expect(archive).toHaveBeenCalledWith({ answerGeneration: saved });
@@ -412,7 +412,7 @@ it('keeps checking a queued job after unchanged responses until saved suggestion
   await rig.repo!.setState('generation', { ...workflow(queued), drafts: {}, selectedIds: [] });
   rig.request.mockResolvedValueOnce(queued).mockResolvedValueOnce(generated);
   await mount();
-  expect(content()).toContain('Your cards are in the queue');
+  expect(content()).toContain('Waiting to generate');
   for (let i = 0; i < 2; i++)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2500);

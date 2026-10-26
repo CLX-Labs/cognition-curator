@@ -32,7 +32,7 @@ export function friendInviteMessage(invite: FriendInvite): string {
   return (
     'Join me on Recollect to share decks and learn together.\n' +
     friendInviteUrl(invite.code) +
-    '\n\nOpen the link to get Recollect or continue in the app. After installing, return to the link, or paste this one-use code in You → Friends: ' +
+    '\n\nOpen the link to continue in Recollect or check access options. Recollect is in iPhone beta; if you do not have access yet, you can join the waitlist. Once you have the app, return to this link or paste this one-use code in You → Friends: ' +
     invite.code +
     '\nThe invite expires in 7 days.'
   );

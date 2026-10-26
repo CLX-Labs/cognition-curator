@@ -60,7 +60,8 @@ export async function buildApp(options: {
       return reply.code(400).send({
         error: {
           code: 'invalid_request',
-          message: 'Request does not match the versioned contract.',
+          message:
+            'Recollect couldn’t read this request. Try again; if it continues, check for an app update.',
           issues: error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
         },
       });
@@ -88,7 +89,7 @@ export async function buildApp(options: {
     return reply.code(500).send({
       error: {
         code: 'internal_error',
-        message: 'The operation did not complete. Retry with the same operation ID.',
+        message: 'We couldn’t confirm this action. Try again from this screen.',
       },
     });
   });

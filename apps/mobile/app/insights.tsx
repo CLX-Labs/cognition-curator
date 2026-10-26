@@ -152,7 +152,11 @@ export default function InsightsScreen() {
         ) : selected ? (
           <Empty
             title="This card is unavailable"
-            detail="It may have changed since sharing, been removed, or no longer be shared."
+            detail={
+              shared
+                ? 'It may have changed since sharing, been removed, or no longer be shared.'
+                : 'It may have been removed, or it may belong to a different deck. Open all cards to continue.'
+            }
             action={<Button title="View all available cards" onPress={() => setSelected(null)} />}
           />
         ) : (

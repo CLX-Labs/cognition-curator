@@ -101,7 +101,7 @@ describe('Anthropic provider boundary', () => {
       front: 'Alternator',
       back: 'Converts mechanical energy into electrical energy.',
     });
-    expect(result.usage.promptVersion).toBe('flashcards-v2-concept-titles');
+    expect(result.usage.promptVersion).toBe('flashcards-v3-focused-answers');
   });
 
   it.each([

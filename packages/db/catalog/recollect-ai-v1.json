@@ -1,0 +1,2431 @@
+{
+  "version": 1,
+  "publisher": "Recollect AI",
+  "createdAt": "2026-10-26T00:00:00.000Z",
+  "decks": [
+    {
+      "slug": "italian-for-travel",
+      "title": "Italian for travel",
+      "description": "A Recollect AI starter deck of 15 Italian words and short phrases for greetings, getting around, and ordering. English meanings include useful context.",
+      "color": "#E8B69E",
+      "icon": "🇮🇹",
+      "cards": [
+        {
+          "key": "buongiorno",
+          "front": "Buongiorno",
+          "back": "Good morning; hello during the day.",
+          "hint": "",
+          "explanation": "A polite greeting. The switch to buonasera varies by place and speaker.",
+          "tags": ["italian", "greetings", "beginner"]
+        },
+        {
+          "key": "buonasera",
+          "front": "Buonasera",
+          "back": "Good evening.",
+          "hint": "",
+          "explanation": "Use as an evening greeting. Buonanotte is usually for saying goodnight when leaving late or going to bed.",
+          "tags": ["italian", "greetings", "beginner"]
+        },
+        {
+          "key": "arrivederci",
+          "front": "Arrivederci",
+          "back": "Goodbye.",
+          "hint": "",
+          "explanation": "A useful polite farewell for shops, restaurants, and other everyday encounters.",
+          "tags": ["italian", "greetings", "beginner"]
+        },
+        {
+          "key": "grazie",
+          "front": "Grazie",
+          "back": "Thank you.",
+          "hint": "",
+          "explanation": "Stress the first syllable and keep the final vowel audible.",
+          "tags": ["italian", "courtesy", "beginner"]
+        },
+        {
+          "key": "prego",
+          "front": "Prego",
+          "back": "You're welcome.",
+          "hint": "",
+          "explanation": "A common response to grazie. In other contexts it can invite someone to go ahead.",
+          "tags": ["italian", "courtesy", "beginner"]
+        },
+        {
+          "key": "per-favore",
+          "front": "Per favore",
+          "back": "Please.",
+          "hint": "",
+          "explanation": "Add it to a request: Un biglietto, per favore.",
+          "tags": ["italian", "courtesy", "beginner"]
+        },
+        {
+          "key": "mi-scusi",
+          "front": "Mi scusi",
+          "back": "Excuse me.",
+          "hint": "",
+          "explanation": "A polite way to get one person’s attention, such as before asking for directions.",
+          "tags": ["italian", "courtesy", "beginner"]
+        },
+        {
+          "key": "dove",
+          "front": "Dove",
+          "back": "Where.",
+          "hint": "",
+          "explanation": "Dov’è la stazione? asks where the station is. Dov’è combines dove and è.",
+          "tags": ["italian", "directions", "beginner"]
+        },
+        {
+          "key": "il-bagno",
+          "front": "Il bagno",
+          "back": "The bathroom; the toilet.",
+          "hint": "",
+          "explanation": "Dov’è il bagno? is a useful question when you need to find it.",
+          "tags": ["italian", "travel", "beginner"]
+        },
+        {
+          "key": "la-stazione",
+          "front": "La stazione",
+          "back": "The station.",
+          "hint": "",
+          "explanation": "Often refers to a railway station. La stazione degli autobus specifies the bus station.",
+          "tags": ["italian", "transport", "beginner"]
+        },
+        {
+          "key": "un-biglietto",
+          "front": "Un biglietto",
+          "back": "A ticket.",
+          "hint": "",
+          "explanation": "Biglietto can refer to a transport ticket or admission ticket; give the destination or event when buying.",
+          "tags": ["italian", "transport", "beginner"]
+        },
+        {
+          "key": "acqua",
+          "front": "Acqua",
+          "back": "Water.",
+          "hint": "",
+          "explanation": "Acqua naturale is still water; acqua frizzante is sparkling.",
+          "tags": ["italian", "food-and-drink", "beginner"]
+        },
+        {
+          "key": "il-conto",
+          "front": "Il conto",
+          "back": "The bill at a restaurant.",
+          "hint": "",
+          "explanation": "Il conto, per favore is a short, polite request when you are ready to pay.",
+          "tags": ["italian", "food-and-drink", "beginner"]
+        },
+        {
+          "key": "quanto-costa",
+          "front": "Il prezzo",
+          "back": "The price.",
+          "hint": "",
+          "explanation": "Quanto costa? asks how much one item costs.",
+          "tags": ["italian", "shopping", "beginner"]
+        },
+        {
+          "key": "non-capisco",
+          "front": "Non capisco",
+          "back": "I don't understand.",
+          "hint": "",
+          "explanation": "You can soften it with Mi scusi before the phrase.",
+          "tags": ["italian", "conversation", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "Treccani — Formule di saluto",
+          "url": "https://www.treccani.it/enciclopedia/formule-di-saluto_(La-grammatica-italiana)/"
+        },
+        {
+          "title": "Babilonia Italian Language School — Italiano per viaggiare",
+          "url": "https://www.babilonia.it/it/italiano-per-viaggiare-vocabolario-essenziale/"
+        },
+        {
+          "title": "Treccani — Biglietto",
+          "url": "https://www.treccani.it/vocabolario/biglietto/"
+        }
+      ]
+    },
+    {
+      "slug": "everyday-spanish",
+      "title": "Everyday Spanish",
+      "description": "A Recollect AI starter deck of 15 Spanish greetings, polite expressions, and short questions. A small starting point for everyday conversations.",
+      "color": "#E6BE69",
+      "icon": "🇪🇸",
+      "cards": [
+        {
+          "key": "hola",
+          "front": "Hola",
+          "back": "Hello; hi.",
+          "hint": "",
+          "explanation": "The h is silent.",
+          "tags": ["spanish", "greetings", "beginner"]
+        },
+        {
+          "key": "buenos-dias",
+          "front": "Buenos días",
+          "back": "Good morning.",
+          "hint": "",
+          "explanation": "Keep the accent in días.",
+          "tags": ["spanish", "greetings", "beginner"]
+        },
+        {
+          "key": "buenas-tardes",
+          "front": "Buenas tardes",
+          "back": "Good afternoon; good evening in some regions.",
+          "hint": "",
+          "explanation": "The change to buenas noches depends on local custom and the time of year.",
+          "tags": ["spanish", "greetings", "beginner"]
+        },
+        {
+          "key": "buenas-noches",
+          "front": "Buenas noches",
+          "back": "Good evening; good night.",
+          "hint": "",
+          "explanation": "Used both to greet someone at night and to say goodbye or wish them a good night.",
+          "tags": ["spanish", "greetings", "beginner"]
+        },
+        {
+          "key": "adios",
+          "front": "Adiós",
+          "back": "Goodbye.",
+          "hint": "",
+          "explanation": "The accent marks the stressed final syllable.",
+          "tags": ["spanish", "greetings", "beginner"]
+        },
+        {
+          "key": "hasta-luego",
+          "front": "Hasta luego",
+          "back": "See you later.",
+          "hint": "",
+          "explanation": "A common farewell even when you have not arranged another meeting.",
+          "tags": ["spanish", "greetings", "beginner"]
+        },
+        {
+          "key": "gracias",
+          "front": "Gracias",
+          "back": "Thank you.",
+          "hint": "",
+          "explanation": "Muchas gracias adds emphasis: thank you very much.",
+          "tags": ["spanish", "courtesy", "beginner"]
+        },
+        {
+          "key": "de-nada",
+          "front": "De nada",
+          "back": "You're welcome.",
+          "hint": "",
+          "explanation": "Use it after someone thanks you.",
+          "tags": ["spanish", "courtesy", "beginner"]
+        },
+        {
+          "key": "por-favor",
+          "front": "Por favor",
+          "back": "Please.",
+          "hint": "",
+          "explanation": "Works at the beginning or end of a request.",
+          "tags": ["spanish", "courtesy", "beginner"]
+        },
+        {
+          "key": "disculpe",
+          "front": "Disculpe",
+          "back": "Excuse me.",
+          "hint": "",
+          "explanation": "A polite form for addressing one person. Disculpa is the informal form.",
+          "tags": ["spanish", "courtesy", "beginner"]
+        },
+        {
+          "key": "lo-siento",
+          "front": "Lo siento",
+          "back": "I'm sorry.",
+          "hint": "",
+          "explanation": "Use to apologize or express sympathy; disculpe is more useful for politely getting attention.",
+          "tags": ["spanish", "courtesy", "beginner"]
+        },
+        {
+          "key": "mucho-gusto",
+          "front": "Mucho gusto",
+          "back": "Nice to meet you.",
+          "hint": "",
+          "explanation": "A short response when someone introduces themselves.",
+          "tags": ["spanish", "introductions", "beginner"]
+        },
+        {
+          "key": "no-entiendo",
+          "front": "No entiendo",
+          "back": "I don't understand.",
+          "hint": "",
+          "explanation": "Entiendo is the first-person form of entender.",
+          "tags": ["spanish", "conversation", "beginner"]
+        },
+        {
+          "key": "mas-despacio",
+          "front": "Más despacio",
+          "back": "More slowly.",
+          "hint": "",
+          "explanation": "Add por favor when asking someone to slow down.",
+          "tags": ["spanish", "conversation", "beginner"]
+        },
+        {
+          "key": "cuanto-cuesta",
+          "front": "El precio",
+          "back": "The price.",
+          "hint": "",
+          "explanation": "¿Cuánto cuesta? asks how much one item costs.",
+          "tags": ["spanish", "shopping", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "Govern de les Illes Balears — Saludos y fórmulas de cortesía",
+          "url": "https://www.caib.es/sites/alabast/ca/salutaciones_i_farmules_de_cortesia/"
+        },
+        {
+          "title": "Academia Mexicana de la Lengua — Buena noche o buenas noches",
+          "url": "https://academia.org.mx/consultas/consultas-frecuentes/item/buena-noche-o-buenas-noches"
+        },
+        {
+          "title": "RAE — Entender",
+          "url": "https://www.rae.es/dpd/entender"
+        },
+        {
+          "title": "Cambridge Dictionary — Costar",
+          "url": "https://dictionary.cambridge.org/es/diccionario/espanol-ingles/costar"
+        }
+      ]
+    },
+    {
+      "slug": "french-essentials",
+      "title": "French essentials",
+      "description": "A Recollect AI starter deck of 15 French expressions for polite conversations, cafés, and small everyday requests. Includes brief English meanings.",
+      "color": "#A9C9DC",
+      "icon": "🇫🇷",
+      "cards": [
+        {
+          "key": "bonjour",
+          "front": "Bonjour",
+          "back": "Hello; good morning or good day.",
+          "hint": "",
+          "explanation": "A daytime greeting. Bonsoir is the usual evening alternative.",
+          "tags": ["french", "greetings", "beginner"]
+        },
+        {
+          "key": "bonsoir",
+          "front": "Bonsoir",
+          "back": "Good evening.",
+          "hint": "",
+          "explanation": "Use to greet someone in the evening. Bonne nuit is a wish for a good night, often before bed.",
+          "tags": ["french", "greetings", "beginner"]
+        },
+        {
+          "key": "au-revoir",
+          "front": "Au revoir",
+          "back": "Goodbye.",
+          "hint": "",
+          "explanation": "A standard farewell suitable for everyday polite exchanges.",
+          "tags": ["french", "greetings", "beginner"]
+        },
+        {
+          "key": "merci",
+          "front": "Merci",
+          "back": "Thank you.",
+          "hint": "",
+          "explanation": "Merci beaucoup means thank you very much.",
+          "tags": ["french", "courtesy", "beginner"]
+        },
+        {
+          "key": "de-rien",
+          "front": "De rien",
+          "back": "You're welcome.",
+          "hint": "",
+          "explanation": "A common reply to merci.",
+          "tags": ["french", "courtesy", "beginner"]
+        },
+        {
+          "key": "sil-vous-plait",
+          "front": "S’il vous plaît",
+          "back": "Please.",
+          "hint": "",
+          "explanation": "Use vous with a person you address politely, or with several people. With one familiar person, use s’il te plaît.",
+          "tags": ["french", "courtesy", "beginner"]
+        },
+        {
+          "key": "excusez-moi",
+          "front": "Excusez-moi",
+          "back": "Excuse me.",
+          "hint": "",
+          "explanation": "Useful for politely getting attention or apologizing for an interruption.",
+          "tags": ["french", "courtesy", "beginner"]
+        },
+        {
+          "key": "oui",
+          "front": "Oui",
+          "back": "Yes.",
+          "hint": "",
+          "explanation": "Pronounced roughly like the English word “we.”",
+          "tags": ["french", "conversation", "beginner"]
+        },
+        {
+          "key": "non",
+          "front": "Non",
+          "back": "No.",
+          "hint": "",
+          "explanation": "The vowel is nasal; avoid adding a strongly pronounced final n.",
+          "tags": ["french", "conversation", "beginner"]
+        },
+        {
+          "key": "je-ne-comprends-pas",
+          "front": "Je ne comprends pas",
+          "back": "I don't understand.",
+          "hint": "",
+          "explanation": "Keep the full phrase when learning; informal speech often drops ne.",
+          "tags": ["french", "conversation", "beginner"]
+        },
+        {
+          "key": "plus-lentement",
+          "front": "Plus lentement",
+          "back": "More slowly.",
+          "hint": "",
+          "explanation": "Add s’il vous plaît when asking someone to slow down.",
+          "tags": ["french", "conversation", "beginner"]
+        },
+        {
+          "key": "repetez",
+          "front": "Répétez, s’il vous plaît",
+          "back": "Please repeat.",
+          "hint": "",
+          "explanation": "The verb uses the polite or plural vous form.",
+          "tags": ["french", "conversation", "beginner"]
+        },
+        {
+          "key": "combien-ca-coute",
+          "front": "Le prix",
+          "back": "The price.",
+          "hint": "",
+          "explanation": "Combien ça coûte ? asks how much something costs.",
+          "tags": ["french", "shopping", "beginner"]
+        },
+        {
+          "key": "laddition",
+          "front": "L’addition",
+          "back": "The bill at a café or restaurant.",
+          "hint": "",
+          "explanation": "L’addition, s’il vous plaît is a short request when you are ready to pay.",
+          "tags": ["french", "food-and-drink", "beginner"]
+        },
+        {
+          "key": "de-leau",
+          "front": "De l’eau",
+          "back": "Some water.",
+          "hint": "",
+          "explanation": "De l’eau, s’il vous plaît is a simple request for water.",
+          "tags": ["french", "food-and-drink", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "Académie française — Bonjour",
+          "url": "https://www.dictionnaire-academie.fr/article/A9B1554?history=0"
+        },
+        {
+          "title": "Académie française — Bonsoir",
+          "url": "https://www.dictionnaire-academie.fr/article/A9B1568"
+        },
+        {
+          "title": "Académie française — Addition",
+          "url": "https://www.dictionnaire-academie.fr/article/A9A0509"
+        },
+        {
+          "title": "Université libre de Bruxelles MultiGram — S’il te plaît / S’il vous plaît",
+          "url": "https://multigram.ulb.ac.be/fra/S%27il_te_plait_/_S%27il_vous_plait"
+        },
+        {
+          "title": "Cambridge Dictionary — Répéter",
+          "url": "https://dictionary.cambridge.org/dictionary/french-english/repeter"
+        }
+      ]
+    },
+    {
+      "slug": "japanese-greetings-and-essentials",
+      "title": "Japanese greetings & essentials",
+      "description": "A Recollect AI starter deck of 15 Japanese greetings and useful everyday words. Japanese fronts have English meanings and pronunciation hints.",
+      "color": "#D9ACBA",
+      "icon": "🇯🇵",
+      "cards": [
+        {
+          "key": "konnichiwa",
+          "front": "こんにちは",
+          "back": "Hello; good afternoon.",
+          "hint": "konnichiwa",
+          "explanation": "A daytime greeting; the final は is pronounced “wa.”",
+          "tags": ["japanese", "greetings", "beginner"]
+        },
+        {
+          "key": "ohayo-gozaimasu",
+          "front": "おはようございます",
+          "back": "Good morning.",
+          "hint": "ohayō gozaimasu",
+          "explanation": "This is the polite form; ohayō is more casual.",
+          "tags": ["japanese", "greetings", "beginner"]
+        },
+        {
+          "key": "konbanwa",
+          "front": "こんばんは",
+          "back": "Good evening.",
+          "hint": "konbanwa",
+          "explanation": "The final は is pronounced “wa.”",
+          "tags": ["japanese", "greetings", "beginner"]
+        },
+        {
+          "key": "oyasuminasai",
+          "front": "おやすみなさい",
+          "back": "Good night, when going to bed.",
+          "hint": "oyasuminasai",
+          "explanation": "This wishes someone rest rather than greeting them on arrival in the evening.",
+          "tags": ["japanese", "greetings", "beginner"]
+        },
+        {
+          "key": "arigato-gozaimasu",
+          "front": "ありがとうございます",
+          "back": "Thank you.",
+          "hint": "arigatō gozaimasu",
+          "explanation": "A polite expression of thanks.",
+          "tags": ["japanese", "courtesy", "beginner"]
+        },
+        {
+          "key": "sumimasen",
+          "front": "すみません",
+          "back": "Excuse me; sorry.",
+          "hint": "sumimasen",
+          "explanation": "Useful for getting attention politely or apologizing for a small inconvenience.",
+          "tags": ["japanese", "courtesy", "beginner"]
+        },
+        {
+          "key": "onegaishimasu",
+          "front": "お願いします",
+          "back": "Please, when making a request.",
+          "hint": "onegaishimasu",
+          "explanation": "Often follows what you want, such as a service or item; it does not replace every English “please.”",
+          "tags": ["japanese", "courtesy", "beginner"]
+        },
+        {
+          "key": "hai",
+          "front": "はい",
+          "back": "Yes; an acknowledgment that you are listening.",
+          "hint": "hai",
+          "explanation": "In conversation, it does not always signal agreement with everything said.",
+          "tags": ["japanese", "conversation", "beginner"]
+        },
+        {
+          "key": "iie",
+          "front": "いいえ",
+          "back": "No.",
+          "hint": "iie",
+          "explanation": "A direct negative response; people may soften refusals in everyday conversation.",
+          "tags": ["japanese", "conversation", "beginner"]
+        },
+        {
+          "key": "wakarimasen",
+          "front": "わかりません",
+          "back": "I don't understand.",
+          "hint": "wakarimasen",
+          "explanation": "Add sumimasen before it to politely signal difficulty following a conversation.",
+          "tags": ["japanese", "conversation", "beginner"]
+        },
+        {
+          "key": "mou-ichido",
+          "front": "もう一度",
+          "back": "One more time; once again.",
+          "hint": "mō ichido",
+          "explanation": "Add onegaishimasu to politely ask for a repetition.",
+          "tags": ["japanese", "conversation", "beginner"]
+        },
+        {
+          "key": "yukkuri",
+          "front": "ゆっくり",
+          "back": "Slowly; at an unhurried pace.",
+          "hint": "yukkuri",
+          "explanation": "In a conversation, yukkuri onegaishimasu asks the speaker to slow down.",
+          "tags": ["japanese", "conversation", "beginner"]
+        },
+        {
+          "key": "ikura-desuka",
+          "front": "いくらですか",
+          "back": "How much does it cost?",
+          "hint": "ikura desu ka",
+          "explanation": "Use when the item you mean is clear from context.",
+          "tags": ["japanese", "shopping", "beginner"]
+        },
+        {
+          "key": "toire",
+          "front": "トイレ",
+          "back": "Toilet; restroom.",
+          "hint": "toire",
+          "explanation": "The word uses katakana, a script often used for loanwords.",
+          "tags": ["japanese", "travel", "beginner"]
+        },
+        {
+          "key": "omizu",
+          "front": "お水",
+          "back": "Water.",
+          "hint": "omizu",
+          "explanation": "A polite everyday form of mizu, often used when asking for drinking water.",
+          "tags": ["japanese", "food-and-drink", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "Japan National Tourism Organization — Japanese language",
+          "url": "https://www.japan.travel/en/plan/japanese-language/"
+        },
+        {
+          "title": "Japan Foundation — Irodori Starter: Lesson 2",
+          "url": "https://www.irodori.jpf.go.jp/assets/data/starter/pdf/X_L02.pdf"
+        },
+        {
+          "title": "Japan Foundation — Irodori Starter materials",
+          "url": "https://www.irodori.jpf.go.jp/en/starter/pdf.html"
+        },
+        {
+          "title": "Japan Foundation — Erin Lesson 6: asking prices",
+          "url": "https://www.erin.jpf.go.jp/materials/key-phrases/download/erin_lesson06_key-phrases_explanation.pdf"
+        }
+      ]
+    },
+    {
+      "slug": "everyday-physics",
+      "title": "Everyday physics",
+      "description": "A Recollect AI starter deck for the forces, motion and heat behind everyday life.",
+      "color": "#E9B85D",
+      "icon": "⚡",
+      "cards": [
+        {
+          "key": "inertia",
+          "front": "Inertia",
+          "back": "An object resists changes to its velocity unless a net force acts on it.",
+          "hint": "Think of a sudden stop.",
+          "explanation": "",
+          "tags": ["physics", "motion"]
+        },
+        {
+          "key": "force",
+          "front": "Force",
+          "back": "A push or pull that can change an object's motion.",
+          "hint": "Think of an interaction.",
+          "explanation": "",
+          "tags": ["physics", "forces"]
+        },
+        {
+          "key": "acceleration",
+          "front": "Acceleration",
+          "back": "The rate at which velocity changes over time.",
+          "hint": "A turn counts too.",
+          "explanation": "",
+          "tags": ["physics", "motion"]
+        },
+        {
+          "key": "mass",
+          "front": "Mass",
+          "back": "A measure of how strongly an object resists acceleration.",
+          "hint": "Compare an empty cart with a full one.",
+          "explanation": "",
+          "tags": ["physics", "motion"]
+        },
+        {
+          "key": "weight",
+          "front": "Weight",
+          "back": "The gravitational force acting on an object.",
+          "hint": "Think of a bathroom scale.",
+          "explanation": "",
+          "tags": ["physics", "gravity"]
+        },
+        {
+          "key": "friction",
+          "front": "Friction",
+          "back": "A contact force that opposes sliding or the tendency to slide.",
+          "hint": "Consider shoes on a floor.",
+          "explanation": "",
+          "tags": ["physics", "forces"]
+        },
+        {
+          "key": "momentum",
+          "front": "Momentum",
+          "back": "An object's mass multiplied by its velocity.",
+          "hint": "Both size and motion matter.",
+          "explanation": "",
+          "tags": ["physics", "motion"]
+        },
+        {
+          "key": "kinetic-energy",
+          "front": "Kinetic energy",
+          "back": "The energy an object has because it is moving.",
+          "hint": "Compare a parked and rolling ball.",
+          "explanation": "",
+          "tags": ["physics", "energy"]
+        },
+        {
+          "key": "gravitational-energy",
+          "front": "Gravitational energy",
+          "back": "Energy stored because of an object's position in a gravitational field.",
+          "hint": "Consider a book on a shelf.",
+          "explanation": "",
+          "tags": ["physics", "energy"]
+        },
+        {
+          "key": "energy-conservation",
+          "front": "Energy conservation",
+          "back": "Energy changes form or moves between objects, while the total in an isolated system stays constant.",
+          "hint": "Follow the whole system.",
+          "explanation": "",
+          "tags": ["physics", "energy"]
+        },
+        {
+          "key": "heat",
+          "front": "Heat",
+          "back": "Energy transferred because two objects or regions have different temperatures.",
+          "hint": "Think of a hot mug.",
+          "explanation": "",
+          "tags": ["physics", "heat"]
+        },
+        {
+          "key": "conduction",
+          "front": "Conduction",
+          "back": "Heat transfer through direct interactions between neighboring particles.",
+          "hint": "Picture a spoon in soup.",
+          "explanation": "",
+          "tags": ["physics", "heat"]
+        },
+        {
+          "key": "convection",
+          "front": "Convection",
+          "back": "Heat transfer carried by the movement of a liquid or gas.",
+          "hint": "Watch water warming in a pan.",
+          "explanation": "",
+          "tags": ["physics", "heat"]
+        },
+        {
+          "key": "thermal-radiation",
+          "front": "Thermal radiation",
+          "back": "Heat transfer by electromagnetic waves, which can travel through empty space.",
+          "hint": "Think of warmth from the Sun.",
+          "explanation": "",
+          "tags": ["physics", "heat"]
+        },
+        {
+          "key": "sound",
+          "front": "Sound",
+          "back": "A traveling disturbance that needs matter to carry it.",
+          "hint": "Think of a vibrating speaker.",
+          "explanation": "",
+          "tags": ["physics", "waves"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "OpenStax Physics: Forces and inertia",
+          "url": "https://openstax.org/books/physics/pages/4-2-newtons-first-law-of-motion-inertia"
+        },
+        {
+          "title": "OpenStax Physics: Force terminology",
+          "url": "https://openstax.org/books/physics/pages/4-key-terms"
+        },
+        {
+          "title": "OpenStax Physics: Acceleration",
+          "url": "https://openstax.org/books/physics/pages/3-1-acceleration"
+        },
+        {
+          "title": "OpenStax Physics: Momentum",
+          "url": "https://openstax.org/books/physics/pages/8-key-terms"
+        },
+        {
+          "title": "OpenStax Physics: Energy",
+          "url": "https://openstax.org/books/physics/pages/9-key-terms"
+        },
+        {
+          "title": "OpenStax Physics: Heat transfer",
+          "url": "https://openstax.org/books/physics/pages/11-key-terms"
+        },
+        {
+          "title": "OpenStax Physics: Sound",
+          "url": "https://openstax.org/books/physics/pages/14-1-speed-of-sound-frequency-and-wavelength"
+        }
+      ]
+    },
+    {
+      "slug": "solar-system",
+      "title": "Solar System",
+      "description": "A Recollect AI starter deck exploring our Sun, planetary neighbors and the spaces between them.",
+      "color": "#8E99C4",
+      "icon": "🪐",
+      "cards": [
+        {
+          "key": "sun",
+          "front": "Sun",
+          "back": "Our star produces energy by fusing hydrogen into helium in its core.",
+          "hint": "Think of its energy source.",
+          "explanation": "",
+          "tags": ["astronomy", "stars"]
+        },
+        {
+          "key": "mercury",
+          "front": "Mercury",
+          "back": "The planet whose orbit lies closest to the Sun.",
+          "hint": "Think of the planetary order.",
+          "explanation": "",
+          "tags": ["astronomy", "planets"]
+        },
+        {
+          "key": "venus",
+          "front": "Venus",
+          "back": "Its dense, carbon-dioxide-rich atmosphere traps heat through a strong greenhouse effect.",
+          "hint": "Think of the atmosphere.",
+          "explanation": "",
+          "tags": ["astronomy", "planets"]
+        },
+        {
+          "key": "earth",
+          "front": "Earth",
+          "back": "The third planet outward from the Sun.",
+          "hint": "Count from the center.",
+          "explanation": "",
+          "tags": ["astronomy", "planets"]
+        },
+        {
+          "key": "mars",
+          "front": "Mars",
+          "back": "Iron minerals that have oxidized give much of its surface a reddish appearance.",
+          "hint": "Think of a familiar metal reaction.",
+          "explanation": "",
+          "tags": ["astronomy", "planets"]
+        },
+        {
+          "key": "jupiter",
+          "front": "Jupiter",
+          "back": "A gas giant with no solid surface to stand on.",
+          "hint": "Think of what lies under the clouds.",
+          "explanation": "",
+          "tags": ["astronomy", "planets"]
+        },
+        {
+          "key": "saturns-rings",
+          "front": "Saturn's rings",
+          "back": "Mostly separate pieces of water ice orbiting the planet.",
+          "hint": "Imagine the rings up close.",
+          "explanation": "",
+          "tags": ["astronomy", "planets"]
+        },
+        {
+          "key": "uranus",
+          "front": "Uranus",
+          "back": "Its strongly tilted rotation axis makes it appear to spin on its side.",
+          "hint": "Think of a rolling ball.",
+          "explanation": "",
+          "tags": ["astronomy", "planets"]
+        },
+        {
+          "key": "neptune",
+          "front": "Neptune",
+          "back": "The eighth planet outward from the Sun.",
+          "hint": "Think of the planetary order.",
+          "explanation": "",
+          "tags": ["astronomy", "planets"]
+        },
+        {
+          "key": "pluto",
+          "front": "Pluto",
+          "back": "A dwarf planet in the icy Kuiper Belt beyond Neptune.",
+          "hint": "Think beyond the eight planets.",
+          "explanation": "",
+          "tags": ["astronomy", "dwarf-planets"]
+        },
+        {
+          "key": "asteroid-belt",
+          "front": "Asteroid belt",
+          "back": "A region of rocky objects orbiting mainly between Mars and Jupiter.",
+          "hint": "Think between inner and outer planets.",
+          "explanation": "",
+          "tags": ["astronomy", "small-bodies"]
+        },
+        {
+          "key": "comet",
+          "front": "Comet",
+          "back": "An icy body that can develop a cloud of gas and dust as sunlight warms it.",
+          "hint": "Think of a changing appearance.",
+          "explanation": "",
+          "tags": ["astronomy", "small-bodies"]
+        },
+        {
+          "key": "kuiper-belt",
+          "front": "Kuiper Belt",
+          "back": "A broad region of icy objects orbiting beyond Neptune.",
+          "hint": "Think of the outer neighborhood.",
+          "explanation": "",
+          "tags": ["astronomy", "small-bodies"]
+        },
+        {
+          "key": "moonlight",
+          "front": "Moonlight",
+          "back": "Sunlight reflected from the Moon's surface.",
+          "hint": "Consider where its light begins.",
+          "explanation": "",
+          "tags": ["astronomy", "moon"]
+        },
+        {
+          "key": "lunar-phases",
+          "front": "Lunar phases",
+          "back": "The changing portion of the Moon's sunlit half that we can see from Earth.",
+          "hint": "Think of our viewing angle.",
+          "explanation": "",
+          "tags": ["astronomy", "moon"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "NASA: Sun facts",
+          "url": "https://science.nasa.gov/sun/facts/"
+        },
+        {
+          "title": "NASA: About the planets",
+          "url": "https://science.nasa.gov/solar-system/planets/"
+        },
+        {
+          "title": "NASA: Venus facts",
+          "url": "https://science.nasa.gov/venus/venus-facts/"
+        },
+        {
+          "title": "NASA: Mars facts",
+          "url": "https://science.nasa.gov/mars/facts/"
+        },
+        {
+          "title": "NASA Cassini: Saturn rings",
+          "url": "https://science.nasa.gov/mission/cassini/science/rings/"
+        },
+        {
+          "title": "NASA: Uranus facts",
+          "url": "https://science.nasa.gov/Uranus/facts/"
+        },
+        {
+          "title": "NASA: Solar System facts",
+          "url": "https://science.nasa.gov/solar-system/solar-system-facts/"
+        },
+        {
+          "title": "NASA: Comet facts",
+          "url": "https://science.nasa.gov/solar-system/comets/facts/"
+        },
+        {
+          "title": "NASA: Moon phases",
+          "url": "https://science.nasa.gov/moon/moon-phases/"
+        }
+      ]
+    },
+    {
+      "slug": "cell-biology",
+      "title": "Cell biology",
+      "description": "A Recollect AI starter deck introducing cell structures and the ways materials move through them.",
+      "color": "#8DB491",
+      "icon": "🌱",
+      "cards": [
+        {
+          "key": "cell-membrane",
+          "front": "Cell membrane",
+          "back": "A boundary that selectively controls what enters and leaves a cell.",
+          "hint": "Think of the cell's edge.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "nucleus",
+          "front": "Nucleus",
+          "back": "The compartment holding most of a eukaryotic cell's DNA.",
+          "hint": "Think of genetic storage.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "ribosome",
+          "front": "Ribosome",
+          "back": "A structure that assembles proteins using instructions carried by RNA.",
+          "hint": "Think of a protein workshop.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "mitochondrion",
+          "front": "Mitochondrion",
+          "back": "An organelle that converts energy from nutrients into ATP during cellular respiration.",
+          "hint": "Think of usable cellular energy.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "chloroplast",
+          "front": "Chloroplast",
+          "back": "An organelle that uses light energy to build sugars through photosynthesis.",
+          "hint": "Think of a green leaf.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "golgi-apparatus",
+          "front": "Golgi apparatus",
+          "back": "An organelle that sorts and packages proteins and lipids for transport.",
+          "hint": "Think of cellular shipping.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "cytoskeleton",
+          "front": "Cytoskeleton",
+          "back": "A network of protein fibers that supports cell shape and movement.",
+          "hint": "Think of internal scaffolding.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "cell-wall",
+          "front": "Cell wall",
+          "back": "A firm outer layer that supports and protects cells such as those of plants.",
+          "hint": "Think beyond the membrane.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "cytoplasm",
+          "front": "Cytoplasm",
+          "back": "In a eukaryotic cell, the material between the cell membrane and nucleus.",
+          "hint": "Think of the space around organelles.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "lysosome",
+          "front": "Lysosome",
+          "back": "An enzyme-filled compartment that breaks down materials and worn-out cell parts.",
+          "hint": "Think of cellular recycling.",
+          "explanation": "",
+          "tags": ["biology", "cells"]
+        },
+        {
+          "key": "prokaryote",
+          "front": "Prokaryote",
+          "back": "An organism whose cells lack a membrane-bound nucleus.",
+          "hint": "Think of bacteria.",
+          "explanation": "",
+          "tags": ["biology", "cell-types"]
+        },
+        {
+          "key": "eukaryote",
+          "front": "Eukaryote",
+          "back": "An organism whose cells have a membrane-bound nucleus.",
+          "hint": "Think of plants and animals.",
+          "explanation": "",
+          "tags": ["biology", "cell-types"]
+        },
+        {
+          "key": "diffusion",
+          "front": "Diffusion",
+          "back": "Net movement of particles from a higher concentration toward a lower concentration.",
+          "hint": "Think of perfume spreading.",
+          "explanation": "",
+          "tags": ["biology", "transport"]
+        },
+        {
+          "key": "osmosis",
+          "front": "Osmosis",
+          "back": "The net diffusion of water across a selectively permeable membrane.",
+          "hint": "Think about water specifically.",
+          "explanation": "In a simple system without opposing pressure, water moves toward the side with lower water concentration.",
+          "tags": ["biology", "transport"]
+        },
+        {
+          "key": "active-transport",
+          "front": "Active transport",
+          "back": "Energy-powered transport that can move substances against their concentration gradient.",
+          "hint": "Think of moving against the usual direction.",
+          "explanation": "",
+          "tags": ["biology", "transport"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "OpenStax Biology 2e: Cell structures",
+          "url": "https://openstax.org/books/biology-2e/pages/4-key-terms"
+        },
+        {
+          "title": "OpenStax Biology 2e: Prokaryotic cells",
+          "url": "https://openstax.org/books/biology-2e/pages/4-2-prokaryotic-cells"
+        },
+        {
+          "title": "OpenStax Biology 2e: Eukaryotic cells",
+          "url": "https://openstax.org/books/biology-2e/pages/4-3-eukaryotic-cells"
+        },
+        {
+          "title": "OpenStax Biology 2e: Membrane transport",
+          "url": "https://openstax.org/books/biology-2e/pages/5-key-terms"
+        }
+      ]
+    },
+    {
+      "slug": "chemistry-essentials",
+      "title": "Chemistry essentials",
+      "description": "A Recollect AI starter deck covering atoms, chemical bonds and everyday solution vocabulary.",
+      "color": "#DA9E9B",
+      "icon": "⚗️",
+      "cards": [
+        {
+          "key": "atom",
+          "front": "Atom",
+          "back": "The smallest unit of an element that retains that element's chemical identity.",
+          "hint": "Think of an element's building block.",
+          "explanation": "",
+          "tags": ["chemistry", "atoms"]
+        },
+        {
+          "key": "proton",
+          "front": "Proton",
+          "back": "A particle with positive electric charge found in an atomic nucleus.",
+          "hint": "Think of nuclear particles.",
+          "explanation": "",
+          "tags": ["chemistry", "atoms"]
+        },
+        {
+          "key": "neutron",
+          "front": "Neutron",
+          "back": "A particle with no electric charge found in an atomic nucleus.",
+          "hint": "Think of nuclear particles.",
+          "explanation": "",
+          "tags": ["chemistry", "atoms"]
+        },
+        {
+          "key": "electron",
+          "front": "Electron",
+          "back": "A negatively charged particle occupying the region around an atomic nucleus.",
+          "hint": "Think outside the nucleus.",
+          "explanation": "",
+          "tags": ["chemistry", "atoms"]
+        },
+        {
+          "key": "atomic-number",
+          "front": "Atomic number",
+          "back": "The number of protons in an atom's nucleus.",
+          "hint": "It determines the element.",
+          "explanation": "",
+          "tags": ["chemistry", "atoms"]
+        },
+        {
+          "key": "isotope",
+          "front": "Isotope",
+          "back": "One of the forms of an element that differ in neutron count.",
+          "hint": "Same element, different mass.",
+          "explanation": "",
+          "tags": ["chemistry", "atoms"]
+        },
+        {
+          "key": "ion",
+          "front": "Ion",
+          "back": "An atom or group of atoms with a net electric charge.",
+          "hint": "Compare proton and electron counts.",
+          "explanation": "",
+          "tags": ["chemistry", "atoms"]
+        },
+        {
+          "key": "covalent-bond",
+          "front": "Covalent bond",
+          "back": "A chemical bond in which atoms share electrons.",
+          "hint": "Think of an electron partnership.",
+          "explanation": "",
+          "tags": ["chemistry", "bonding"]
+        },
+        {
+          "key": "ionic-bond",
+          "front": "Ionic bond",
+          "back": "Attraction between ions with opposite electric charges.",
+          "hint": "Think of positive and negative partners.",
+          "explanation": "",
+          "tags": ["chemistry", "bonding"]
+        },
+        {
+          "key": "molecule",
+          "front": "Molecule",
+          "back": "An electrically neutral group of two or more atoms held together by chemical bonds.",
+          "hint": "Think of a water particle.",
+          "explanation": "",
+          "tags": ["chemistry", "bonding"]
+        },
+        {
+          "key": "solute",
+          "front": "Solute",
+          "back": "A substance dissolved in another substance to form a solution.",
+          "hint": "Think of sugar added to tea.",
+          "explanation": "",
+          "tags": ["chemistry", "solutions"]
+        },
+        {
+          "key": "solvent",
+          "front": "Solvent",
+          "back": "The component of a solution that dissolves the solute.",
+          "hint": "Think of water in saltwater.",
+          "explanation": "",
+          "tags": ["chemistry", "solutions"]
+        },
+        {
+          "key": "acid",
+          "front": "Acid",
+          "back": "In the Brønsted–Lowry model, a substance that donates a proton during a reaction.",
+          "hint": "Think of a transfer between substances.",
+          "explanation": "",
+          "tags": ["chemistry", "acids-bases"]
+        },
+        {
+          "key": "base",
+          "front": "Base",
+          "back": "In the Brønsted–Lowry model, a substance that accepts a proton during a reaction.",
+          "hint": "Think of a transfer between substances.",
+          "explanation": "",
+          "tags": ["chemistry", "acids-bases"]
+        },
+        {
+          "key": "ph",
+          "front": "pH",
+          "back": "In water, a lower pH indicates a more acidic solution.",
+          "hint": "Think of the direction of the scale.",
+          "explanation": "",
+          "tags": ["chemistry", "acids-bases"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "OpenStax Chemistry 2e: Atomic structure",
+          "url": "https://openstax.org/books/chemistry-2e/pages/2-3-atomic-structure-and-symbolism"
+        },
+        {
+          "title": "OpenStax Chemistry 2e: Atomic and bonding vocabulary",
+          "url": "https://openstax.org/books/chemistry-2e/pages/2-key-terms"
+        },
+        {
+          "title": "OpenStax Chemistry 2e: Covalent bonding",
+          "url": "https://openstax.org/books/chemistry-2e/pages/7-2-covalent-bonding"
+        },
+        {
+          "title": "OpenStax Chemistry 2e: Solutions",
+          "url": "https://openstax.org/books/chemistry-2e/pages/11-1-the-dissolution-process"
+        },
+        {
+          "title": "OpenStax Chemistry 2e: Acids and bases",
+          "url": "https://openstax.org/books/chemistry-2e/pages/14-key-terms"
+        }
+      ]
+    },
+    {
+      "slug": "world-geography",
+      "title": "World geography",
+      "description": "A Recollect AI starter deck for reading the globe and recognizing memorable places around the world.",
+      "color": "#81AEB0",
+      "icon": "🌍",
+      "cards": [
+        {
+          "key": "equator",
+          "front": "Equator",
+          "back": "The line at zero degrees latitude, halfway between the geographic poles.",
+          "hint": "Think of Earth's middle.",
+          "explanation": "",
+          "tags": ["geography", "coordinates"]
+        },
+        {
+          "key": "latitude",
+          "front": "Latitude",
+          "back": "A location's angular position north or south of the equator.",
+          "hint": "Think of the north–south coordinate.",
+          "explanation": "",
+          "tags": ["geography", "coordinates"]
+        },
+        {
+          "key": "longitude",
+          "front": "Longitude",
+          "back": "A location's angular position east or west of the prime meridian.",
+          "hint": "Think of the east–west coordinate.",
+          "explanation": "",
+          "tags": ["geography", "coordinates"]
+        },
+        {
+          "key": "prime-meridian",
+          "front": "Prime meridian",
+          "back": "The reference meridian assigned zero degrees longitude.",
+          "hint": "Think of the starting line for longitude.",
+          "explanation": "",
+          "tags": ["geography", "coordinates"]
+        },
+        {
+          "key": "tropic-of-cancer",
+          "front": "Tropic of Cancer",
+          "back": "A line of latitude about 23.4 degrees north of the equator.",
+          "hint": "Think of the northern tropics.",
+          "explanation": "",
+          "tags": ["geography", "coordinates"]
+        },
+        {
+          "key": "tropic-of-capricorn",
+          "front": "Tropic of Capricorn",
+          "back": "A line of latitude about 23.4 degrees south of the equator.",
+          "hint": "Think of the southern tropics.",
+          "explanation": "",
+          "tags": ["geography", "coordinates"]
+        },
+        {
+          "key": "andes",
+          "front": "Andes",
+          "back": "A mountain system running along the western side of South America.",
+          "hint": "Think of the continent's Pacific side.",
+          "explanation": "",
+          "tags": ["geography", "mountains"]
+        },
+        {
+          "key": "himalayas",
+          "front": "Himalayas",
+          "back": "A mountain range formed by the collision of the Indian and Eurasian tectonic plates.",
+          "hint": "Think of continents meeting.",
+          "explanation": "",
+          "tags": ["geography", "mountains"]
+        },
+        {
+          "key": "sahara",
+          "front": "Sahara",
+          "back": "A desert stretching across much of North Africa.",
+          "hint": "Think north of the Sahel.",
+          "explanation": "",
+          "tags": ["geography", "deserts"]
+        },
+        {
+          "key": "amazon-basin",
+          "front": "Amazon Basin",
+          "back": "The South American region drained by the Amazon River and its tributaries.",
+          "hint": "Think of an entire river network.",
+          "explanation": "",
+          "tags": ["geography", "rivers"]
+        },
+        {
+          "key": "great-barrier-reef",
+          "front": "Great Barrier Reef",
+          "back": "A coral reef system off the coast of northeastern Australia.",
+          "hint": "Think of Queensland's coast.",
+          "explanation": "",
+          "tags": ["geography", "oceans"]
+        },
+        {
+          "key": "strait-of-gibraltar",
+          "front": "Strait of Gibraltar",
+          "back": "A waterway joining the Atlantic Ocean and Mediterranean Sea.",
+          "hint": "Think of a passage between seas.",
+          "explanation": "",
+          "tags": ["geography", "waterways"]
+        },
+        {
+          "key": "panama-canal",
+          "front": "Panama Canal",
+          "back": "A ship canal through Panama linking Atlantic and Pacific shipping routes.",
+          "hint": "Think of a shortcut across land.",
+          "explanation": "",
+          "tags": ["geography", "waterways"]
+        },
+        {
+          "key": "pacific-ocean",
+          "front": "Pacific Ocean",
+          "back": "The ocean between Asia and Australia to the west and the Americas to the east.",
+          "hint": "Think of its neighboring landmasses.",
+          "explanation": "",
+          "tags": ["geography", "oceans"]
+        },
+        {
+          "key": "antarctica",
+          "front": "Antarctica",
+          "back": "The continent surrounding Earth's geographic South Pole.",
+          "hint": "Think of a continent beneath the ice.",
+          "explanation": "",
+          "tags": ["geography", "continents"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "NOAA: Latitude",
+          "url": "https://oceanservice.noaa.gov/facts/latitude.html"
+        },
+        {
+          "title": "NOAA: Longitude",
+          "url": "https://oceanservice.noaa.gov/facts/longitude.html"
+        },
+        {
+          "title": "NASA Earth Observatory: Topography of South America",
+          "url": "https://science.nasa.gov/earth/earth-observatory/topography-of-south-america-3581/"
+        },
+        {
+          "title": "USGS: The Himalayas",
+          "url": "https://pubs.usgs.gov/gip/dynamic/himalaya.html"
+        },
+        {
+          "title": "USGS: Types of deserts",
+          "url": "https://pubs.usgs.gov/gip/deserts/types/"
+        },
+        {
+          "title": "Great Barrier Reef Marine Park Authority: Reef setting",
+          "url": "https://www2.gbrmpa.gov.au/sites/default/files/2022-06/GBRMPA_WQualityGuidelinesGBRMP_RevEdition_2010.pdf"
+        },
+        {
+          "title": "NASA: Strait of Gibraltar",
+          "url": "https://www.nasa.gov/image-article/strait-of-gibraltar-connects-atlantic-mediterranean/"
+        },
+        {
+          "title": "Panama Canal Authority: Connectivity",
+          "url": "https://pancanal.com/en/connectivity/"
+        },
+        {
+          "title": "NOAA: Pacific Ocean overview",
+          "url": "https://www.cpc.ncep.noaa.gov/products/international/ocean_monitoring/pacific/PO_monitoring_fcsts/overview.html"
+        },
+        {
+          "title": "Australian Antarctic Program: Antarctic geography",
+          "url": "https://www.antarctica.gov.au/about-antarctica/geography-and-geology/"
+        }
+      ]
+    },
+    {
+      "slug": "car-mechanics-basics",
+      "title": "Car mechanics basics",
+      "description": "A Recollect AI starter deck explaining key parts of a conventional gasoline car and what they do.",
+      "color": "#C4A17B",
+      "icon": "🚗",
+      "cards": [
+        {
+          "key": "alternator",
+          "front": "Alternator",
+          "back": "Uses engine rotation to generate electricity and recharge the battery.",
+          "hint": "Think of the charging system.",
+          "explanation": "",
+          "tags": ["cars", "electrical"]
+        },
+        {
+          "key": "starter-motor",
+          "front": "Starter motor",
+          "back": "Turns the engine to begin the combustion cycle.",
+          "hint": "Think of the first few turns.",
+          "explanation": "",
+          "tags": ["cars", "electrical"]
+        },
+        {
+          "key": "battery",
+          "front": "Battery",
+          "back": "Stores electrical energy used to start the engine and power electrical equipment.",
+          "hint": "Think of stored energy.",
+          "explanation": "",
+          "tags": ["cars", "electrical"]
+        },
+        {
+          "key": "spark-plug",
+          "front": "Spark plug",
+          "back": "Produces a spark that ignites the fuel–air mixture in a gasoline engine.",
+          "hint": "Think of ignition.",
+          "explanation": "",
+          "tags": ["cars", "engine"]
+        },
+        {
+          "key": "piston",
+          "front": "Piston",
+          "back": "Moves within a cylinder as combustion pressure pushes on it.",
+          "hint": "Think of motion inside the engine.",
+          "explanation": "",
+          "tags": ["cars", "engine"]
+        },
+        {
+          "key": "crankshaft",
+          "front": "Crankshaft",
+          "back": "Converts the pistons' back-and-forth movement into rotation.",
+          "hint": "Think of the spinning engine shaft.",
+          "explanation": "",
+          "tags": ["cars", "engine"]
+        },
+        {
+          "key": "intake-valve",
+          "front": "Intake valve",
+          "back": "Opens to let incoming air or fuel–air mixture enter a cylinder.",
+          "hint": "Think of the cylinder's entrance.",
+          "explanation": "",
+          "tags": ["cars", "engine"]
+        },
+        {
+          "key": "exhaust-valve",
+          "front": "Exhaust valve",
+          "back": "Opens to let burned gases leave a cylinder.",
+          "hint": "Think of the cylinder's exit.",
+          "explanation": "",
+          "tags": ["cars", "engine"]
+        },
+        {
+          "key": "fuel-injector",
+          "front": "Fuel injector",
+          "back": "Meters fuel into the engine as a fine spray.",
+          "hint": "Think of fuel delivery.",
+          "explanation": "",
+          "tags": ["cars", "fuel"]
+        },
+        {
+          "key": "engine-oil",
+          "front": "Engine oil",
+          "back": "Reduces friction between moving engine parts.",
+          "hint": "Think of surfaces sliding together.",
+          "explanation": "",
+          "tags": ["cars", "lubrication"]
+        },
+        {
+          "key": "radiator",
+          "front": "Radiator",
+          "back": "Transfers heat from engine coolant to the surrounding air.",
+          "hint": "Think of heat leaving the car.",
+          "explanation": "",
+          "tags": ["cars", "cooling"]
+        },
+        {
+          "key": "coolant-pump",
+          "front": "Coolant pump",
+          "back": "Circulates coolant through the engine's cooling system.",
+          "hint": "Think of keeping fluid moving.",
+          "explanation": "",
+          "tags": ["cars", "cooling"]
+        },
+        {
+          "key": "transmission",
+          "front": "Transmission",
+          "back": "Adjusts the relationship between engine speed and torque delivered to the drive wheels.",
+          "hint": "Think of selecting a gear.",
+          "explanation": "",
+          "tags": ["cars", "drivetrain"]
+        },
+        {
+          "key": "differential",
+          "front": "Differential",
+          "back": "Lets driven wheels rotate at different speeds when the car turns.",
+          "hint": "Think of inner and outer wheels.",
+          "explanation": "",
+          "tags": ["cars", "drivetrain"]
+        },
+        {
+          "key": "brake-caliper",
+          "front": "Brake caliper",
+          "back": "Presses brake pads against a disc to slow the wheel.",
+          "hint": "Think of a gripping action.",
+          "explanation": "",
+          "tags": ["cars", "brakes"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "DENSO: Starters and alternators technical manual",
+          "url": "https://assets.denso-am.eu/production/attachments/Starter-Alternator-Manual-English.pdf"
+        },
+        {
+          "title": "DENSO: Automotive service parts",
+          "url": "https://www.denso.com/global/en/products/lineup/parts-accessories/"
+        },
+        {
+          "title": "DENSO: Engine cooling systems",
+          "url": "https://www.denso-am.eu/products/ac-engine-cooling"
+        },
+        {
+          "title": "Toyota Canada: How vehicle systems work",
+          "url": "https://www.toyota.ca/en/owners/service/"
+        }
+      ]
+    },
+    {
+      "slug": "art-movements",
+      "title": "Art movements",
+      "description": "A Recollect AI starter for recognizing 15 art movements and styles, from everyday scenes to dream worlds.",
+      "color": "#CF6B4E",
+      "icon": "🎨",
+      "cards": [
+        {
+          "key": "impressionism",
+          "front": "Impressionism",
+          "back": "Painters captured fleeting light and everyday scenes with visible brushwork.",
+          "hint": "Think of changing sunlight on a river.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "post-impressionism",
+          "front": "Post-Impressionism",
+          "back": "Artists built on Impressionism while exploring more expressive color, structure, or symbolism.",
+          "hint": "Consider what painters pursued after fleeting impressions.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "cubism",
+          "front": "Cubism",
+          "back": "Artists broke subjects into geometric forms, often combining several viewpoints.",
+          "hint": "Imagine seeing the front and side together.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "fauvism",
+          "front": "Fauvism",
+          "back": "Painters used intense, often unnatural colors as an expressive force.",
+          "hint": "A face need not be painted in skin tones.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "expressionism",
+          "front": "Expressionism",
+          "back": "Artists distorted color or form to communicate subjective feelings.",
+          "hint": "Ask whether the scene describes a place or an emotion.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "surrealism",
+          "front": "Surrealism",
+          "back": "Artists explored dreams and the unconscious through unexpected images and combinations.",
+          "hint": "Imagine familiar objects behaving impossibly.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "dada",
+          "front": "Dada",
+          "back": "An experimental movement challenged artistic conventions through absurdity, chance, and provocation.",
+          "hint": "Think of an artwork that questions what art can be.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "futurism",
+          "front": "Futurism",
+          "back": "An Italian movement celebrated modern machinery, speed, and dynamic movement.",
+          "hint": "Picture a city as a rush of motion.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "abstract-expressionism",
+          "front": "Abstract Expressionism",
+          "back": "A movement associated with midcentury New York explored expressive abstraction, including gestures and color fields.",
+          "hint": "Think of a canvas experienced at bodily scale.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "pop-art",
+          "front": "Pop Art",
+          "back": "Artists drew on advertising, consumer goods, and popular entertainment.",
+          "hint": "Look for images borrowed from mass culture.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "minimalism",
+          "front": "Minimalism",
+          "back": "Artists emphasized simple forms, repetition, and the physical presence of materials.",
+          "hint": "Imagine repeated units with little visible personal gesture.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "conceptual-art",
+          "front": "Conceptual Art",
+          "back": "The idea or process takes priority over a finished physical object.",
+          "hint": "An instruction can matter as much as its execution.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "art-nouveau",
+          "front": "Art Nouveau",
+          "back": "A decorative style used flowing lines and forms inspired by plants and nature.",
+          "hint": "Picture a doorway with curling stems.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "art-deco",
+          "front": "Art Deco",
+          "back": "A decorative style favored geometric patterns, streamlined forms, and modern glamour.",
+          "hint": "Picture a symmetrical, stepped skyscraper.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        },
+        {
+          "key": "realism",
+          "front": "Realism",
+          "back": "Nineteenth-century artists depicted ordinary people and contemporary life without idealizing them.",
+          "hint": "Consider workers rather than mythological heroes.",
+          "explanation": "",
+          "tags": ["art", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "MoMA — Glossary of Art Terms",
+          "url": "https://www.moma.org/momaorg/shared/flattened_pages/moma_learning/glossary/"
+        },
+        {
+          "title": "Columbia Museum of Art — What the -ism?",
+          "url": "https://www.columbiamuseum.org/what-ism"
+        }
+      ]
+    },
+    {
+      "slug": "literary-devices",
+      "title": "Literary devices",
+      "description": "A Recollect AI starter for noticing how language creates images, sound, and meaning, with original examples.",
+      "color": "#8B739D",
+      "icon": "✒️",
+      "cards": [
+        {
+          "key": "metaphor",
+          "front": "Metaphor",
+          "back": "Describes one thing as another to suggest a meaningful resemblance.",
+          "hint": "“The hallway was a river of backpacks.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "simile",
+          "front": "Simile",
+          "back": "Compares different things explicitly, often using like or as.",
+          "hint": "“The train moved like a tired beetle.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "personification",
+          "front": "Personification",
+          "back": "Gives human qualities or actions to something nonhuman.",
+          "hint": "“The kettle complained from the stove.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "hyperbole",
+          "front": "Hyperbole",
+          "back": "Uses deliberate exaggeration for emphasis or effect.",
+          "hint": "“I carried a mountain of laundry.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "alliteration",
+          "front": "Alliteration",
+          "back": "Repeats initial consonant sounds across nearby words.",
+          "hint": "“Brave birds battered the breeze.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "assonance",
+          "front": "Assonance",
+          "back": "Repeats vowel sounds across nearby words.",
+          "hint": "Listen to the long vowels in “slow boats float.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "consonance",
+          "front": "Consonance",
+          "back": "Repeats consonant sounds within or at the ends of nearby words.",
+          "hint": "Listen to the repeated sound in “blank trunk.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "onomatopoeia",
+          "front": "Onomatopoeia",
+          "back": "Uses words whose sounds imitate what they describe.",
+          "hint": "Consider the sound of “buzz” or “clang.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "allusion",
+          "front": "Allusion",
+          "back": "Briefly refers to another work, person, event, or cultural reference.",
+          "hint": "Calling a difficult task “a Herculean effort.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "irony",
+          "front": "Irony",
+          "back": "Creates a gap between what is said, expected, or understood and what is actually the case.",
+          "hint": "A boast about perfect planning meets a forgotten map.",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "imagery",
+          "front": "Imagery",
+          "back": "Uses sensory language to make an experience vivid.",
+          "hint": "“Warm bread crackled beneath the knife.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "anaphora",
+          "front": "Anaphora",
+          "back": "Repeats a word or phrase at the beginnings of successive clauses or lines.",
+          "hint": "“We waited at dawn. We waited at dusk.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "enjambment",
+          "front": "Enjambment",
+          "back": "Carries a sentence or phrase across a poetic line break without a completing pause.",
+          "hint": "",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "allegory",
+          "front": "Allegory",
+          "back": "Tells a story whose characters or events also convey a broader layer of meaning.",
+          "hint": "A journey may also represent a moral struggle.",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        },
+        {
+          "key": "apostrophe",
+          "front": "Apostrophe",
+          "back": "Directly addresses someone absent or something unable to respond.",
+          "hint": "“O stubborn moon, keep me company.”",
+          "explanation": "",
+          "tags": ["language", "literature", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "Harvard — Guide to Poetic Terms",
+          "url": "https://poetry.harvard.edu/guide-poetic-terms"
+        },
+        {
+          "title": "Academy of American Poets — Glossary of Poetic Terms",
+          "url": "https://poets.org/glossary"
+        },
+        {
+          "title": "Academy of American Poets — Metaphor",
+          "url": "https://poets.org/glossary/metaphor"
+        }
+      ]
+    },
+    {
+      "slug": "music-fundamentals",
+      "title": "Music fundamentals",
+      "description": "A Recollect AI starter in Western music notation: pitch, beats, scales, and the building blocks of chords.",
+      "color": "#BC9652",
+      "icon": "🎵",
+      "cards": [
+        {
+          "key": "pitch",
+          "front": "Pitch",
+          "back": "How high or low a musical sound seems.",
+          "hint": "Compare the left and right ends of a piano.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "beat",
+          "front": "Beat",
+          "back": "The underlying pulse used to organize musical time.",
+          "hint": "Think of what your foot taps along with.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "tempo",
+          "front": "Tempo",
+          "back": "The speed of the beat, often measured in beats per minute.",
+          "hint": "A metronome changes this setting.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "meter",
+          "front": "Meter",
+          "back": "The recurring organization of beats and their usual subdivisions.",
+          "hint": "A waltz and a march group their pulses differently.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "measure",
+          "front": "Measure",
+          "back": "A section of notated music separated by bar lines.",
+          "hint": "Also called a bar.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "simple-meter",
+          "front": "Simple meter",
+          "back": "A meter in which each beat normally divides into two equal parts.",
+          "hint": "Count “one-and, two-and.”",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "compound-meter",
+          "front": "Compound meter",
+          "back": "A meter in which each beat normally divides into three equal parts.",
+          "hint": "Count “one-and-a, two-and-a.”",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "half-step",
+          "front": "Half step",
+          "back": "The distance between neighboring keys on a piano, whether black or white.",
+          "hint": "Look at E and the next F.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "whole-step",
+          "front": "Whole step",
+          "back": "A pitch distance equal to two half steps.",
+          "hint": "Look at C and the next D.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "major-scale",
+          "front": "Major scale",
+          "back": "A seven-note scale with step pattern whole, whole, half, whole, whole, whole, half.",
+          "hint": "Play the white keys from C to the next C.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "interval",
+          "front": "Interval",
+          "back": "The distance between two pitches, heard together or one after the other.",
+          "hint": "Compare the notes rather than their duration.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "octave",
+          "front": "Octave",
+          "back": "An interval spanning eight letter names, such as C up to the next C.",
+          "hint": "The letter name returns in a higher register.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "triad",
+          "front": "Triad",
+          "back": "A three-note chord whose pitches can be arranged as stacked thirds.",
+          "hint": "Try the notes C, E, and G.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "root",
+          "front": "Root",
+          "back": "The note a chord is built on, which need not be its lowest sounding note.",
+          "hint": "Rearranging a chord does not necessarily change this.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        },
+        {
+          "key": "rest",
+          "front": "Rest",
+          "back": "A notation symbol indicating a measured duration of silence.",
+          "hint": "The player counts but does not play a note.",
+          "explanation": "",
+          "tags": ["music", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "Puget Sound — Pitch",
+          "url": "https://musictheory.pugetsound.edu/mt21c/Pitch.html"
+        },
+        {
+          "title": "Puget Sound — Meter",
+          "url": "https://musictheory.pugetsound.edu/mt21c/meter.html"
+        },
+        {
+          "title": "Puget Sound — Half Steps and Whole Steps",
+          "url": "https://musictheory.pugetsound.edu/mt21c/HalfStepsAndWholeSteps.html"
+        },
+        {
+          "title": "Puget Sound — The Major Scale",
+          "url": "https://musictheory.pugetsound.edu/mt21c/TheMajorScale.html"
+        },
+        {
+          "title": "Puget Sound — Introduction to Intervals",
+          "url": "https://musictheory.pugetsound.edu/mt21c/IntervalsIntroduction.html"
+        },
+        {
+          "title": "Puget Sound — Introduction to Triads",
+          "url": "https://musictheory.pugetsound.edu/mt21c/TriadsIntroduction.html"
+        },
+        {
+          "title": "Puget Sound — Durational Symbols",
+          "url": "https://musictheory.pugetsound.edu/mt21c/DurationalSymbols.html"
+        }
+      ]
+    },
+    {
+      "slug": "internet-basics",
+      "title": "Internet basics",
+      "description": "A Recollect AI starter for the everyday terms behind websites, connections, and the path from a link to a page.",
+      "color": "#527E94",
+      "icon": "🌐",
+      "cards": [
+        {
+          "key": "internet",
+          "front": "Internet",
+          "back": "A global network of interconnected networks that exchange data.",
+          "hint": "Email and the web both use it.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "web",
+          "front": "Web",
+          "back": "A system of linked pages and resources accessed over the internet.",
+          "hint": "It is one service, rather than the entire network.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "browser",
+          "front": "Browser",
+          "back": "Software that retrieves and displays web pages.",
+          "hint": "Think of Safari, Firefox, or Chrome.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "client",
+          "front": "Client",
+          "back": "A device or program that requests a service from another computer.",
+          "hint": "When you open a page, your browser plays this role.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "server",
+          "front": "Server",
+          "back": "A computer or program that responds to requests from clients.",
+          "hint": "Think of the other end of a page request.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "router",
+          "front": "Router",
+          "back": "A device that forwards data between networks.",
+          "hint": "Traffic must choose a path beyond your home network.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "internet-provider",
+          "front": "Internet provider",
+          "back": "A company that connects customers to the internet.",
+          "hint": "Often shortened to ISP.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "packet",
+          "front": "Packet",
+          "back": "A small unit of data sent across a network.",
+          "hint": "A large transfer is broken into many of these.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "ip-address",
+          "front": "IP address",
+          "back": "An address used to identify a network interface and route data to it.",
+          "hint": "It may look like 192.0.2.1.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "dns",
+          "front": "DNS",
+          "back": "A distributed system that looks up records for domain names, including their IP addresses.",
+          "hint": "A readable website name needs a network destination.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "url",
+          "front": "URL",
+          "back": "A web address identifying a resource and how to access it.",
+          "hint": "Notice the scheme, domain, and path in a link.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "http",
+          "front": "HTTP",
+          "back": "A protocol defining requests and responses used to exchange web resources.",
+          "hint": "A browser asks; a web server replies.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "https",
+          "front": "HTTPS",
+          "back": "HTTP protected with TLS encryption between client and server.",
+          "hint": "Look at the beginning of a secure web address.",
+          "explanation": "An encrypted connection does not by itself prove that a site is trustworthy.",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "html",
+          "front": "HTML",
+          "back": "A markup language that structures web content using elements.",
+          "hint": "Headings, paragraphs, and links need structure.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        },
+        {
+          "key": "css",
+          "front": "CSS",
+          "back": "A language used to describe the presentation and layout of web content.",
+          "hint": "Colors, spacing, and type styles belong here.",
+          "explanation": "",
+          "tags": ["technology", "internet", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "MDN — How the web works",
+          "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Getting_started/Web_standards/How_the_web_works"
+        },
+        {
+          "title": "MDN — How does the Internet work?",
+          "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Howto/Web_mechanics/How_does_the_Internet_work"
+        },
+        {
+          "title": "MDN — HTTPS",
+          "url": "https://developer.mozilla.org/en-US/docs/Glossary/HTTPS"
+        },
+        {
+          "title": "MDN — HTML: Creating the content",
+          "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Getting_started/Your_first_website/Creating_the_content"
+        },
+        {
+          "title": "MDN — CSS: Cascading Style Sheets",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/CSS"
+        }
+      ]
+    },
+    {
+      "slug": "logical-fallacies",
+      "title": "Logical fallacies",
+      "description": "A Recollect AI starter for spotting weak arguments, with short examples and reminders that context matters.",
+      "color": "#9B665E",
+      "icon": "💭",
+      "cards": [
+        {
+          "key": "ad-hominem",
+          "front": "Ad hominem",
+          "back": "Rejects an argument by attacking an irrelevant trait of the person making it.",
+          "hint": "“Ignore her proposal; her haircut is ridiculous.”",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "straw-man",
+          "front": "Straw man",
+          "back": "Misrepresents an argument to attack an easier version.",
+          "hint": "A request for less homework becomes “You oppose learning.”",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "false-dilemma",
+          "front": "False dilemma",
+          "back": "Treats a restricted set of choices as exhaustive without justification.",
+          "hint": "“Either agree with every rule or leave the club.”",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "slippery-slope",
+          "front": "Slippery slope",
+          "back": "Claims one step will trigger an extreme chain of consequences without adequate support.",
+          "hint": "One late assignment supposedly guarantees total academic collapse.",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "hasty-generalization",
+          "front": "Hasty generalization",
+          "back": "Draws a broad conclusion from too little or unrepresentative evidence.",
+          "hint": "Two rude visitors supposedly describe an entire country.",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "circular-reasoning",
+          "front": "Circular reasoning",
+          "back": "Uses the conclusion, directly or indirectly, as support for itself.",
+          "hint": "“This rule is right because it is the correct rule.”",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "appeal-to-ignorance",
+          "front": "Appeal to ignorance",
+          "back": "Claims something is true because it hasn’t been disproved, or false because it hasn’t been proved.",
+          "hint": "“Nobody disproved my guess, so it must be true.”",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "post-hoc",
+          "front": "Post hoc",
+          "back": "Assumes an earlier event caused a later one merely because it came first.",
+          "hint": "A new pen supposedly caused yesterday’s exam success.",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "red-herring",
+          "front": "Red herring",
+          "back": "Diverts attention to an irrelevant issue instead of addressing the argument.",
+          "hint": "A question about bus delays gets an unrelated parking speech.",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "tu-quoque",
+          "front": "Tu quoque",
+          "back": "Dismisses a claim by alleging hypocrisy rather than evaluating its reasons.",
+          "hint": "“Your advice cannot be right; you ignore it yourself.”",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "appeal-to-popularity",
+          "front": "Appeal to popularity",
+          "back": "Treats widespread belief or popularity as sufficient proof that a claim is true.",
+          "hint": "“Everyone shares that rumor, so it must be accurate.”",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "unqualified-authority",
+          "front": "Unqualified authority",
+          "back": "Treats an authority’s opinion as decisive despite lacking relevant expertise or reliability.",
+          "hint": "A famous singer is offered as proof about bridge engineering.",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "equivocation",
+          "front": "Equivocation",
+          "back": "Switches a key word’s meaning during an argument.",
+          "hint": "“Light” can mean low weight or visible radiation.",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "composition",
+          "front": "Composition",
+          "back": "Assumes a whole must have a property because its individual parts have it.",
+          "hint": "Each tile is light, so the entire shipment must be light.",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        },
+        {
+          "key": "false-analogy",
+          "front": "False analogy",
+          "back": "Draws a conclusion from a comparison despite differences relevant to that conclusion.",
+          "hint": "Two things look alike, but does that support the claim?",
+          "explanation": "",
+          "tags": ["reasoning", "critical-thinking", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "OpenStax — Informal Fallacies",
+          "url": "https://openstax.org/books/introduction-philosophy/pages/5-5-informal-fallacies"
+        },
+        {
+          "title": "Internet Encyclopedia of Philosophy — Fallacies",
+          "url": "https://iep.utm.edu/fallacy/"
+        }
+      ]
+    },
+    {
+      "slug": "statistics-essentials",
+      "title": "Statistics essentials",
+      "description": "A Recollect AI starter for describing data and interpreting evidence, including common traps around correlation and p-values.",
+      "color": "#62836B",
+      "icon": "📊",
+      "cards": [
+        {
+          "key": "mean",
+          "front": "Mean",
+          "back": "The sum of numerical values divided by how many values there are.",
+          "hint": "Imagine sharing the total equally.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "median",
+          "front": "Median",
+          "back": "The middle ordered value, or the average of the two middle values when the count is even.",
+          "hint": "Sort the numbers before finding the center.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "mode",
+          "front": "Mode",
+          "back": "The value or values occurring most frequently in a data set.",
+          "hint": "Can a data set have more than one?",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "range",
+          "front": "Range",
+          "back": "The largest value minus the smallest value.",
+          "hint": "Focus on the two extremes.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "variance",
+          "front": "Variance",
+          "back": "A measure of spread based on squared deviations from the mean.",
+          "hint": "Squaring prevents positive and negative deviations from cancelling.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "standard-deviation",
+          "front": "Standard deviation",
+          "back": "The square root of variance, measuring spread in the original units.",
+          "hint": "Unlike variance, it can be stated in centimeters or seconds.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "population",
+          "front": "Population",
+          "back": "The complete group of individuals or items a study concerns.",
+          "hint": "",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "sample",
+          "front": "Sample",
+          "back": "A subset of a population selected for study.",
+          "hint": "A poll asks some people rather than everyone.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "parameter",
+          "front": "Parameter",
+          "back": "A numerical characteristic of a population.",
+          "hint": "Distinguish the whole group from the observed subset.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "statistic",
+          "front": "Statistic",
+          "back": "A numerical summary calculated from sample data.",
+          "hint": "A poll’s average is an estimate, not the population value.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "correlation",
+          "front": "Pearson correlation",
+          "back": "Pearson’s correlation measures the direction and strength of a linear relationship between two numerical variables.",
+          "hint": "A curved relationship can be strong even when this is near zero.",
+          "explanation": "Correlation alone does not establish that one variable causes the other.",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "p-value",
+          "front": "P-value",
+          "back": "Assuming the null hypothesis and test assumptions, the probability of a result at least as extreme as the observed result.",
+          "hint": "The probability concerns possible data, not whether a hypothesis is true.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "null-hypothesis",
+          "front": "Null hypothesis",
+          "back": "A baseline claim about a population or probability model that a statistical test evaluates.",
+          "hint": "Often a claim of no difference or no effect.",
+          "explanation": "Failing to reject it does not prove it true.",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "outlier",
+          "front": "Outlier",
+          "back": "An observation unusually far from the rest of the data.",
+          "hint": "Check an extreme value before deciding to remove it.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        },
+        {
+          "key": "simple-random-sample",
+          "front": "Simple random sample",
+          "back": "A sample selected so every possible group of its size has an equal chance of selection.",
+          "hint": "Think of a thoroughly mixed draw without replacement.",
+          "explanation": "",
+          "tags": ["math", "statistics", "beginner"]
+        }
+      ],
+      "sources": [
+        {
+          "title": "OpenStax — Definitions of Statistics, Probability, and Key Terms",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/1-1-definitions-of-statistics-probability-and-key-terms"
+        },
+        {
+          "title": "OpenStax — Measures of the Center of the Data",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/2-5-measures-of-the-center-of-the-data"
+        },
+        {
+          "title": "OpenStax — Measures of the Spread of the Data",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/2-7-measures-of-the-spread-of-the-data"
+        },
+        {
+          "title": "OpenStax — Testing the Significance of the Correlation Coefficient",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/12-4-testing-the-significance-of-the-correlation-coefficient"
+        },
+        {
+          "title": "OpenStax — Rare Events, the Sample, Decision and Conclusion",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/9-4-rare-events-the-sample-decision-and-conclusion"
+        },
+        {
+          "title": "OpenStax — Data, Sampling, and Variation in Data and Sampling",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/1-2-data-sampling-and-variation-in-data-and-sampling"
+        },
+        {
+          "title": "OpenStax — Measures of the Location of the Data",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/2-3-measures-of-the-location-of-the-data"
+        },
+        {
+          "title": "OpenStax — Informal Fallacies (correlation and causation)",
+          "url": "https://openstax.org/books/introduction-philosophy/pages/5-5-informal-fallacies"
+        }
+      ]
+    }
+  ]
+}

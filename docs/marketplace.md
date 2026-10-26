@@ -2,6 +2,46 @@
 
 This is a free, signed-in deck catalog inside Recollect, introduced in PR #35. Publishing a deck is separate from sharing it privately with a friend. Main deploys the API to Railway and delivers the app to TestFlight; the marketplace is available for beta testing.
 
+## Recollect AI starter collection
+
+The first official collection contains **16 decks and 240 cards**, published as
+**Recollect AI**: Italian, Spanish, French, Japanese, physics, the solar system,
+cell biology, chemistry, geography, car mechanics, art movements, literary
+devices, music, the internet, logical fallacies, and statistics. Each deck has 15
+short concept cards, original AI-created explanations, and primary source links
+in its description. Japanese cards include pronunciation hints.
+
+The reviewed source is `packages/db/catalog/recollect-ai-v1.json`. Its deterministic
+builder validates normal deck/card/publication contracts and creates migration
+`0007_recollect_ai_catalog.sql`. Before this migration is first deployed, regenerate
+and verify it with Node 24:
+
+```sh
+node --import=tsx packages/db/src/starter-catalog.ts --write
+node --import=tsx packages/db/src/starter-catalog.ts --check
+```
+
+After publication, keep this version's manifest and migration immutable. Add a
+new reviewed migration for future additions or corrections. Stable identifiers
+derive from the publisher identity, catalog version, deck slug and card key;
+reordering content does not change those identities or snapshot hashes.
+
+Merging to `main` publishes through Railway's existing transactional migration
+step. No new service configuration, API route, access token, or app binary is
+required. The dedicated publisher has no Apple identity, email, login credentials,
+or sessions. It creates ordinary source decks, cards, sync changes, marketplace
+snapshots and publication receipts. Every card is marked `aiGenerated`; no reviews,
+downloads or usage consent are fabricated. Both public metric switches start off.
+Learners download independent copies with fresh review schedules through the
+existing marketplace flow.
+
+The migration ledger prevents repeated deploys from duplicating decks, resetting
+settings or restoring removed content. Identity collisions fail the transaction;
+inactive or deleted publishers are not reactivated. Operators can unpublish the
+official listings using the existing moderation process, preserving downloaded
+copies. Do not delete migration ledger entries or rerun earlier migrations to
+undo a publication.
+
 ## Ownership model
 
 ```mermaid

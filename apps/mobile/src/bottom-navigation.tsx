@@ -6,7 +6,7 @@ import { colors, s, Text } from './ui';
 
 export const tabs = [
   { name: 'index', icon: '◉', label: 'Today' },
-  { name: 'decks', icon: '▤', label: 'Practice' },
+  { name: 'decks', icon: '▤', label: 'Decks' },
   { name: 'generate', icon: '+', label: 'Create' },
   { name: 'progress', icon: '↗', label: 'Progress' },
   { name: 'profile', icon: '◎', label: 'You' },

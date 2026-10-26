@@ -93,15 +93,16 @@ export function AIPermissionPanel({
       <Text style={s.body}>
         With your permission, Recollect sends your question or deck title, topic and generation
         prompt to Anthropic to suggest cards or answers. When expanding a deck, up to 40 existing
-        card questions are included as context.
+        card fronts are included as context.
       </Text>
       <Text style={s.caption}>
-        Your profile and Apple sign-in identifiers are not intentionally included in the AI prompt.
+        Recollect does not add your profile or Apple sign-in details to the AI prompt. Anything
+        you include in your card text or generation prompt may be sent.
       </Text>
       <Text style={s.caption}>
         This is optional. Write and practice cards without AI. Permission applies to this signed-in
-        account on this device. You can revoke it here in You; requests already sent cannot be
-        recalled.
+        account on this device. You can revoke it in the You tab; requests already sent cannot
+        be recalled.
       </Text>
       {!!consent.error && (
         <Text accessibilityRole="alert" style={s.caption}>

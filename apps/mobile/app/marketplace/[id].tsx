@@ -112,7 +112,7 @@ function MarketplaceDetailForAccount({ id }: { id: string }) {
             </Text>
             <Text style={s.body}>
               {owned
-                ? 'This public snapshot stays available until you unpublish it, even if you edit or delete the original deck. Your private review history stays private.'
+                ? 'This public snapshot stays available until you unpublish it, even if you edit or delete the original deck. Publishing does not include your review history.'
                 : 'Downloading adds an independent copy to your library. Your edits and practice schedule stay yours. Later publisher changes do not update your copy.'}
             </Text>
             {owned ? (
@@ -126,14 +126,14 @@ function MarketplaceDetailForAccount({ id }: { id: string }) {
                 />
                 <MarketplaceToggle
                   title="Show download count"
-                  detail="You can show or hide this unique download count at any time."
+                  detail="Counts active accounts that downloaded this deck, once per account. You can hide the count at any time; download records are kept."
                   value={listing.showDownloadCount}
                   disabled={!!result.busy}
                   onChange={(enabled) => void settings({ showDownloadCount: enabled })}
                 />
                 <MarketplaceToggle
-                  title="Show aggregate practice activity"
-                  detail="Only broad trends from at least 5 eligible consenting learners over the last 30 days can appear. Individual progress stays private."
+                  title="Show practice trends"
+                  detail="Show broad trends from consenting learners over the last 30 days, once at least 5 qualify. These trends do not show individual progress. Hiding them does not stop contributions or delete reviews."
                   value={listing.showUsageStats}
                   disabled={!!result.busy}
                   onChange={(enabled) => void settings({ showUsageStats: enabled })}
@@ -171,13 +171,22 @@ function MarketplaceDetailForAccount({ id }: { id: string }) {
                 />
               </>
             ) : (
-              <Button
-                title={listing.download ? 'Sync downloaded copy' : 'Download deck'}
-                size="compact"
-                disabled={!!result.busy}
-                loading={result.busy === 'download'}
-                onPress={() => void download()}
-              />
+              <>
+                {!!listing.download && (
+                  <Text style={s.caption}>
+                    You downloaded version {listing.download.version}, but its copy is not on this
+                    device. Sync can check for it. If you deleted the copy, syncing will keep that
+                    deletion; this publication cannot be downloaded again yet.
+                  </Text>
+                )}
+                <Button
+                  title={listing.download ? 'Check downloaded copy' : 'Download deck'}
+                  size="compact"
+                  disabled={!!result.busy}
+                  loading={result.busy === 'download'}
+                  onPress={() => void download()}
+                />
+              </>
             )}
             {!!listing.download && (
               <MarketplaceUsageConsent

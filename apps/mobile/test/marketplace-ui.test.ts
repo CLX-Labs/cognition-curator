@@ -66,7 +66,7 @@ vi.mock('../src/ui', () => ({
 import DeckMarketplace from '../src/deck-marketplace';
 import MarketplaceDetail from '../app/marketplace/[id]';
 import MarketplaceCatalog from '../app/marketplace/index';
-import { MarketplaceMetrics } from '../src/marketplace-ui';
+import { MarketplaceMetrics, MarketplaceUsageConsent } from '../src/marketplace-ui';
 
 let renderer: ReactTestRenderer | null = null;
 const deckId = '00000000-0000-4000-8000-000000000002';
@@ -164,7 +164,7 @@ it('requires a deliberate rights acknowledgement and keeps the publication form 
   await act(async () => renderer!.root.findByType('pressable').props.onPress());
   await press('Publish this deck…');
   expect(toggle('Show download count').props.value).toBe(false);
-  expect(toggle('Show aggregate practice activity').props.value).toBe(false);
+  expect(toggle('Show practice trends').props.value).toBe(false);
   expect(button('Publish public copy').props.disabled).toBe(true);
   await press('Publish public copy');
   expect(rig.request.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(
@@ -304,6 +304,27 @@ it('preserves a downloaded learner’s contribution control independently of lis
     body: { enabled: false },
   });
   expect(toggle('Contribute my practice activity').props.value).toBe(false);
+});
+
+it('lets learners read contribution details without changing consent, including while a change is pending', async () => {
+  const change = vi.fn();
+  await mount(
+    React.createElement(MarketplaceUsageConsent, {
+      enabled: false,
+      disabled: true,
+      onChange: change,
+    }),
+  );
+  const disclosure = () => renderer!.root.findByType('pressable');
+  expect(disclosure().props.accessibilityState.expanded).toBe(false);
+  expect(toggle('Contribute my practice activity').props.disabled).toBe(true);
+  await act(async () => disclosure().props.onPress());
+  expect(disclosure().props.accessibilityState.expanded).toBe(true);
+  expect(toggle('Contribute my practice activity').props.value).toBe(false);
+  expect(change).not.toHaveBeenCalled();
+  await act(async () => disclosure().props.onPress());
+  expect(disclosure().props.accessibilityState.expanded).toBe(false);
+  expect(change).not.toHaveBeenCalled();
 });
 
 it('does not open a downloaded deck when the signed-in account changes during the request', async () => {

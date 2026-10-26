@@ -367,7 +367,7 @@ it('opens hints outside the swipe surface without flipping or saving the card', 
   expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
   await closeReader();
   expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
-  expect(cardView().props.accessibilityLabel).toBe('Question: ' + first.front);
+  expect(cardView().props.accessibilityLabel).toBe('Front: ' + first.front);
   expect(rig.rate).not.toHaveBeenCalled();
   expect(rig.revealHaptic).toHaveBeenCalledTimes(1);
   await swipe(140);
@@ -698,7 +698,7 @@ it('cleans up feedback when leaving a session instead of showing it in the next 
   expect(feedback()).toHaveLength(1);
   rig.params = { ...rig.params, practice: 'true' };
   await act(async () => renderer!.update(React.createElement(ReviewScreen)));
-  expect(text()).toContain('FREE PRACTICE');
+  expect(text()).toContain('EXTRA PRACTICE');
   expect(feedback()).toHaveLength(0);
   await elapse(1000);
   expect(rig.haptic).toHaveBeenCalledTimes(1);
@@ -721,13 +721,15 @@ it('does not vibrate for an old session when its save finishes after leaving', a
   await act(async () => finish());
   expect(rig.haptic).not.toHaveBeenCalled();
   expect(feedback()).toHaveLength(0);
-  expect(text()).toContain('FREE PRACTICE');
+  expect(text()).toContain('EXTRA PRACTICE');
   expect(text()).toContain(first.front);
 });
 
 it('practice records the same ratings as daily review without repeating missed cards', async () => {
   rig.params.practice = 'true';
   await mount();
+  expect(text()).toContain('Your responses update the next review dates.');
+  expect(text()).toContain('Next review · Not sure: 3d · Remembered: 7d');
   await swipe(-150);
   expect(text()).toContain(second.front);
   expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'again', 0);
@@ -872,6 +874,59 @@ it('opens and rates the widget’s specific future-due card even when no cards a
   expect(random).not.toHaveBeenCalled();
 });
 
+it.each([
+  { params: { cardId: 'missing-card' }, title: 'This card is unavailable' },
+  { params: { deckId: 'missing-deck' }, title: 'This deck is unavailable' },
+])('offers library recovery for an unavailable target: $title', async ({ params, title }) => {
+  rig.params = params;
+  await mount();
+  expect(text()).toContain(title);
+  expect(text()).not.toContain('All caught up.');
+  expect(text()).not.toContain('SESSION COMPLETE');
+  expect(button('Open decks')).toBeDefined();
+  expect(rig.rate).not.toHaveBeenCalled();
+});
+
+it('does not claim completion when synchronization removes the current card', async () => {
+  await mount();
+  await press('I remember →');
+  rig.data = { ...rig.data!, cards: [first] };
+  await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+  expect(text()).toContain('This card is unavailable');
+  expect(text()).not.toContain('Nicely done.');
+  expect(text()).not.toContain('SESSION COMPLETE');
+  expect(button('Back to deck')).toBeDefined();
+  expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'good', 0);
+});
+
+it('offers extra practice for an empty due queue without claiming a completed session', async () => {
+  const future = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  rig.data = {
+    ...rig.data!,
+    cards: [first, second].map((item) => ({
+      ...item,
+      schedule: { ...item.schedule, dueAt: future },
+    })),
+  };
+  await mount();
+  expect(text()).toContain('All caught up.');
+  expect(text()).toContain('No cards are due right now.');
+  expect(text()).not.toContain('SESSION COMPLETE');
+  expect(button('Practice anytime')).toBeDefined();
+  expect(rig.rate).not.toHaveBeenCalled();
+});
+
+it('offers a way to add cards when the selected deck is empty', async () => {
+  rig.params.practice = 'true';
+  rig.data = { ...rig.data!, cards: [] };
+  await mount();
+  expect(text()).toContain('No cards to review yet');
+  expect(text()).not.toContain('All caught up.');
+  expect(text()).not.toContain('PRACTICE COMPLETE');
+  expect(button('Open decks')).toBeDefined();
+  expect(rig.rate).not.toHaveBeenCalled();
+});
+
 it('saving never inserts sync or storage-status banners into the next card or completion', async () => {
   rig.mutate.mockImplementation(async (work) => {
     await work({ rateCard: rig.rate } as unknown as Repository);
@@ -922,7 +977,7 @@ it('switching review mode starts a fresh session while a normal rerender does no
   await flip();
   rig.params = { ...rig.params, practice: 'true' };
   await act(async () => renderer!.update(React.createElement(ReviewScreen)));
-  expect(text()).toContain('FREE PRACTICE');
+  expect(text()).toContain('EXTRA PRACTICE');
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
   expect(rig.rate).not.toHaveBeenCalled();

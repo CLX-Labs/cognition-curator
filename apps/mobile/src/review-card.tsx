@@ -153,17 +153,17 @@ export default function ReviewCard({
           accessibilityLabel={
             revealed
               ? 'Answer: ' + card.back
-              : (card.aiGenerated ? 'Concept: ' : 'Question: ') + card.front
+              : 'Front: ' + card.front
           }
           accessibilityHint={
             revealed
-              ? 'Tap to show the question. Swipe right if you remember, or left if you do not.'
-              : 'Tap to show the answer. Swipe right if you remember, or left if you do not.'
+              ? 'Tap to flip back. Swipe right if you remember, or left if you are not sure.'
+              : 'Tap to show the answer. Swipe right if you remember, or left if you are not sure.'
           }
           accessibilityState={{ disabled, busy: disabled }}
           accessibilityActions={[
             { name: 'remembered', label: 'I remember' },
-            { name: 'missed', label: 'I do not remember' },
+            { name: 'missed', label: 'Not sure' },
           ]}
           onAccessibilityAction={(event) => {
             if (disabled) return;
@@ -184,7 +184,7 @@ export default function ReviewCard({
               numberOfLines={1}
               style={[s.eyebrow, { marginBottom: 0, color: colors.ink, flexShrink: 1 }]}
             >
-              {revealed ? '02 / ANSWER' : card.aiGenerated ? '01 / CONCEPT' : '01 / QUESTION'}
+              {revealed ? '02 / ANSWER' : '01 / FRONT'}
             </Text>
             <Text style={[s.caption, { color: colors.ink }]}>↻</Text>
           </View>
@@ -204,7 +204,7 @@ export default function ReviewCard({
           </View>
           <View style={styles.cardFooter}>
             <Text numberOfLines={1} style={[s.caption, { color: colors.ink, flexShrink: 1 }]}>
-              {revealed ? 'Tap to see the question' : 'Tap to reveal the answer'}
+              {revealed ? 'Tap to flip back' : 'Tap to reveal the answer'}
             </Text>
             <Text style={{ fontSize: 22, color: colors.accent }}>↗</Text>
           </View>

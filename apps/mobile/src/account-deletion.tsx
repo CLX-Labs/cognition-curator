@@ -47,8 +47,9 @@ export function AccountDeletionPanel() {
         <>
           <Text style={s.body}>
             Request permanent deletion of this Recollect account and its library. Access is disabled
-            when the server accepts the request. Friends lose shared recall access; independent deck
-            copies they already imported remain theirs.
+            when Recollect accepts the request. Your marketplace listings and shared review-history
+            access will be removed. Copies other people already downloaded or accepted remain in
+            their libraries.
           </Text>
           <Text style={s.caption}>
             After acceptance, this signed-in account’s current cards, drafts, profile cache and
@@ -132,9 +133,9 @@ export function AccountDeletionRecoveryScreen() {
         <Text style={s.body}>
           {receipt
             ? receipt.status === 'completed'
-              ? 'The server confirmed permanent account deletion. Finish removing its data from this device.'
-              : 'Your account is disabled and permanent deletion is pending. We are removing its data from this device.'
-            : 'The connection ended before the deletion request could be confirmed. Confirm with Apple to safely check or retry the same request. This screen will not guess whether deletion completed.'}
+              ? 'Recollect confirmed permanent account deletion. Finish removing its data from this device.'
+              : 'Your Recollect account is disabled and permanent deletion is pending. Its data is being removed from this device.'
+            : 'The connection ended before Recollect could confirm your deletion request. Confirm your identity with Apple to check or retry the same Recollect request.'}
         </Text>
         {!!deletionError && (
           <Text accessibilityRole="alert" style={[s.body, { color: colors.danger }]}>
@@ -142,7 +143,7 @@ export function AccountDeletionRecoveryScreen() {
           </Text>
         )}
         <Button
-          title={receipt ? 'Finish removing local data' : 'Confirm with Apple & check request'}
+          title={receipt ? 'Finish removing local data' : 'Confirm identity & check request'}
           loading={deletionBusy}
           disabled={deletionBusy}
           onPress={() => void retryAccountDeletion()}
@@ -175,12 +176,12 @@ export function DeletionReceiptNotice() {
       </Text>
       <Text style={s.body}>
         {receipt.status === 'completed'
-          ? 'Permanent server deletion is complete. Its current Recollect library, sign-in and widget data were removed from this device.'
-          : 'Your account is disabled. Its current Recollect library, sign-in and widget data were removed from this device. Permanent server deletion is still pending.'}
+          ? 'Recollect confirmed permanent deletion of your account. Its current library, sign-in and widget data were removed from this device.'
+          : 'Your Recollect account is disabled. Its current library, sign-in and widget data were removed from this device. Permanent account deletion is still pending.'}
       </Text>
       <Text style={s.caption}>
-        User-exported files and original legacy recovery stores are separate and may remain on this
-        device. Support can help with those files.
+        Exported files and recovery data from the original app are separate and may remain on this
+        device. Support can help remove them.
       </Text>
       {receipt.status === 'pending' && (
         <>
@@ -189,15 +190,23 @@ export function DeletionReceiptNotice() {
               ? 'Support needs to help finish this request. Use the support link below and include your request reference.'
               : receipt.actionRequired === 'reauthenticate'
                 ? 'Confirm with Apple again to help finish deletion of your Sign in with Apple connection.'
-                : 'The server will process this request. You can check its status with Apple.'}
+                : 'Recollect will process this request. Checking its status asks you to confirm your identity with Apple.'}
           </Text>
           {receipt.estimatedCompletionDays !== null && (
             <Text style={s.caption}>
-              Estimated completion: within {receipt.estimatedCompletionDays} days.
+              Estimated completion:{' '}
+              {new Date(
+                Date.parse(receipt.requestedAt) + receipt.estimatedCompletionDays * 86_400_000,
+              ).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+              .
             </Text>
           )}
           <Button
-            title="Check deletion status with Apple"
+            title="Check Recollect deletion status"
             variant="secondary"
             size="compact"
             loading={deletionBusy}

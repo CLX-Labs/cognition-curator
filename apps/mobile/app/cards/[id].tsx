@@ -144,7 +144,7 @@ export default function CardEditor() {
         <View style={{ gap: 8 }}>
           {answerPending && (
             <Text style={s.caption}>
-              Wait for the answer or use Set aside in the answer draft to save your own.
+              Wait for the answer or choose Set request aside to save your own.
             </Text>
           )}
           {!existing && (
@@ -175,7 +175,8 @@ export default function CardEditor() {
         </View>
       )}
       <Field
-        label={baseline?.aiGenerated ? 'Title' : 'Question'}
+        label="Front"
+        hint="A short concept or question."
         placeholder="What do you want to remember?"
         value={front}
         multiline

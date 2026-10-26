@@ -31,11 +31,18 @@ private struct ReviewWidgetView: View {
       if let card = entry.snapshot?.topCard {
         Text(card.question).font(.headline).lineLimit(5).minimumScaleFactor(0.8).privacySensitive()
         Spacer(minLength: 0)
-        Text(card.deckName).font(.caption).foregroundStyle(.secondary).lineLimit(1).privacySensitive()
+        HStack(spacing: 4) {
+          Text(card.deckName).lineLimit(1).privacySensitive()
+          if entry.snapshot?.dueCount == 0 {
+            Spacer(minLength: 0)
+            Text("Extra practice").fixedSize()
+          }
+        }
+        .font(.caption).foregroundStyle(.secondary)
       } else {
-        Text(entry.snapshot == nil ? "Open Recollect to sign in" : "Ready for your next review").font(.headline)
+        Text("Open Recollect").font(.headline)
         Spacer(minLength: 0)
-        Text("Tap to study").font(.caption).foregroundStyle(.secondary)
+        Text(entry.snapshot?.hasCards == false ? "Add your first card" : "See your cards").font(.caption).foregroundStyle(.secondary)
       }
     }
     .containerBackground(Color(.systemBackground), for: .widget)
@@ -49,7 +56,7 @@ struct CognitionCuratorWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: kind, provider: ReviewProvider()) { ReviewWidgetView(entry: $0) }
       .configurationDisplayName("Flashcard Review")
-      .description("Open your next review and see your latest due count.")
+      .description("See a card from your library and open it to practice.")
       .supportedFamilies([.systemSmall, .systemMedium])
   }
 }

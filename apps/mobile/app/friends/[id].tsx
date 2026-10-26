@@ -82,8 +82,8 @@ export default function FriendScreen() {
             <Panel tint>
               <Text style={s.sectionTitle}>See what is sticking.</Text>
               <Text style={s.body}>
-                Explore {friend.name}’s card-by-card recall, repeat struggles, and review history
-                across the shared decks they have enabled.
+                See which cards {friend.name} remembers, which need more practice, and how their
+                recall changes across the decks they have chosen to share.
               </Text>
               <Button
                 title={'View ' + friend.name + '’s recall'}
@@ -141,9 +141,9 @@ export default function FriendScreen() {
             />
           ))}
           <Text style={s.caption}>
-            You each control your recall visibility. Turning it off removes your friend’s access to
-            past and future reviews immediately. Editing a copied card makes its new content
-            private.
+            You each control recall sharing for each deck. Turning it off stops further access
+            through Recollect; it cannot erase information your friend has already seen. Edits to
+            copied cards are not shared.
           </Text>
           <Button
             title="Refresh shared decks"

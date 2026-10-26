@@ -87,7 +87,7 @@ export default function AnswerGenerator({
       } catch (cause) {
         if (current())
           setError(
-            cause instanceof Error ? cause.message : 'Your request is saved. Retry when connected.',
+            cause instanceof Error ? cause.message : 'The answer request could not finish. Try again.',
           );
       } finally {
         if (current()) {
@@ -127,7 +127,7 @@ export default function AnswerGenerator({
     });
     if (!request.success) {
       setError(
-        'Shorten the question to generate an answer. You can still write and save an answer yourself.',
+        'Shorten the card front to generate an answer. You can still write and save an answer yourself.',
       );
       return;
     }
@@ -203,7 +203,13 @@ export default function AnswerGenerator({
           <View style={s.row}>
             {(busy || state?.job) && <ActivityIndicator color={colors.ink} />}
             <Text style={s.label}>
-              {busy || state?.job ? 'Generating answer…' : 'Your answer request is saved'}
+              {state?.job?.status === 'running'
+                ? 'Drafting your answer…'
+                : state?.job?.status === 'queued'
+                  ? 'Waiting to generate'
+                  : busy
+                    ? 'Sending your answer request…'
+                    : 'Your answer request is saved'}
             </Text>
           </View>
           {!busy && !state?.job && (
@@ -230,11 +236,11 @@ export default function AnswerGenerator({
             <Button title="Use this answer" size="compact" onPress={() => onUse(answer)} />
           ) : (
             <Text style={s.caption}>
-              Your question changed. Restore it or generate a fresh answer.
+              The card front changed. Restore it or generate a fresh answer.
             </Text>
           )}
           <Button
-            title={changedQuestion ? 'Generate for updated question' : 'Try another answer'}
+            title={changedQuestion ? 'Generate for updated front' : 'Try another answer'}
             size="compact"
             variant="ghost"
             disabled={!question.trim() || !consent.allowed}
@@ -247,7 +253,7 @@ export default function AnswerGenerator({
         <View style={s.between}>
           {changedQuestion && (
             <Button
-              title="Restore saved question"
+              title="Restore saved front"
               size="compact"
               variant="ghost"
               disabled={busy}

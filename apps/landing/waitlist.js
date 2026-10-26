@@ -44,7 +44,7 @@
       saved = true;
       form.reset();
       fields.hidden = true;
-      status.textContent = 'You’re on the list. We’ll email you when Recollect is ready.';
+      status.textContent = 'You’re on the list. We’ll email you when Recollect is available.';
       status.focus({ preventScroll: true });
     } catch {
       fields.disabled = false;

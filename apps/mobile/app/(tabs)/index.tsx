@@ -48,7 +48,7 @@ export default function Home() {
       <Panel tint>
         <View style={s.between}>
           <View style={s.pill}>
-            <Text style={s.pillText}>DAILY PRACTICE</Text>
+            <Text style={s.pillText}>DAILY REVIEW</Text>
           </View>
           <BrandPattern variant="orbit" width={64} height={28} />
         </View>
@@ -94,15 +94,15 @@ export default function Home() {
       </Panel>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Create cards or a deck"
+        accessibilityLabel="Generate cards with AI"
         onPress={() => router.navigate('/generate')}
         style={({ pressed }) => [pressed && { opacity: 0.75 }]}
       >
         <Panel style={{ gap: 12 }}>
           <View style={s.between}>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={s.sectionTitle}>Learn something new</Text>
-              <Text style={s.body}>Write a card or let AI get you started.</Text>
+              <Text style={s.sectionTitle}>Start with a subject</Text>
+              <Text style={s.body}>Let AI draft cards for a new or existing deck.</Text>
             </View>
             <View
               style={{

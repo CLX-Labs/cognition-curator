@@ -137,7 +137,7 @@ async function mount() {
 }
 async function enter(front: string, back: string) {
   await act(async () => {
-    field('Question').props.onChangeText(front);
+    field('Front').props.onChangeText(front);
     field('Answer').props.onChangeText(back);
   });
 }
@@ -156,7 +156,7 @@ it('saves successive cards in the chosen deck, clears fields, and changes only t
     }),
     undefined,
   );
-  expect(field('Question').props.value).toBe('');
+  expect(field('Front').props.value).toBe('');
   expect(field('Answer').props.value).toBe('');
   expect(renderer!.root.findByType('answer-generator').props.cardId).toBe('stable-2');
   expect(rig.dismissTo).not.toHaveBeenCalled();
@@ -176,7 +176,7 @@ it('reuses the assigned card ID when a save succeeds but refresh fails', async (
   await enter('Question', 'Answer');
   rig.failRefresh = true;
   await act(async () => button('Save & add another').props.onPress());
-  expect(field('Question').props.value).toBe('Question');
+  expect(field('Front').props.value).toBe('Question');
   expect(rig.reportError).toHaveBeenCalledWith(
     expect.objectContaining({ message: 'Refresh failed' }),
   );
@@ -208,7 +208,7 @@ it('keeps optional details hidden and retains an edited card baseline through a 
   rig.params = { id: 'card-id' };
   await mount();
   expect(renderer!.root.findAllByType('field').map((node) => node.props.label)).toEqual([
-    'Question',
+    'Front',
     'Answer',
   ]);
   await enter('My edit', 'My answer');
@@ -220,7 +220,7 @@ it('keeps optional details hidden and retains an edited card baseline through a 
     baseline,
   );
 });
-it('explains a pending answer save lock and enables saving again after Set aside', async () => {
+it('explains a pending answer save lock and enables saving again after setting the request aside', async () => {
   await mount();
   await enter('Question', 'My own answer');
   await act(async () => renderer!.root.findByType('answer-generator').props.onPendingChange(true));
@@ -229,7 +229,7 @@ it('explains a pending answer save lock and enables saving again after Set aside
     .findAllByType('text')
     .map((node) => node.props.children)
     .join(' ');
-  expect(copy).toContain('Set aside');
+  expect(copy).toContain('Set request aside');
   await act(async () => renderer!.root.findByType('answer-generator').props.onPendingChange(false));
   expect(button('Save & add another').props.disabled).toBe(false);
 });

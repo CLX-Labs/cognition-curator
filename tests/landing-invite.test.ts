@@ -28,7 +28,7 @@ function setup({
   ]) {
     elements[id] = {
       hidden: ['invite-ready', 'invite-invalid'].includes(id),
-      textContent: id === 'invite-download' ? 'Get beta access ↗' : '',
+      textContent: id === 'invite-download' ? 'Join the waitlist ↗' : '',
       value: '',
       href: id === 'invite-download' ? '/#get-recollect' : '',
       focus: vi.fn(), select: vi.fn(), setSelectionRange: vi.fn(),
@@ -128,7 +128,7 @@ describe('public friend invitation', () => {
   ])('keeps the honest beta fallback for unconfigured or unsafe download URL %s', (downloadUrl) => {
     const page = setup({ downloadUrl });
     expect(page.elements['invite-download']!.href).toBe('/#get-recollect');
-    expect(page.elements['invite-download']!.textContent).toContain('Get beta access');
+    expect(page.elements['invite-download']!.textContent).toContain('Join the waitlist');
   });
 
   it('does not use a download destination supplied through invite query parameters', () => {

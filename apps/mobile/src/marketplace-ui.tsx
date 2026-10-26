@@ -74,7 +74,8 @@ export function MarketplaceMetrics({ listing }: { listing: MarketplaceListing })
     <View style={{ gap: 7 }}>
       {listing.showDownloadCount && listing.downloadCount !== null && (
         <Text style={s.caption}>
-          {listing.downloadCount} {listing.downloadCount === 1 ? 'download' : 'downloads'}
+          Downloaded by {listing.downloadCount}{' '}
+          {listing.downloadCount === 1 ? 'learner' : 'learners'}
         </Text>
       )}
       {!!usage && (
@@ -126,7 +127,9 @@ export function MarketplaceListingCard({ listing }: { listing: MarketplaceListin
         {!!listing.download && (
           <Text style={s.caption}>
             Downloaded version {listing.download.version}
-            {listing.download.version < listing.version ? ' · Newer publication available' : ''}
+            {listing.download.version < listing.version
+              ? ' · Newer publication; your copy is unchanged'
+              : ''}
           </Text>
         )}
         {!listing.isPublished && <Text style={s.caption}>Unpublished · visible only to you</Text>}
@@ -203,7 +206,7 @@ export function MarketplaceSafety({ listing }: { listing: MarketplaceListing }) 
   function block() {
     Alert.alert(
       'Block ' + listing.publisher.name + '?',
-      'Their marketplace decks will disappear for you, and your aggregate practice contribution to them will stop. Existing downloaded copies stay in your library. This also ends any friendship and shared recall access between you.',
+      'You will no longer see each other’s marketplace decks, and practice contributions between you stop. Downloaded copies stay in your libraries. This also removes your friendship and shared recall access. Unblocking will not restore sharing permissions or practice contributions.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -301,13 +304,40 @@ export function MarketplaceUsageConsent({
   disabled?: boolean;
   onChange(value: boolean): void;
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   return (
-    <MarketplaceToggle
-      title="Contribute my practice activity"
-      value={enabled}
-      disabled={disabled}
-      onChange={onChange}
-      detail="Include my reviews of these downloaded cards in broad marketplace trends. Results appear only with at least 5 contributing learners, and only if the publisher shows usage. Your name, answers, and individual history are never shown here. Turning this off removes your past and future contribution."
-    />
+    <View style={{ gap: 8 }}>
+      <MarketplaceToggle
+        title="Contribute my practice activity"
+        value={enabled}
+        disabled={disabled}
+        onChange={onChange}
+        detail="Optional. Include future reviews of unchanged downloaded cards in broad marketplace trends. Turning this off removes your contribution from those trends; your cards and review history stay in your account."
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: detailsOpen }}
+        onPress={() => setDetailsOpen((value) => !value)}
+        style={{ minHeight: 44, justifyContent: 'center' }}
+      >
+        <Text style={[s.label, { color: colors.accent }]}>
+          {detailsOpen ? 'Hide contribution details' : 'How practice contributions work'}
+        </Text>
+      </Pressable>
+      {detailsOpen && (
+        <>
+          <Text style={s.caption}>
+            Only reviews made after you turn this on count, and only while the downloaded cards
+            remain unchanged. Trends cover the last 30 days and appear only with at least 5
+            contributing learners, if the author chooses to show them.
+          </Text>
+          <Text style={s.caption}>
+            These marketplace trends do not show your name, individual ratings or review history.
+            Turning this off excludes your past and future contribution. Turning it on again starts
+            fresh with future reviews.
+          </Text>
+        </>
+      )}
+    </View>
   );
 }

@@ -18,7 +18,7 @@ Project: `recollect-ai` in the Collect Software team, ID `97e0b691-ea61-4f19-a2c
 
 Upload this directory through Netlify's manual deploy interface, or use the root `netlify.toml` when connecting the repository. No build command or framework is required. The deploy contains only these public website files.
 
-Set `downloadUrl` in `site-config.js` to a verified public App Store or TestFlight URL when one is available. Until then, the primary calls to action lead to the email waitlist, and “Try a card” opens the working card preview.
+Set `downloadUrl` in `site-config.js` to a verified public App Store or TestFlight URL when one is available. Until then, the primary calls to action lead to the email waitlist, and “Try the cards” opens the working card preview.
 
 ## Friend invitations
 
@@ -26,7 +26,7 @@ Shared friend invitations use `https://recollect-ai.netlify.app/friends?invite=<
 
 `friend-invite.js` validates codes against the API contract and rejects duplicate `invite` parameters. Clipboard access happens only after pressing **Copy invite code**, with manual selection if copying is unavailable. The code stays in the URL and page memory; this page does not call the API, use browser storage, or run analytics. Link preview metadata excludes the code, and the page uses a no-referrer policy for external resources and links.
 
-The installation action uses the same public `downloadUrl` setting as the homepage, restricted to official App Store app pages or public TestFlight join URLs. Until a verified public link is configured, it honestly offers beta access through the homepage. Keep that setting `null` rather than substituting an unavailable App Store listing or a private TestFlight dashboard URL. Installing does not automatically transfer or accept the invitation; users return to the original link or use the visible code after signing in. Without JavaScript, the page still provides installation access and instructions for copying the code from the invitation URL.
+The installation action uses the same public `downloadUrl` setting as the homepage, restricted to official App Store app pages or public TestFlight join URLs. Until a verified public link is configured, it offers the availability waitlist through the homepage, which does not grant beta access. Keep that setting `null` rather than substituting an unavailable App Store listing or a private TestFlight dashboard URL. Installing does not automatically transfer or accept the invitation; users return to the original link or use the visible code after signing in. Without JavaScript, the page still links to the waitlist or a configured download destination and explains how to copy the code from the invitation URL.
 
 ## Interest signups
 

@@ -160,8 +160,8 @@ export default function ProfileScreen() {
     const title = action === 'server' ? 'Use the server version?' : 'Submit your version again?';
     const detail =
       action === 'server'
-        ? 'This replaces the visible local version and its queued edits with the server version. A recovery copy of every replaced change remains in your export.'
-        : 'This creates a new command based on the latest server version. The previous attempt stays in your recovery export. If another device changes the record again, you will be asked to resolve it.';
+        ? 'This replaces the visible local version and its queued edits with the server version. A recovery copy of replaced changes stays on this device and can be exported.'
+        : 'This retries your edit against the latest server version. A recovery copy of the previous attempt stays on this device and can be exported. If another device changes the record again, you will be asked to resolve the conflict.';
     Alert.alert(title, detail, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -380,8 +380,9 @@ export default function ProfileScreen() {
               original. You can export the copy and review ownership before any upload.
             </Text>
             <Text style={s.caption}>
-              An approved import sends the cards and their non-secret recovery archive, including
-              original reviews, preferences, and pending sync records, to your configured server.
+              If you approve the import, Recollect uploads your cards and a recovery archive with
+              review history, preferences, and records waiting to sync. Review the export for
+              personal information before importing.
             </Text>
             {(inspection?.status === 'found' || inspection?.status === 'needs_recovery') &&
               !workflow && (

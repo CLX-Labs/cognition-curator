@@ -74,11 +74,9 @@
       'demo-prompt',
       'demo-answer',
       'demo-back',
-      'choice-actions',
-      'rating-actions',
-      'rating-first',
-      'rating-second',
-      'change-choice',
+      'demo-flip',
+      'demo-instruction',
+      'demo-feedback',
       'demo-announcement',
     ].map((id) => [id, document.getElementById(id)]),
   );
@@ -98,41 +96,45 @@
     elements['demo-answer'].querySelector('.eyebrow').textContent = deck.answerLabel;
     elements['demo-answer'].hidden = true;
     elements['demo-prompt'].hidden = false;
-    elements['choice-actions'].hidden = false;
-    elements['rating-actions'].hidden = true;
+    elements['demo-flip'].setAttribute('aria-expanded', 'false');
+    elements['demo-flip'].setAttribute('aria-label', `Show answer for ${card.front}`);
+    elements['demo-instruction'].textContent = 'Tap the card to show the answer.';
     cardElement.classList.remove('is-revealed');
     if (announce)
       elements['demo-announcement'].textContent =
         `${deck.name}, card ${cardIndex + 1} of 3: ${card.front}.`;
   }
 
-  function reveal(confidence) {
-    elements['demo-answer'].hidden = false;
-    elements['demo-prompt'].hidden = true;
-    elements['choice-actions'].hidden = true;
-    elements['rating-actions'].hidden = false;
-    cardElement.classList.add('is-revealed');
-    const unsure = confidence === 'unsure';
-    elements['rating-first'].textContent = unsure ? 'Again · 1m' : 'Good · 10m';
-    elements['rating-second'].textContent = unsure ? 'Hard · 1m' : 'Easy · 4d';
-    elements['demo-announcement'].textContent = decks[deckKey].cards[cardIndex].back;
-    elements['rating-first'].focus({ preventScroll: true });
-  }
-
+  // A native button supports tap, pointer, Enter, and Space without separate
+  // keyboard handlers. Flipping never records a recall choice.
+  elements['demo-flip'].addEventListener('click', () => {
+    const card = decks[deckKey].cards[cardIndex];
+    const revealed = elements['demo-answer'].hidden;
+    elements['demo-answer'].hidden = !revealed;
+    elements['demo-prompt'].hidden = revealed;
+    elements['demo-flip'].setAttribute('aria-expanded', String(revealed));
+    elements['demo-flip'].setAttribute(
+      'aria-label',
+      revealed ? `Hide answer for ${card.front}. ${card.back}` : `Show answer for ${card.front}`,
+    );
+    elements['demo-instruction'].textContent = revealed
+      ? 'Tap to flip back, or choose what you remembered.'
+      : 'Tap the card to show the answer.';
+    cardElement.classList.toggle('is-revealed', revealed);
+    elements['demo-announcement'].textContent = revealed ? card.back : card.front;
+  });
   document.querySelectorAll('[data-confidence]').forEach((button) => {
-    button.addEventListener('click', () => reveal(button.dataset.confidence));
-  });
-  [elements['rating-first'], elements['rating-second']].forEach((button) => {
     button.addEventListener('click', () => {
+      const unsure = button.dataset.confidence === 'unsure';
+      const feedback = `${unsure ? 'Not sure' : 'I remember'} · Example next review: in ${unsure ? 3 : 7} days.`;
       cardIndex = (cardIndex + 1) % decks[deckKey].cards.length;
-      renderCard(true);
-      document.querySelector('[data-confidence]').focus({ preventScroll: true });
+      renderCard();
+      elements['demo-feedback'].textContent = feedback + ' Your choice isn’t saved.';
+      const deck = decks[deckKey];
+      elements['demo-announcement'].textContent =
+        `${feedback} Next card: ${deck.cards[cardIndex].front}, ${cardIndex + 1} of 3.`;
+      // The same two buttons stay mounted, so keyboard focus stays in place.
     });
-  });
-  elements['change-choice'].addEventListener('click', () => {
-    elements['choice-actions'].hidden = false;
-    elements['rating-actions'].hidden = true;
-    document.querySelector('[data-confidence]').focus({ preventScroll: true });
   });
   document.querySelectorAll('[data-deck]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -142,6 +144,8 @@
         .querySelectorAll('[data-deck]')
         .forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
       renderCard(true);
+      elements['demo-feedback'].textContent =
+        'In the app, swipe left for “Not sure” or right for “I remember.”';
     });
   });
   document.querySelectorAll('.demo-stage button, [data-deck]').forEach((button) => {

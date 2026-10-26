@@ -181,7 +181,7 @@ export function planMigration(
       legacySchedules.length +
         ' card(s), including ' +
         legacySchedules.slice(0, 5).join(', ') +
-        ', have fractional intervals, longer intervals, or higher ease values from the original algorithm. Their CURRENT due dates, intervals, and ease values are preserved exactly; the NEXT rating adopts the new bounded scheduling rules. Every original value remains in your recovery export.',
+        ', have fractional intervals, longer intervals, or higher ease values from the original algorithm. Their CURRENT due dates, intervals, and ease values are preserved exactly; the NEXT rating adopts the new bounded scheduling rules. Every original value remains in your recovery archive.',
     );
   notes.push(
     'Existing due dates, intervals, ease factors, and review totals are carried into an SM-2 checkpoint. Legacy streak/lapse counters were not stored and begin at zero. Future reviews use the new shared scheduler.',

@@ -46,7 +46,7 @@ export default function ReleasePanel() {
           ? 'Your update is ready. Restart to use the new version.'
           : result === 'none'
             ? 'You’re up to date for this build. New native releases appear in TestFlight.'
-            : 'The update could not be downloaded. Try again when connected.',
+            : 'No new update was downloaded. Your current version is unchanged.',
       );
     } catch (cause) {
       setError(

@@ -147,7 +147,7 @@ function EditProfile({
         </View>
       </View>
       <Field
-        label="Your name"
+        label="Display name"
         value={name}
         onChangeText={setName}
         placeholder="What should we call you?"
@@ -159,7 +159,10 @@ function EditProfile({
         returnKeyType="done"
         onSubmitEditing={() => void submit()}
       />
-      <Text style={s.caption}>Your name and photo are saved to your Recollect account.</Text>
+      <Text style={s.caption}>
+        Friends can see your name and photo. If you publish a marketplace deck, your display name
+        appears as its author.
+      </Text>
       {!!error && (
         <Text accessibilityRole="alert" style={[s.body, { color: colors.danger }]}>
           {error}

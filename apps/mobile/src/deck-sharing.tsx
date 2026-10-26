@@ -63,8 +63,9 @@ export function RecallConsent({
         />
       </View>
       <Text style={s.caption}>
-        This shares past and future recall on the shared cards: remembered or unsure, answers, and
-        review timelines. Your other decks stay private. You can turn this off at any time.
+        Share your past and future ratings (“I remember” or “Not sure”) and review history for this
+        deck. Insights also show the shared questions and answers. This setting does not share other
+        decks. You can turn it off at any time.
       </Text>
     </View>
   );
@@ -472,8 +473,8 @@ export function SharedDeckPreview({
             onPress={() => void revoke()}
           />
           <Text style={s.caption}>
-            Stopping sharing immediately removes recall access for both of you. Imported copies stay
-            in each library.
+            Stopping sharing ends further recall access through Recollect for both of you. It cannot
+            erase information already viewed. Imported copies stay in each library.
           </Text>
         </>
       )}

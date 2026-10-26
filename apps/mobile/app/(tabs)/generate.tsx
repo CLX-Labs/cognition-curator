@@ -157,7 +157,7 @@ export default function GenerateScreen() {
       } catch (cause) {
         if (live(epoch))
           setError(
-            cause instanceof Error ? cause.message : 'Your request is saved. Retry when connected.',
+            cause instanceof Error ? cause.message : 'The request could not finish. Try again.',
           );
       } finally {
         if (live(epoch)) {
@@ -297,7 +297,7 @@ export default function GenerateScreen() {
         setError(
           cause instanceof Error
             ? cause.message
-            : 'Your selection is saved. Retry to finish adding it.',
+            : 'The cards could not be added. Try again.',
         );
     } finally {
       if (live(epoch)) {
@@ -344,9 +344,9 @@ export default function GenerateScreen() {
   function setAside(nextDeckId = state?.request.deckId ?? deckId, nextTopic = '') {
     Alert.alert(
       'Set these suggestions aside?',
-      'They stay in your recovery export. No cards will be added.',
+      'A recovery copy stays on this device and will be included if you export your data. No cards will be added.',
       [
-        { text: 'Keep reviewing', style: 'cancel' },
+        { text: 'Keep suggestions', style: 'cancel' },
         { text: 'Set aside', onPress: () => void clearDraft(nextDeckId, nextTopic) },
       ],
     );
@@ -447,7 +447,7 @@ export default function GenerateScreen() {
             </>
           ) : (
             <Button
-              title={state.accepted ? 'Generate for ' + incomingName : 'Set aside & switch decks'}
+              title={state.accepted ? 'Switch to ' + incomingName : 'Set aside & switch decks'}
               loading={busy}
               onPress={() =>
                 state.accepted
@@ -482,7 +482,7 @@ export default function GenerateScreen() {
           )}
           {ready && (
             <Text style={s.caption}>
-              Your reviewed selection is saved. Retry below to add it once.
+              Review your selection, then retry below to add the cards.
             </Text>
           )}
         </Panel>
@@ -642,9 +642,9 @@ export default function GenerateScreen() {
             {!error && <ActivityIndicator color={colors.ink} />}
             <Text style={s.sectionTitle}>
               {error
-                ? 'Request paused'
+                ? 'Request needs attention'
                 : state.job?.status === 'queued'
-                  ? 'Your cards are in the queue'
+                  ? 'Waiting to generate'
                   : state.job?.status === 'running'
                     ? 'Drafting your cards'
                     : busy
@@ -677,7 +677,9 @@ export default function GenerateScreen() {
       )}
       {(state?.job?.status === 'failed' || state?.job?.status === 'canceled') && (
         <Panel>
-          <Text style={s.sectionTitle}>Let’s try another set</Text>
+          <Text style={s.sectionTitle}>
+            {state.job.status === 'failed' ? 'Cards weren’t generated' : 'Generation canceled'}
+          </Text>
           <Text style={s.body}>{state.job.error?.message ?? 'This request was canceled.'}</Text>
           <Button
             title="Try this topic again"
@@ -705,7 +707,7 @@ export default function GenerateScreen() {
           <View style={s.between}>
             <Text style={s.caption}>Choose cards to keep. Edit any suggestion.</Text>
             <Button
-              title={selectedCount === selectableIds.length ? 'Clear all' : 'Select all'}
+              title={selectedCount === selectableIds.length ? 'Deselect all' : 'Select all'}
               size="compact"
               variant="ghost"
               disabled={!!state.acceptance || busy}
@@ -769,7 +771,8 @@ export default function GenerateScreen() {
                 {editing ? (
                   <>
                     <Field
-                      label="Title"
+                      label="Front"
+                      hint="A short concept or question."
                       multiline
                       value={candidate.front}
                       editable={!locked}

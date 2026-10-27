@@ -9,9 +9,10 @@ export function reviewSwipe(
   width: number,
 ): 'remembered' | 'missed' | null {
   if (Math.abs(dx) <= Math.abs(dy) * 1.5) return null;
-  const threshold = Math.max(72, Math.min(120, width * 0.25));
+  // Keep a deliberate thumb swipe short, including on wider cards and tablets.
+  const threshold = Math.max(44, Math.min(56, Math.round(width * 0.14)));
   const deliberateFlick =
-    Math.abs(dx) >= 36 && Math.abs(vx) >= 0.65 && Math.sign(dx) === Math.sign(vx);
+    Math.abs(dx) >= 26 && Math.abs(vx) >= 0.65 && Math.sign(dx) === Math.sign(vx);
   if (Math.abs(dx) < threshold && !deliberateFlick) return null;
   return dx > 0 ? 'remembered' : 'missed';
 }

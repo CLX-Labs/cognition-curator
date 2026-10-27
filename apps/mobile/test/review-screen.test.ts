@@ -118,6 +118,8 @@ vi.mock('react-native', () => {
   };
 });
 vi.mock('react-native-safe-area-context', () => ({
+  SafeAreaProvider: ({ children }: { children?: React.ReactNode }) =>
+    React.createElement('safe-area-provider', null, children),
   SafeAreaView: ({ children, ...props }: { children?: React.ReactNode }) =>
     React.createElement('safe-area', props, children),
 }));
@@ -312,6 +314,11 @@ it.each([false, true])(
     rig.revealHaptic.mockClear();
     await press('Read in full');
     expect(readingText().children.join('')).toBe(revealed ? first.back : first.front);
+    expect(reader().findByType('status-bar').props.barStyle).toBe('dark-content');
+    expect(reader().findAllByType('safe-area-provider')).toHaveLength(1);
+    const question = reader().findAllByProps({ testID: 'review-reader-question' });
+    expect(question.length > 0).toBe(revealed);
+    if (revealed) expect(question[0]!.findByType('text').children.join('')).toBe(first.front);
     expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
     expect(cardView().props.disabled).toBe(true);
     expect(
@@ -328,6 +335,7 @@ it.each([false, true])(
     expect(feedback()).toHaveLength(0);
     await closeReader();
     expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
+    expect(renderer!.root.findByType('status-bar').props.barStyle).toBe('light-content');
     expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
     expect(cardView().props.disabled).toBe(false);
     expect(cardView().props.accessibilityLabel).toContain(revealed ? first.back : first.front);
@@ -364,6 +372,12 @@ it('opens hints outside the swipe surface without flipping or saving the card', 
   expect(rig.revealHaptic).toHaveBeenCalledExactlyOnceWith();
   expect(rig.haptic).not.toHaveBeenCalled();
   expect(readingText().children.join('')).toBe(first.hint);
+  const readerContent = reader()
+    .findAllByType('text')
+    .flatMap((node) => node.children)
+    .join(' ');
+  expect(readerContent).toContain(first.front);
+  expect(readerContent).not.toContain(first.back);
   expect(renderer!.root.findAllByType('scroll')).toHaveLength(1);
   await closeReader();
   expect(renderer!.root.findAllByType('scroll')).toHaveLength(0);
@@ -426,6 +440,24 @@ it('can swipe from the answer side and resets the next card to its question', as
   expect(text()).toContain(second.front);
   expect(text()).not.toContain(second.back);
 });
+
+it.each([
+  { dx: 50, vx: 0, rating: 'good', remembered: true },
+  { dx: -50, vx: 0, rating: 'again', remembered: false },
+  { dx: 26, vx: 0.8, rating: 'good', remembered: true },
+  { dx: -26, vx: -0.8, rating: 'again', remembered: false },
+] as const)(
+  'a short thumb swipe of $dx with velocity $vx saves once and advances',
+  async ({ dx, vx, rating, remembered }) => {
+    await mount();
+    await swipe(dx, 2, vx);
+    expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, rating, 0);
+    expect(rig.haptic).toHaveBeenCalledExactlyOnceWith(remembered);
+    expect(text()).toContain(second.front);
+    expect(text()).not.toContain(first.back);
+    expect(rig.revealHaptic).not.toHaveBeenCalled();
+  },
+);
 
 it('small, vertical and cancelled drags never save or flip', async () => {
   await mount();

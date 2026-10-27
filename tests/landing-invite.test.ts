@@ -28,7 +28,7 @@ function setup({
   ]) {
     elements[id] = {
       hidden: ['invite-ready', 'invite-invalid'].includes(id),
-      textContent: id === 'invite-download' ? 'Get beta access ↗' : '',
+      textContent: id === 'invite-download' ? 'Join the waitlist ↗' : '',
       value: '',
       href: id === 'invite-download' ? '/#get-recollect' : '',
       focus: vi.fn(), select: vi.fn(), setSelectionRange: vi.fn(),
@@ -125,10 +125,10 @@ describe('public friend invitation', () => {
     'https://apps.apple.com.evil.example/app/id123', 'https://evil.example/download',
     'https://testflight.apple.com/join/not-a-public-invite', 'https://apps.apple.com/login',
     'https://user:password@apps.apple.com/app/id123', 'https://apps.apple.com:8443/app/id123',
-  ])('keeps the honest beta fallback for unconfigured or unsafe download URL %s', (downloadUrl) => {
+  ])('keeps the availability waitlist fallback for unconfigured or unsafe download URL %s', (downloadUrl) => {
     const page = setup({ downloadUrl });
     expect(page.elements['invite-download']!.href).toBe('/#get-recollect');
-    expect(page.elements['invite-download']!.textContent).toContain('Get beta access');
+    expect(page.elements['invite-download']!.textContent).toContain('Join the waitlist');
   });
 
   it('does not use a download destination supplied through invite query parameters', () => {
@@ -144,6 +144,8 @@ describe('public friend invitation', () => {
     expect(html).toContain('<noscript>');
     expect(html).toContain('Your invitation.');
     expect(html).toContain('A public download link isn’t available yet.');
+    expect(html).toContain('Join the waitlist for availability updates');
+    expect(html).not.toContain('Get beta access');
     expect(html).toContain('You → Friends');
     expect(html).not.toMatch(/<script[^>]*>[^<]*location\s*[=.]/);
   });

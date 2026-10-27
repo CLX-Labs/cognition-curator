@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="440" viewBox="0 0 600 440" fill="none">
+  <defs><clipPath id="frame"><path fill="#fff" d="M0 0h600v440H0z"/></clipPath></defs>
+  <g clip-path="url(#frame)">
+    <path fill="#ED5737" d="M0 0h600v440H0z"/>
+    <circle cx="422" cy="124" r="111" fill="#F0CB50"/>
+    <path d="M422 14v220M311 124h222" stroke="#ED5737" stroke-width="1.5" stroke-opacity=".3"/>
+    <path fill="#CF432A" d="m61 294 169-126 50 73 156-26 102 118-203 13-119 72L61 294Z"/>
+    <path fill="#F4EBDD" d="m46 277 169-126 50 73 156-26 102 118-203 13-119 72L46 277Z"/>
+    <path fill="#293DCB" d="m46 277 219-53-64 177L46 277Z"/>
+    <path fill="#20231F" d="m215 151 50 73-219 53 169-126Z"/>
+    <path fill="#293DCB" d="m265 224 156-26-101 131-55-105Z"/>
+    <path fill="#F0CB50" d="m320 329 101-131 102 118-203 13Z"/>
+    <path fill="#293DCB" d="m421 198 69-110 33 228-102-118Z"/>
+    <path fill="#F4EBDD" d="m421 198 69-110-3 68-66 42Z"/>
+    <path d="m265 224 55 105-119 72m220-203 102 118" stroke="#20231F" stroke-width="2"/>
+    <path d="M32 36h104M32 47h79M32 58h54" stroke="#20231F" stroke-width="5"/>
+    <path d="M462 386h106M462 398h106M462 410h106" stroke="#20231F" stroke-width="4"/>
+    <circle cx="559" cy="45" r="7" fill="#F4EBDD"/>
+    <circle cx="559" cy="66" r="7" fill="#F4EBDD"/>
+    <circle cx="559" cy="87" r="7" fill="#F4EBDD"/>
+  </g>
+</svg>

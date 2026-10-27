@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="440" viewBox="0 0 600 440" fill="none">
+  <defs><clipPath id="frame"><path fill="#fff" d="M0 0h600v440H0z"/></clipPath></defs>
+  <g clip-path="url(#frame)">
+    <path fill="#F4EBDD" d="M0 0h600v440H0z"/>
+    <path fill="#F0CB50" d="M360 0h240v440H360z"/>
+    <circle cx="450" cy="115" r="143" fill="#20231F"/>
+    <g stroke="#F4EBDD" stroke-width="1.5" opacity=".7">
+      <circle cx="450" cy="115" r="121"/>
+      <circle cx="450" cy="115" r="112"/>
+      <circle cx="450" cy="115" r="103"/>
+      <circle cx="450" cy="115" r="94"/>
+      <circle cx="450" cy="115" r="85"/>
+      <circle cx="450" cy="115" r="76"/>
+    </g>
+    <circle cx="450" cy="115" r="45" fill="#ED5737"/>
+    <circle cx="450" cy="115" r="9" fill="#F4EBDD"/>
+    <g stroke="#293DCB" stroke-width="15">
+      <path d="M-24 145c85 0 85 154 170 154s85-154 170-154 85 154 170 154 85-154 170-154"/>
+      <path d="M-24 179c85 0 85 154 170 154s85-154 170-154 85 154 170 154 85-154 170-154"/>
+      <path d="M-24 213c85 0 85 154 170 154s85-154 170-154 85 154 170 154 85-154 170-154"/>
+      <path d="M-24 247c85 0 85 154 170 154s85-154 170-154 85 154 170 154 85-154 170-154"/>
+    </g>
+    <path fill="#ED5737" d="M34 38h18v57H34zm32 0h18v87H66zm32 0h18v44H98zm32 0h18v70h-18zm32 0h18v30h-18z"/>
+    <path d="M34 426h144" stroke="#20231F" stroke-width="4"/>
+    <circle cx="245" cy="80" r="8" fill="#20231F"/>
+    <circle cx="245" cy="105" r="8" fill="#20231F"/>
+    <circle cx="245" cy="130" r="8" fill="#20231F"/>
+  </g>
+</svg>

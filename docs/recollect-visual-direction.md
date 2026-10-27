@@ -63,6 +63,27 @@ The reference site's [license](https://bookofshapes.com/license) permits use of 
 
 ## References and original art
 
+### Editorial website experiment
+
+The website preview on `enhancement/editorial-website-preview` explores the
+[Elaya landing-page showcase](https://x.com/elayadesigns/status/2114049200749175174)
+and its [open design reference](https://github.com/elayadesign/ai-design-skills).
+The useful principles are a clear promise, one primary next step, a tangible
+product demonstration, and a deliberate visual composition. The reference's
+fixed font, layout, and motion prescriptions are not project requirements.
+
+The hero now pairs expressive serif typography with an interactive cobalt card
+poster. Six original geometric covers present the official starter collection
+like small printed books. Each cover opens matching sample cards in the hero;
+the artwork is a website study and has not replaced the marketplace's app covers.
+The signup remains an availability waitlist until a verified public Apple link
+exists. There are no invented testimonials, popularity counts, or learning results.
+
+These changes are isolated to the website preview for visual review. Mobile
+adoption follows a selected direction and should keep practice controls quick,
+readable and stable. No new animation framework, analytics, or native dependency
+is introduced.
+
 The [Promptsites gallery](https://www.promptsites.co/), including its [learning card presentation](https://www.promptsites.co/prompt/bite-sized-courses) and [editorial compositions](https://www.promptsites.co/prompt/prisma-landing), informed the use of depth, type scale, and visual hierarchy. The Recollect layout, copy, code, and hero illustration are original.
 
 The hero asset is `apps/landing/assets/curiosity-sculpture.png`, generated with the **built-in imagegen tool**, on a transparent background. The existing `app-icon.png` is preserved unchanged.

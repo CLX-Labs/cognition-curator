@@ -16,8 +16,7 @@
       window.location.protocol !== 'https:' ||
       ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
     ) {
-      status.textContent =
-        'This is a preview. Signup opens when the site goes live; your email hasn’t been saved.';
+      status.textContent = 'This preview doesn’t save signups. Your email hasn’t been saved.';
       status.focus({ preventScroll: true });
       return;
     }
@@ -44,7 +43,7 @@
       saved = true;
       form.reset();
       fields.hidden = true;
-      status.textContent = 'You’re on the list. We’ll email you when Recollect is ready.';
+      status.textContent = 'You’re on the list. We’ll email you when Recollect is available.';
       status.focus({ preventScroll: true });
     } catch {
       fields.disabled = false;

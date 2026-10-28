@@ -48,7 +48,7 @@ export default function Home() {
       <Panel tint>
         <View style={s.between}>
           <View style={s.pill}>
-            <Text style={s.pillText}>DAILY PRACTICE</Text>
+            <Text style={s.pillText}>DAILY REVIEW</Text>
           </View>
           <BrandPattern variant="orbit" width={64} height={28} />
         </View>
@@ -73,7 +73,7 @@ export default function Home() {
           {due.length
             ? 'Bring these ideas back to mind, one card at a time.'
             : data.cards.length
-              ? 'You are up to date. Practice anytime, or add something new.'
+              ? 'You are up to date. Practice includes cards that are not due yet.'
               : 'Choose a subject. Create a few cards. Give what you learn a place to stay.'}
         </Text>
         <Button
@@ -81,7 +81,7 @@ export default function Home() {
             due.length
               ? 'Review ' + due.length + (due.length === 1 ? ' card' : ' cards') + '  →'
               : data.cards.length
-                ? 'Practice anytime  →'
+                ? 'Practice all cards  →'
                 : 'Create your first deck  →'
           }
           onPress={() => {

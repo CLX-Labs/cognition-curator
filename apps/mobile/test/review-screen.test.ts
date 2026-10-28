@@ -915,7 +915,7 @@ it.each(['cardId', 'id'] as const)(
   },
 );
 
-it('opens and rates the widget’s specific future-due card even when no cards are due', async () => {
+it('opens a future-due widget card as free practice and shows its scheduled review date', async () => {
   const random = vi.spyOn(Math, 'random').mockReturnValue(0);
   const future = new Date(Date.now() + 7 * 86_400_000).toISOString();
   rig.data = {
@@ -928,6 +928,8 @@ it('opens and rates the widget’s specific future-due card even when no cards a
   // This is the route supplied by cognitioncurator://review/<card-id>.
   rig.params = { id: second.id };
   await mount();
+  expect(text()).toContain('FREE PRACTICE');
+  expect(text()).toContain('Next scheduled review ' + new Date(future).toLocaleDateString());
   expect(text()).toContain(second.front);
   expect(text()).not.toContain(first.front);
   expect(text()).not.toContain('All caught up.');
@@ -935,7 +937,7 @@ it('opens and rates the widget’s specific future-due card even when no cards a
   expect(text()).toContain(second.back);
   await press('I remember →');
   expect(rig.rate).toHaveBeenCalledExactlyOnceWith(second.id, 'good', 0);
-  expect(text()).toContain('SESSION COMPLETE');
+  expect(text()).toContain('PRACTICE COMPLETE');
   expect(random).not.toHaveBeenCalled();
 });
 
@@ -993,4 +995,166 @@ it('switching review mode starts a fresh session while a normal rerender does no
   expect(text()).toContain(first.front);
   expect(text()).not.toContain(first.back);
   expect(rig.rate).not.toHaveBeenCalled();
+});
+
+async function refreshReview() {
+  await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+}
+function tomorrow(item: Card): Card {
+  return {
+    ...item,
+    schedule: { ...item.schedule, dueAt: new Date(Date.now() + 7 * 86_400_000).toISOString() },
+  };
+}
+function progress() {
+  return renderer!.root.findAllByProps({ accessibilityRole: 'progressbar' })[0]!.props
+    .accessibilityValue;
+}
+
+it.each(['question', 'answer', 'reader'])(
+  'skips a current card reviewed elsewhere while viewing its %s, without counting a response',
+  async (surface) => {
+    await mount();
+    const staleAnswer = button('I remember →').props.onPress;
+    if (surface === 'answer') await flip();
+    if (surface === 'reader') await press('Read in full');
+    rig.data = { ...rig.data!, cards: [tomorrow(first), second] };
+    await refreshReview();
+    expect(text()).toContain(second.front);
+    expect(text()).not.toContain(first.front);
+    expect(text()).not.toContain(second.back);
+    expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
+    expect(progress()).toEqual({ min: 0, max: 1, now: 0 });
+    await act(async () => staleAnswer());
+    expect(rig.rate).not.toHaveBeenCalled();
+    await press('I remember →');
+    expect(rig.rate).toHaveBeenCalledExactlyOnceWith(second.id, 'good', 0);
+    const completion = renderer!.root.findByType(Screen);
+    expect(completion.props.title).toBe('Nicely done.');
+    expect(completion.findAllByType('text').some((node) => node.children.join('') === '1')).toBe(
+      true,
+    );
+  },
+);
+
+it.each(['deleted card', 'paused deck', 'deleted deck'])(
+  'skips a %s during an open reader and continues with an eligible deck',
+  async (change) => {
+    const otherDeck = { ...deck, id: 'e0000000-0000-4000-8000-000000000000', name: 'Other deck' };
+    const otherCard = { ...second, deckId: otherDeck.id };
+    rig.params = {};
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    rig.data = { ...rig.data!, decks: [deck, otherDeck], cards: [first, otherCard] };
+    await mount();
+    await press('Read in full');
+    rig.data = {
+      ...rig.data!,
+      cards: change === 'deleted card' ? [otherCard] : [first, otherCard],
+      decks:
+        change === 'deleted deck'
+          ? [otherDeck]
+          : [{ ...deck, isSilenced: change === 'paused deck' }, otherDeck],
+    };
+    await refreshReview();
+    expect(text()).toContain(otherCard.front);
+    expect(text()).not.toContain(first.front);
+    expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
+    expect(progress()).toEqual({ min: 0, max: 1, now: 0 });
+    expect(rig.rate).not.toHaveBeenCalled();
+  },
+);
+
+it('removes a remotely reviewed queued card without adding newly due cards or reshuffling', async () => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+  const third = card('e0000000-0000-4000-8000-000000000000', 'Third question', 'Third answer');
+  const added = card('f0000000-0000-4000-8000-000000000000', 'New question', 'New answer');
+  rig.params = {};
+  rig.data = { ...rig.data!, cards: [first, second, third] };
+  await mount();
+  // The original shuffle is second, third, first.
+  expect(text()).toContain(second.front);
+  await flip();
+  rig.data = { ...rig.data!, cards: [first, second, tomorrow(third), added] };
+  await refreshReview();
+  expect(text()).toContain(second.back);
+  expect(progress()).toEqual({ min: 0, max: 2, now: 0 });
+  expect(random).toHaveBeenCalledTimes(2);
+  await press('I remember →');
+  expect(text()).toContain(first.front);
+  expect(progress()).toEqual({ min: 0, max: 2, now: 1 });
+  // An excluded card must not return to this session if a later snapshot revives it.
+  rig.data = { ...rig.data!, cards: [first, second, third, added] };
+  await refreshReview();
+  await press('I remember →');
+  expect(text()).toContain('SESSION COMPLETE');
+  expect(rig.rate.mock.calls.map(([id]) => id)).toEqual([second.id, first.id]);
+  expect(
+    renderer!.root
+      .findByType(Screen)
+      .findAllByType('text')
+      .some((node) => node.children.join('') === '2'),
+  ).toBe(true);
+});
+
+it('finishes with zero responses when sync makes every queued card not due', async () => {
+  await mount();
+  rig.data = { ...rig.data!, cards: [tomorrow(first), tomorrow(second)] };
+  await refreshReview();
+  expect(renderer!.root.findByType(Screen).props.title).toBe('All caught up.');
+  expect(text()).toContain('SESSION COMPLETE');
+  expect(
+    renderer!.root
+      .findByType(Screen)
+      .findAllByType('text')
+      .some((node) => node.children.join('') === '0'),
+  ).toBe(true);
+  expect(rig.rate).not.toHaveBeenCalled();
+});
+
+it.each([false, true])(
+  'consumes its own saved snapshot exactly once before the save promise resolves (specific=%s)',
+  async (specific) => {
+    if (specific) rig.params = { id: first.id };
+    let finish!: () => void;
+    rig.mutate.mockImplementation(async (work) => {
+      await work({ rateCard: rig.rate } as unknown as Repository);
+      rig.data = { ...rig.data!, cards: [tomorrow(first), second] };
+      await new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+    });
+    await mount();
+    await press('I remember →');
+    await refreshReview();
+    expect(text()).toContain(first.front);
+    expect(text()).toContain('DAILY REVIEW');
+    expect(text()).not.toContain('FREE PRACTICE');
+    expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'good', 0);
+    expect(rig.haptic).not.toHaveBeenCalled();
+    await act(async () => finish());
+    if (specific) {
+      expect(text()).toContain('SESSION COMPLETE');
+      expect(text()).not.toContain('PRACTICE COMPLETE');
+    } else {
+      expect(text()).toContain(second.front);
+      expect(progress()).toEqual({ min: 0, max: 2, now: 1 });
+      rig.mutate.mockImplementation(async (work) =>
+        work({ rateCard: rig.rate } as unknown as Repository),
+      );
+      await press('I remember →');
+      expect(rig.rate.mock.calls.map(([id]) => id)).toEqual([first.id, second.id]);
+      expect(text()).toContain('SESSION COMPLETE');
+    }
+  },
+);
+
+it('opens a specific paused-deck card as practice and retains practice guidance for all-card sessions', async () => {
+  rig.params = { id: first.id };
+  rig.data = { ...rig.data!, decks: [{ ...deck, isSilenced: true }] };
+  await mount();
+  expect(text()).toContain('FREE PRACTICE');
+  expect(text()).toContain('Practice includes cards that are not due yet.');
+  await press('I remember →');
+  expect(text()).toContain('PRACTICE COMPLETE');
+  expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'good', 0);
 });

@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, StatusBar, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { previewIntervals } from '@recollect/scheduler';
 import { useStore } from './store';
-import { dueCards } from './repository';
+import { activeDeck, dueCards, type LocalSnapshot } from './repository';
 import { Back, Button, Panel, Screen, Text, colors, reportError, s } from './ui';
 import ReviewCard from './review-card';
 import { createReviewHaptics } from './review-haptics';
@@ -12,6 +12,16 @@ import { ReviewReadingSheet } from './review-reading-sheet';
 import { BrandPattern } from './brand-patterns';
 
 type ReviewParams = { deckId?: string; practice?: string; cardId?: string; id?: string };
+type ReadingSection = 'card' | 'hint' | 'context';
+function eligibleCard(data: LocalSnapshot, id: string, practice: boolean, now = Date.now()) {
+  const card = data.cards.find((item) => item.id === id && !item.deletedAt);
+  const deck = card && data.decks.find((item) => item.id === card.deckId && !item.deletedAt);
+  return card &&
+    deck &&
+    (practice || (activeDeck(deck, now) && Date.parse(card.schedule.dueAt) <= now))
+    ? card
+    : undefined;
+}
 function duration(seconds: number) {
   if (seconds < 3600) return Math.round(seconds / 60) + 'm';
   if (seconds < 86400) return Math.round(seconds / 3600) + 'h';
@@ -30,9 +40,17 @@ export default function ReviewScreen() {
 
 function ReviewSession({ params }: { params: ReviewParams }) {
   const { data, mutate } = useStore();
-  const practice = params.practice === 'true';
   const specific = params.cardId ?? params.id;
-  const [queue] = useState(() => {
+  // Widget fallbacks can intentionally open a card that is not due. Keep that
+  // session in practice mode even after its own rating changes the due date.
+  const [practice] = useState(() => {
+    const selected =
+      specific && data.cards.find((card) => card.id.toLowerCase() === specific.toLowerCase());
+    return (
+      params.practice === 'true' || Boolean(selected && !eligibleCard(data, selected.id, false))
+    );
+  });
+  const [queue, setQueue] = useState(() => {
     const ids = (
       specific
         ? data.cards.filter((c) => c.id.toLowerCase() === specific.toLowerCase())
@@ -50,9 +68,9 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     }
     return ids;
   });
-  const [index, setIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const [reading, setReading] = useState<'card' | 'hint' | 'context' | null>(null);
+  const [reviewed, setReviewed] = useState(0);
+  const [revealedCard, setRevealedCard] = useState<string | null>(null);
+  const [reader, setReader] = useState<{ cardId: string; section: ReadingSection } | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<ReviewFeedback | null>(null);
   const [haptics] = useState(createReviewHaptics);
@@ -65,7 +83,36 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   const saving = useRef(false);
   const leaving = useRef(false);
   const started = useRef(Date.now());
-  const card = data.cards.find((c) => c.id === queue[index]);
+  const latestData = useRef(data);
+  latestData.current = data;
+  const savingCard = useRef<string | null>(null);
+  // Revalidate the original order; sync must never add cards to this session.
+  // The current save refreshes SQLite before its promise resolves, so retain
+  // that one card until answer() consumes it exactly once.
+  const eligibleIds = useMemo(() => {
+    const decks = new Set(data.decks.filter((deck) => !deck.deletedAt).map((deck) => deck.id));
+    const cards = practice ? data.cards : dueCards(data);
+    return new Set(
+      cards.filter((card) => !card.deletedAt && decks.has(card.deckId)).map((card) => card.id),
+    );
+  }, [data, practice]);
+  const availableQueue = queue.filter((id) => id === savingCard.current || eligibleIds.has(id));
+  const card = data.cards.find((item) => item.id === availableQueue[0] && !item.deletedAt);
+  const currentCard = useRef(card?.id);
+  currentCard.current = card?.id;
+  const revealed = !!card && revealedCard === card.id;
+  const reading = card && reader?.cardId === card.id ? reader.section : null;
+  const total = reviewed + availableQueue.length;
+  useEffect(() => {
+    setQueue((current) => {
+      const next = current.filter((id) => id === savingCard.current || eligibleIds.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [eligibleIds, busy]);
+
+  function setReading(section: ReadingSection | null) {
+    setReader(section && card ? { cardId: card.id, section } : null);
+  }
   useEffect(() => {
     active.current = true;
     foreground.current =
@@ -100,17 +147,18 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   }, [feedback]);
   useEffect(() => {
     started.current = Date.now();
-    saving.current = false;
-  }, [index]);
+  }, [card?.id]);
 
-  function advance() {
-    setRevealed(false);
-    setReading(null);
-    setIndex((i) => i + 1);
+  function advance(cardId: string) {
+    setRevealedCard(null);
+    setReader(null);
+    setQueue((current) => current.filter((id) => id !== cardId));
+    setReviewed((count) => count + 1);
   }
   async function answer(remembered: boolean) {
     if (
       !card ||
+      card.id !== currentCard.current ||
       !active.current ||
       !focused.current ||
       saving.current ||
@@ -118,8 +166,13 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       reading
     )
       return;
+    if (!eligibleCard(latestData.current, card.id, practice)) {
+      setQueue((current) => current.filter((id) => id !== card.id));
+      return;
+    }
     haptics.cancel();
     saving.current = true;
+    savingCard.current = card.id;
     setBusy(true);
     setFeedback(null);
     try {
@@ -129,11 +182,12 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       if (!active.current) return;
       setFeedback({ id: ++feedbackSequence.current, remembered });
       haptics.answer(remembered);
-      advance();
+      advance(card.id);
     } catch (error) {
       if (active.current) reportError(error);
     } finally {
       saving.current = false;
+      savingCard.current = null;
       if (active.current) setBusy(false);
     }
   }
@@ -149,6 +203,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   function manageCard() {
     if (
       !card ||
+      card.id !== currentCard.current ||
       !reading ||
       !active.current ||
       !focused.current ||
@@ -167,11 +222,11 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     return (
       <Screen
         syncFeedback="errors"
-        title={queue.length ? 'Nicely done.' : 'All caught up.'}
+        title={reviewed ? 'Nicely done.' : 'All caught up.'}
         eyebrow={practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE'}
         action={<BrandPattern variant="orbit" width={56} height={56} />}
         subtitle={
-          queue.length
+          reviewed
             ? 'A little practice, a lasting memory.'
             : 'Your next cards will be here when they are ready.'
         }
@@ -190,7 +245,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
         }
       >
         <Panel tint>
-          <Text style={[s.metric, { fontSize: 72 }]}>{index}</Text>
+          <Text style={[s.metric, { fontSize: 72 }]}>{reviewed}</Text>
           <Text style={s.body}>
             {practice
               ? 'cards practiced. Your next review dates are saved.'
@@ -198,10 +253,10 @@ function ReviewSession({ params }: { params: ReviewParams }) {
           </Text>
         </Panel>
         <Text style={s.editorial}>A little more stays.</Text>
-        {!queue.length &&
+        {!reviewed &&
           data.cards.some((item) => !params.deckId || item.deckId === params.deckId) && (
             <Button
-              title="Practice anytime"
+              title="Practice all cards"
               variant="secondary"
               onPress={() =>
                 router.replace({
@@ -228,11 +283,19 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       title={deck?.name ?? 'Your review'}
       appearance="focus"
       eyebrow={practice ? 'FREE PRACTICE' : 'DAILY REVIEW'}
+      subtitle={
+        practice
+          ? specific && Date.parse(card.schedule.dueAt) > Date.now()
+            ? 'Practice · Next scheduled review ' +
+              new Date(card.schedule.dueAt).toLocaleDateString()
+            : 'Practice includes cards that are not due yet.'
+          : undefined
+      }
       leading={
         <View style={s.between}>
           <Back label="Finish later" color={colors.paper} />
           <Text style={[s.eyebrow, { color: colors.paper, marginBottom: 0 }]}>
-            {String(index + 1).padStart(2, '0')} / {String(queue.length).padStart(2, '0')}
+            {String(reviewed + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
           </Text>
         </View>
       }
@@ -271,7 +334,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       <StatusBar barStyle="light-content" />
       <View
         accessibilityRole="progressbar"
-        accessibilityValue={{ min: 0, max: queue.length, now: index }}
+        accessibilityValue={{ min: 0, max: total, now: reviewed }}
         accessibilityLabel="Cards reviewed"
         style={{ height: 3, backgroundColor: '#FFFFFF40' }}
       >
@@ -279,12 +342,12 @@ function ReviewSession({ params }: { params: ReviewParams }) {
           style={{
             height: 3,
             backgroundColor: colors.yellow,
-            width: `${(index / queue.length) * 100}%`,
+            width: `${(reviewed / total) * 100}%`,
           }}
         />
       </View>
       <ReviewCard
-        key={index + ':' + card.id}
+        key={card.id}
         card={card}
         revealed={revealed}
         disabled={busy || !!reading}
@@ -300,7 +363,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
             return;
           if (!revealed) haptics.reveal();
           else haptics.cancel();
-          setRevealed(!revealed);
+          setRevealedCard(revealed ? null : card.id);
         }}
         onAnswer={(remembered) => void answer(remembered)}
       />

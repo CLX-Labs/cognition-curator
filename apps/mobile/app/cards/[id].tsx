@@ -257,41 +257,35 @@ export default function CardEditor() {
               editable={!busy}
               onChangeText={setTags}
             />
-            {existing && (
-              <Button
-                title="Delete card"
-                variant="danger"
-                size="compact"
-                disabled={busy}
-                onPress={() =>
-                  Alert.alert(
-                    'Delete this card?',
-                    'The card will be removed from your active library.',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: 'Delete',
-                        style: 'destructive',
-                        onPress: () =>
-                          void mutate((repo) =>
-                            repo.remove('card', existing.id, baseline ?? existing),
-                          )
-                            .then(() =>
-                              router.dismissTo({
-                                pathname: '/decks/[id]',
-                                params: { id: parentId! },
-                              }),
-                            )
-                            .catch(reportError),
-                      },
-                    ],
-                  )
-                }
-              />
-            )}
           </>
         )}
       </Panel>
+      {existing && (
+        <Button
+          title="Delete card"
+          variant="danger"
+          size="compact"
+          disabled={busy}
+          onPress={() =>
+            Alert.alert('Delete this card?', 'The card will be removed from your active library.', [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () =>
+                  void mutate((repo) => repo.remove('card', existing.id, baseline ?? existing))
+                    .then(() =>
+                      router.dismissTo({
+                        pathname: '/decks/[id]',
+                        params: { id: parentId! },
+                      }),
+                    )
+                    .catch(reportError),
+              },
+            ])
+          }
+        />
+      )}
     </Screen>
   );
 }

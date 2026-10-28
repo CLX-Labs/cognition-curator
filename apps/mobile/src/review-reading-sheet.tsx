@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal, Pressable, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { Card } from '@recollect/contracts';
-import { Text, colors, s } from './ui';
+import { Button, Text, colors, s } from './ui';
 import { useReducedMotion } from './use-reduced-motion';
 
 export type ReviewReadingSection = 'card' | 'hint' | 'context';
@@ -12,11 +12,13 @@ export function ReviewReadingSheet({
   revealed,
   section,
   onClose,
+  onManage,
 }: {
   card: Card;
   revealed: boolean;
   section: ReviewReadingSection;
   onClose(): void;
+  onManage(): void;
 }) {
   const reduceMotion = useReducedMotion();
   const label =
@@ -91,6 +93,14 @@ export function ReviewReadingSheet({
                 </View>
               </View>
             </ScrollView>
+            <View style={styles.footer}>
+              <View style={styles.footerContent}>
+                <Button title="Manage card" variant="secondary" onPress={onManage} />
+                <Text style={[s.caption, { textAlign: 'center' }]}>
+                  Leave review to edit or delete this card.
+                </Text>
+              </View>
+            </View>
           </View>
         </SafeAreaView>
       </SafeAreaProvider>
@@ -134,4 +144,12 @@ const styles = StyleSheet.create({
   divided: { paddingTop: 24, borderTopWidth: 1, borderTopColor: colors.line },
   front: { fontSize: 28, lineHeight: 39, fontWeight: '700', color: colors.ink },
   body: { fontSize: 21, lineHeight: 33, color: colors.ink },
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.paper,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  footerContent: { width: '100%', maxWidth: 640, alignSelf: 'center', gap: 8 },
 });

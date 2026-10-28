@@ -78,10 +78,10 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - name: Select Xcode 26.2 and verify Swift
+      - name: Select Xcode 26.4.1 and verify Swift
         if: needs.plan.outputs.release_type == 'native'
         run: |
-          xcode_developer_dir=/Applications/Xcode_26.2.app/Contents/Developer
+          xcode_developer_dir=/Applications/Xcode_26.4.1.app/Contents/Developer
           test -d "$xcode_developer_dir"
           sudo xcode-select --switch "$xcode_developer_dir"
           echo "DEVELOPER_DIR=$xcode_developer_dir" >> "$GITHUB_ENV"
@@ -105,6 +105,9 @@ jobs:
         run: node scripts/release-notifications.mjs start
       - run: node scripts/release-pipeline.mjs validate
       - run: npm ci
+      - name: Prepare verified iOS dependency archives
+        if: needs.plan.outputs.release_type == 'native'
+        run: node scripts/prepare-ios-dependencies.mjs --configuration all
       - run: npm install --global eas-cli@24.12.1
       - name: Set the stable API address for the app
         working-directory: apps/mobile

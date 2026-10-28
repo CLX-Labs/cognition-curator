@@ -16,14 +16,16 @@ This is a preparation document, not proof that an app has been approved, submitt
 
 ## Submission preparation status — October 28, 2026
 
-- App Store Connect currently has an iOS version **1.0** in **Prepare for Submission**. This is a draft, not a submitted or approved release.
+- App Store Connect currently has an iOS version **7.0.0** in **Prepare for Submission**, with product copy, review notes, and the owner-provided private review contact saved. This is a draft, not a submitted or approved release.
 - The latest completed store/TestFlight binary is **6.0.0 (7)**, EAS build `b65e3fd7-a51f-479f-93ef-f6e3b8c53d38`, built on October 24 from `bad082c46725bc8f2993b2adaaf7c34ffb5b296c`. Its embedded bundle predates the current review improvements.
 - Current main is `1c1812c43a31df4e58385a0b8a6e5c6ea9483d01`, delivered as OTA **6.7.0** for native version **6.0.0**. An installed OTA does not change the embedded bundle in the binary selected for App Review.
-- A fresh **7.0.0** native release is planned through `feature/app-store-submission`. The release pipeline must complete its build and upload before that build can be selected for review. Update the draft App Store version to match the processed candidate; do not select the older binary by accident.
+- A fresh **7.0.0** native release is planned. The first cloud attempt exhausted the account's free iOS build allowance; it did not deliver a new binary. The release pipeline must complete its build and upload before that build can be selected for review. Match the processed candidate to the draft version; do not select the older binary by accident.
 - Capture actual current-app iPhone and iPad screenshots at accepted device resolutions. The screenshot upload, App Privacy declarations, and required App Review contact fields are still pending.
 - Submission has not been confirmed. Record the selected build and App Store Connect submission status only after those actions succeed.
 
-The simulator EAS profile uses the `sdk-57` image and Node `24.21.0`, while retaining its development-client behavior. The local Xcode 16.3 toolchain cannot compile the Expo SDK 57 Swift 6.2 requirements; use the cloud simulator build for native screenshot capture. Store builds retain the existing `testflight` profile, preview environment, TestFlight OTA channel, and Apple team.
+The simulator EAS profile retains its development-client behavior. The local Xcode 16.3 toolchain cannot compile the Expo SDK 57 Swift 6.2 requirements. The manual `recollect-ios-simulator.yml` workflow builds with EAS `--local` on a GitHub-hosted macOS 26 runner using Xcode 26.2, then uploads the verified simulator app as a short-lived artifact for native screenshot capture. It does not use an EAS cloud build slot.
+
+Native releases also use EAS `--local` on that runner, with the existing managed signing credentials, `testflight` profile, preview environment, TestFlight OTA channel, and Apple team. Before submitting the exact IPA path, the pipeline checks its signed app identity, version, distribution profile, and embedded update runtime. A successful waited upload records compatibility proof in the annotated release tag; later OTA releases can use that proof when there is no EAS cloud build record. An upload is not proof of Apple processing, review submission, approval, or public availability.
 
 ## Remaining release verification
 

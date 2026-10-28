@@ -13,8 +13,10 @@
     "simulator": {
       "extends": "development",
       "ios": {
-        "simulator": true
-      }
+        "simulator": true,
+        "image": "sdk-57"
+      },
+      "node": "24.21.0"
     },
     "preview": {
       "distribution": "internal",

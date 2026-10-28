@@ -23,9 +23,11 @@ This is a preparation document, not proof that an app has been approved, submitt
 - Capture actual current-app iPhone and iPad screenshots at accepted device resolutions. The screenshot upload, App Privacy declarations, and required App Review contact fields are still pending.
 - Submission has not been confirmed. Record the selected build and App Store Connect submission status only after those actions succeed.
 
-The simulator EAS profile retains its development-client behavior. The local Xcode 16.3 toolchain cannot compile the Expo SDK 57 Swift 6.2 requirements. The manual `recollect-ios-simulator.yml` workflow builds with EAS `--local` on a GitHub-hosted macOS 26 runner using Xcode 26.2, then uploads the verified simulator app as a short-lived artifact for native screenshot capture. It does not use an EAS cloud build slot.
+The simulator EAS profile retains its development-client behavior. The local Xcode 16.3 toolchain cannot compile Expo SDK 57, which requires Xcode 26.4 or newer. The manual `recollect-ios-simulator.yml` workflow builds with EAS `--local` on a GitHub-hosted macOS 26 runner using Xcode 26.4.1, then uploads the verified simulator app as a short-lived artifact for native screenshot capture. It does not use an EAS cloud build slot.
 
 Native releases also use EAS `--local` on that runner, with the existing managed signing credentials, `testflight` profile, preview environment, TestFlight OTA channel, and Apple team. Before submitting the exact IPA path, the pipeline checks its signed app identity, version, distribution profile, and embedded update runtime. A successful waited upload records compatibility proof in the annotated release tag; later OTA releases can use that proof when there is no EAS cloud build record. An upload is not proof of Apple processing, review submission, approval, or public availability.
+
+Both native workflows prefetch the installed React Native version's official debug and release dependency archives with bounded retries and SHA-256 verification before CocoaPods runs. The workspace pins React and native peer packages to Expo SDK 57-compatible versions to avoid conflicting auto-installed copies. Local build failures expose only capped, filtered technical errors; raw output and credential material are not published.
 
 ## Remaining release verification
 

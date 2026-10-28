@@ -48,9 +48,9 @@ jobs:
           // This changes only the disposable checkout, not the repository version.
           writeFileSync('apps/mobile/native-version.json', JSON.stringify({ version }, null, 2) + '\n');
           JS
-      - name: Select Xcode 26.2 and verify Swift
+      - name: Select Xcode 26.4.1 and verify Swift
         run: |
-          xcode_developer_dir=/Applications/Xcode_26.2.app/Contents/Developer
+          xcode_developer_dir=/Applications/Xcode_26.4.1.app/Contents/Developer
           test -d "$xcode_developer_dir"
           sudo xcode-select --switch "$xcode_developer_dir"
           echo "DEVELOPER_DIR=$xcode_developer_dir" >> "$GITHUB_ENV"
@@ -65,6 +65,8 @@ jobs:
           console.log(output.trim());
           JS
       - run: npm ci
+      - name: Prepare verified iOS dependency archives
+        run: node scripts/prepare-ios-dependencies.mjs --configuration all
       - run: npm install --global eas-cli@24.12.1
       - name: Build the simulator app on the GitHub runner
         working-directory: apps/mobile

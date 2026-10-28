@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { deliverRelease } from './release-delivery.mjs';
+import { deliverRelease, localBuildDiagnostics } from './release-delivery.mjs';
 
 const sha = 'a'.repeat(40);
 const hash = 'b'.repeat(40);
@@ -440,4 +440,97 @@ test('OTA accepts matching successful local native proof, but rejects changed id
     );
     assert.deepEqual(f.calls, ['fingerprint:generate', 'build:list']);
   }
+});
+
+test('local diagnostics redact environment secrets and URLs, drop credential material, and prefix nested output', () => {
+  const env = {
+    EXPO_TOKEN: 'expo-private-value',
+    DATABASE_URL: 'postgres://private-database',
+    SLACK_RELEASE_WEBHOOK: 'https://hooks.slack.test/private',
+    OTHER_PRIVATE_VALUE: 'nonstandard-sensitive-value',
+  };
+  const error = {
+    stdout:
+      '\u001b[31merror: cannot find SomeView in scope\u001b[0m\n' +
+      'error: unexpected expo-private-value and nonstandard-sensitive-value\n' +
+      'error: fetch https://signed.test/path?token=private-url-value failed\n' +
+      'error: Authorization: Bearer unlisted-bearer-value\n' +
+      'error: API_KEY=unlisted-key-value\n' +
+      'error: signing certificate unlisted-managed-material\n' +
+      'error: Cookie: unlisted-cookie-value\n' +
+      'error: session_id=unlisted-session-value\n' +
+      '-----BEGIN PRIVATE KEY-----\nerror: unlisted-pem-value\n-----END PRIVATE KEY-----\n',
+    cause: {
+      stderr: Buffer.from(
+        '::error::failed to compile Widget.swift\rerror: postgres://private-database\n',
+      ),
+    },
+    errors: [
+      {
+        stderr: 'fatal error: module is unavailable; https://example.test/source?secret=unknown\n',
+      },
+    ],
+  };
+  const lines = localBuildDiagnostics(error, env);
+  const output = lines.join('\n');
+  assert.match(output, /cannot find SomeView/);
+  assert.match(output, /failed to compile Widget/);
+  assert.match(output, /module is unavailable/);
+  assert.match(output, /\[redacted\]/);
+  assert.match(output, /\[URL redacted\]/);
+  assert.doesNotMatch(
+    output,
+    /expo-private-value|nonstandard-sensitive-value|private-database|unlisted-|private-url-value|https?:\/\/|\u001b|BEGIN PRIVATE/,
+  );
+  assert.ok(lines.every((line) => line.startsWith('[native build diagnostic] ')));
+  assert.ok(lines.every((line) => !/[\r\u001b]/.test(line)));
+});
+
+test('local diagnostics bound line count, length, duplicate output, and cyclic nested errors', () => {
+  const error = {
+    stderr: Array.from({ length: 80 }, (_, i) => `error: failure ${i}: ${'x'.repeat(900)}`).join(
+      '\n',
+    ),
+  };
+  error.cause = error;
+  error.errors = [error];
+  const lines = localBuildDiagnostics(error, {});
+  assert.equal(lines.length, 50);
+  assert.ok(lines.every((line) => line.length <= 300));
+  assert.match(lines.at(-1), /failure 79/);
+  assert.equal(
+    localBuildDiagnostics({ stdout: 'error: duplicate\nerror: duplicate' }, {}).length,
+    1,
+  );
+});
+
+test('failed local build emits only sanitized technical diagnostics and cannot verify, upload, or record a release', async (t) => {
+  const f = await localFixture(t);
+  await assert.rejects(
+    deliverRelease(f.env, {
+      ...f.options,
+      verifyArchive: async () => {
+        throw new Error('Verification must not start');
+      },
+      run: async (args) => {
+        f.calls.push(args[0]);
+        if (args[0] === 'fingerprint:generate') return JSON.stringify({ hash });
+        throw Object.assign(new Error('raw error must-never-be-logged'), {
+          code: 1,
+          stdout: 'error: Swift compile failed\nerror: must-never-be-logged\n',
+          cause: {
+            stderr: 'fatal error: cannot find ModuleName\nerror: private_key=unlisted-value',
+          },
+        });
+      },
+    }),
+    /EAS local build failed \(exit 1\)/,
+  );
+  assert.deepEqual(f.calls, ['fingerprint:generate', 'build']);
+  const output = f.logs.join('\n');
+  assert.match(output, /\[native build diagnostic\] error: Swift compile failed/);
+  assert.match(output, /cannot find ModuleName/);
+  assert.doesNotMatch(output, /must-never-be-logged|unlisted-value|raw error|completed/);
+  assert.equal(await readFile(f.env.RELEASE_PLAN_FILE, 'utf8'), f.env.RELEASE_PLAN_JSON);
+  assert.equal(await readFile(join(f.dir, 'eas.json'), 'utf8'), config);
 });

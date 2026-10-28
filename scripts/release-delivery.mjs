@@ -13,6 +13,74 @@ const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const fingerprintHash = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 const version = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
+export function localBuildDiagnostics(error, env) {
+  const chunks = [],
+    seen = new Set();
+  const collect = (value, depth = 0) => {
+    if (!value || typeof value !== 'object' || seen.has(value) || depth > 3 || seen.size >= 16)
+      return;
+    seen.add(value);
+    for (const key of ['stdout', 'stderr']) {
+      if (typeof value[key] === 'string' || Buffer.isBuffer(value[key]))
+        chunks.push(String(value[key]));
+    }
+    collect(value.cause, depth + 1);
+    if (Array.isArray(value.errors)) for (const nested of value.errors) collect(nested, depth + 1);
+  };
+  collect(error);
+  const secrets = Object.entries(env)
+    .filter(
+      ([key, value]) =>
+        /token|secret|password|private|credential|webhook|api.?key|dsn|database.?url|authorization/i.test(
+          key,
+        ) &&
+        typeof value === 'string' &&
+        value.length >= 4,
+    )
+    .map(([, value]) => value)
+    .sort((a, b) => b.length - a.length);
+  const result = [],
+    unique = new Set();
+  for (const chunk of chunks) {
+    // Inspect a bounded tail, where build tools normally summarize failures.
+    // No raw child output is persisted or forwarded to GitHub.
+    let safe = chunk
+      .slice(-2 * 1024 * 1024)
+      .replace(/\u001b\][\s\S]*?(?:\u0007|\u001b\\)/g, '')
+      .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '')
+      .replace(/\r/g, '\n')
+      .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '');
+    for (const secret of secrets) safe = safe.split(secret).join('[redacted]');
+    let pem = false;
+    for (const raw of safe.split('\n')) {
+      if (/-----BEGIN [A-Z0-9 ]+-----/.test(raw)) pem = true;
+      if (pem) {
+        if (/-----END [A-Z0-9 ]+-----/.test(raw)) pem = false;
+        continue;
+      }
+      if (!/\berror\b|\bfatal\b|\bfailed\b|❌|\[!\]|ERR_[A-Z_]+/i.test(raw)) continue;
+      const text = raw.replace(/\b(?:https?|ftp):\/\/[^\s]+/gi, '[URL redacted]').trim();
+      // Unknown managed signing material is not necessarily in the process
+      // environment. Drop credential-bearing lines rather than guessing at it.
+      if (
+        /authorization|bearer\s|cookies?|session[ _-]?(?:id|token|secret)|password|private[ _-]?key|api[ _-]?key|access[ _-]?token|credentials?|certificate|provisioning|signing|keystore|\.p(?:8|12)\b|["']?(?:key|token|secret)["']?\s*[:=]/i.test(
+          text,
+        )
+      )
+        continue;
+      if (!text) continue;
+      // Prefixing every line prevents untrusted tool output from becoming a
+      // GitHub workflow command (for example ::error:: or ::add-mask::).
+      const line = `[native build diagnostic] ${text}`.slice(0, 300);
+      if (!unique.has(line)) {
+        result.push(line);
+        unique.add(line);
+      }
+    }
+  }
+  return result.slice(-50);
+}
+
 async function runEas(args, options) {
   // JSON can contain signed artifact URLs. Capture CLI output rather than
   // streaming it to GitHub logs; only selected non-secret identifiers are logged.
@@ -82,8 +150,9 @@ export async function deliverRelease(
     try {
       return await run(args, { cwd: projectDir, env });
     } catch (error) {
-      // Never include execFile's error/message/stdout/stderr: these may contain
-      // credential values or signed URLs. EAS retains the detailed service logs.
+      // Only local compilation needs console diagnostics: there is no cloud
+      // build log. Never print raw execFile output, even for a failed build.
+      if (stage === 'local build') for (const line of localBuildDiagnostics(error, env)) log(line);
       const code = Number.isInteger(error?.code) ? ` (exit ${error.code})` : '';
       const location =
         stage === 'local build'

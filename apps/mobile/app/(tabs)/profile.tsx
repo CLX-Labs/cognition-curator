@@ -24,6 +24,7 @@ import { BrandPattern } from '../../src/brand-patterns';
 import PublicLinks from '../../src/public-links';
 import { AIPermissionPanel, useAIConsent } from '../../src/ai-consent-ui';
 import { AccountDeletionPanel } from '../../src/account-deletion';
+import TokenBalancePanel from '../../src/tokens-ui';
 
 type ImportWorkflow = {
   legacy: LegacyExport;
@@ -223,6 +224,7 @@ export default function ProfileScreen() {
           onPress={() => router.push('/marketplace/downloads')}
         />
       </Panel>
+      <TokenBalancePanel />
       <ReleasePanel />
       <AIPermissionPanel consent={aiConsent} settings />
       <Panel>

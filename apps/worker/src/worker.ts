@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { PgBoss } from 'pg-boss';
 import { ProviderError, type GenerationProvider } from '@recollect/ai';
-import { transaction, type Database } from '@recollect/db';
+import {
+  DomainError,
+  lockOwner,
+  releaseGenerationToken,
+  transaction,
+  type Database,
+} from '@recollect/db';
 
 type ClaimedJob = {
   id: string;
@@ -10,6 +16,26 @@ type ClaimedJob = {
   attempt: number;
   fence: string;
 };
+async function releaseFailedGenerationToken(db: Database, jobId: string): Promise<void> {
+  // Worker claims lock the job first. Release in a separate transaction to preserve the
+  // API's owner-before-job lock order and avoid deadlocking an acceptance or cancellation.
+  const job = (
+    await db.query<{ owner_id: string; status: string; token_required: boolean }>(
+      'SELECT owner_id,status,token_required FROM recollect.generation_jobs WHERE id=$1',
+      [jobId],
+    )
+  ).rows[0];
+  if (!job?.token_required || !['failed', 'canceled'].includes(job.status)) return;
+  try {
+    await transaction(db, async (tx) => {
+      await lockOwner(tx, job.owner_id);
+      await releaseGenerationToken(tx, job.owner_id, jobId);
+    });
+  } catch (error) {
+    // Account deletion cancels jobs and erases their wallet through cascading FKs.
+    if (!(error instanceof DomainError && error.code === 'account_inactive')) throw error;
+  }
+}
 export async function runGeneration(
   db: Database,
   provider: GenerationProvider,
@@ -48,7 +74,10 @@ export async function runGeneration(
       )
     ).rows[0]!;
   });
-  if (!claimed) return 'ignored';
+  if (!claimed) {
+    await releaseFailedGenerationToken(db, jobId);
+    return 'ignored';
+  }
   try {
     const result = await provider.generate({ prompt: claimed.prompt, count: claimed.card_count });
     const candidates = result.cards.map((card) => ({ ...card, id: randomUUID() }));
@@ -76,6 +105,7 @@ export async function runGeneration(
         10 * 2 ** claimed.attempt,
       ],
     );
+    if (saved.rowCount && !retry) await releaseFailedGenerationToken(db, jobId);
     return saved.rowCount ? (retry ? 'retry' : 'failed') : 'ignored';
   }
 }

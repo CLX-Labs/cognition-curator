@@ -1,3 +1,5 @@
+import type { AppleBillingConfig } from './billing.js';
+
 export interface ApiConfig {
   databaseUrl: string;
   accessSecret: string;
@@ -7,6 +9,9 @@ export interface ApiConfig {
   accessTtlSeconds: number;
   refreshTtlSeconds: number;
   dailyGenerationCards: number;
+  /** Deliberately opt-in until the native billing client is ready for release. */
+  generationTokensEnabled?: boolean;
+  appleBilling?: AppleBillingConfig;
   appleSignInTeamId?: string;
   appleSignInKeyId?: string;
   appleSignInPrivateKey?: string;
@@ -24,6 +29,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   if (!env.APPLE_BUNDLE_ID && !enableDevAuth)
     throw new Error('APPLE_BUNDLE_ID is required for verified Apple sign-in.');
   const dailyGenerationCards = Number(env.DAILY_GENERATION_CARDS ?? 100);
+  if (production && env.APPLE_BILLING_ENVIRONMENT === 'Sandbox')
+    throw new Error('Sandbox purchases cannot fund production token balances.');
   const accountDeletionMaxDays = env.ACCOUNT_DELETION_MAX_DAYS
     ? Number(env.ACCOUNT_DELETION_MAX_DAYS)
     : undefined;
@@ -51,6 +58,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     accessTtlSeconds: 900,
     refreshTtlSeconds: 2_592_000,
     dailyGenerationCards,
+    generationTokensEnabled: env.GENERATION_TOKENS_ENABLED === 'true',
+    appleBilling: {
+      enabled: env.APPLE_BILLING_ENABLED === 'true',
+      environment: env.APPLE_BILLING_ENVIRONMENT === 'Sandbox' ? 'Sandbox' : 'Production',
+      bundleId: env.APPLE_BUNDLE_ID ?? 'collect.software.cognition-curator',
+      appAppleId: 6749138102,
+      productId: 'collect.software.recollect.tokens.monthly',
+    },
     appleSignInTeamId: env.APPLE_SIGN_IN_TEAM_ID,
     appleSignInKeyId: env.APPLE_SIGN_IN_KEY_ID,
     appleSignInPrivateKey: env.APPLE_SIGN_IN_PRIVATE_KEY,

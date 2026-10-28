@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import * as Linking from 'expo-linking';
 import { useStore } from './store';
 import { shareJSON } from './export';
 import { Button, Field, Panel, Screen, Text, colors, s } from './ui';
@@ -55,6 +56,17 @@ export function AccountDeletionPanel() {
             widget data are removed from this device. Permanent server deletion may remain pending
             while it is processed. This cannot be undone.
           </Text>
+          <Text style={s.caption}>
+            Deleting your Recollect account does not cancel an Apple subscription. Cancel it in your
+            Apple account settings before deleting this account. Unused tokens are removed with your
+            account.
+          </Text>
+          <Button
+            title="Manage Apple subscriptions"
+            variant="ghost"
+            size="compact"
+            onPress={() => void Linking.openURL('https://apps.apple.com/account/subscriptions')}
+          />
           <Text style={s.caption}>
             Files you exported and original legacy recovery stores are separate. They are not
             automatically erased because they may contain another account’s data. Contact support if

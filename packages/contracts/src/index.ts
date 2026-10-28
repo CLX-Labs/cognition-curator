@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { deckImageSchema } from './deck-image.ts';
 export * from './deck-image.ts';
 export * from './account-deletion.ts';
+export * from './tokens.ts';
 
 /** Wire format is deliberately explicit: UUIDs, UTC/offset ISO dates, seconds for intervals. */
 export const uuidSchema = z.uuid().toLowerCase();
@@ -222,12 +223,17 @@ export const appleSignInSchema = z.strictObject({
   displayName: z.string().trim().min(1).max(100).optional(),
 });
 export const refreshRequestSchema = z.strictObject({ refreshToken: z.string().min(32).max(500) });
-export const generationRequestSchema = z.strictObject({
-  operationId: uuidSchema,
-  deckId: uuidSchema,
-  prompt: z.string().trim().min(1).max(20_000),
-  count: z.number().int().min(1).max(20),
-});
+export const generationRequestSchema = z
+  .strictObject({
+    operationId: uuidSchema,
+    deckId: uuidSchema,
+    prompt: z.string().trim().min(1).max(20_000),
+    count: z.number().int().min(1).max(20),
+    mode: z.enum(['cards', 'answer']).optional(),
+  })
+  .refine((value) => value.mode !== 'answer' || value.count === 1, {
+    message: 'An answer request generates exactly one answer.',
+  });
 export type GenerationRequest = z.infer<typeof generationRequestSchema>;
 export const generationAcceptSchema = z.strictObject({
   operationId: uuidSchema,

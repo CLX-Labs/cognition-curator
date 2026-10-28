@@ -13,8 +13,10 @@ import {
   marketplaceSnapshotValue,
   sessionSchema,
   snapshotSchema,
+  tokenWalletSchema,
   type Card,
   type MarketplacePublish,
+  type MarketplaceListing,
   type MarketplaceSettings,
   type ReviewEvent,
   type Session,
@@ -790,5 +792,77 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('snapshot deck marketplace', () 
       payload: { id: second.id },
     });
     expect((await detail(viewer, listing.id)).listing.usageStats).toBeNull();
+  });
+
+  it('rewards a real first download exactly once while public metrics and practice sharing are off', async () => {
+    const publisher = await login('Author');
+    const learner = await login('Reader');
+    const { deckId } = await library(publisher, 'Science', 1);
+    const { listing } = await publish(publisher, deckId);
+    const tokenApp = await buildApp({ db, config: { ...config, generationTokensEnabled: true } });
+    try {
+      const before = await tokenApp.inject({ url: '/v1/tokens', headers: headers(publisher) });
+      expect(tokenWalletSchema.parse(before.json())).toMatchObject({ earned: 0, free: 10 });
+      const download = () =>
+        tokenApp.inject({
+          method: 'POST',
+          url: `/v1/marketplace/listings/${listing.id}/download`,
+          headers: headers(learner),
+          payload: {},
+        });
+      const downloads = await Promise.all([download(), download()]);
+      expect(downloads.map((response) => response.statusCode)).toEqual([200, 200]);
+      expect(downloads[0]!.json()).toEqual(downloads[1]!.json());
+      expect(downloads[0]!.json().contributeUsage).toBe(false);
+      const after = await tokenApp.inject({ url: '/v1/tokens', headers: headers(publisher) });
+      expect(tokenWalletSchema.parse(after.json())).toMatchObject({
+        earned: 1,
+        available: 11,
+        reserved: 0,
+      });
+      const own = await tokenApp.inject({
+        method: 'POST',
+        url: `/v1/marketplace/listings/${listing.id}/download`,
+        headers: headers(publisher),
+        payload: {},
+      });
+      expect(own.statusCode).toBe(400);
+      const privateView = await detail(learner, listing.id);
+      expect(privateView.listing.downloadCount).toBeNull();
+      expect(privateView.listing.usageStats).toBeNull();
+      const anonymous = await tokenApp.inject({ url: '/v1/tokens' });
+      expect(anonymous.statusCode).toBe(401);
+    } finally {
+      await tokenApp.close();
+    }
+  });
+
+  it('credits concurrent reciprocal downloads without taking a publisher sync-head lock', async () => {
+    const authors = await Promise.all([login('A'), login('B'), login('C')]);
+    const listings: MarketplaceListing[] = [];
+    for (const author of authors) {
+      const { deckId } = await library(author, 'A published subject', 1);
+      listings.push((await publish(author, deckId)).listing);
+    }
+    const tokenApp = await buildApp({ db, config: { ...config, generationTokensEnabled: true } });
+    try {
+      const responses = await Promise.all(
+        authors.map((author, index) =>
+          tokenApp.inject({
+            method: 'POST',
+            url: `/v1/marketplace/listings/${listings[(index + 1) % authors.length]!.id}/download`,
+            headers: headers(author),
+            payload: {},
+          }),
+        ),
+      );
+      expect(responses.map((response) => response.statusCode)).toEqual([200, 200, 200]);
+      for (const author of authors) {
+        const response = await tokenApp.inject({ url: '/v1/tokens', headers: headers(author) });
+        expect(tokenWalletSchema.parse(response.json()).earned).toBe(1);
+      }
+    } finally {
+      await tokenApp.close();
+    }
   });
 });

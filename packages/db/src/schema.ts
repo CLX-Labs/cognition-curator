@@ -142,6 +142,8 @@ export const generationJobs = recollect.table(
     prompt: text().notNull(),
     cardCount: integer('card_count').notNull(),
     status: text().notNull(),
+    mode: text().notNull().default('cards'),
+    tokenRequired: boolean('token_required').notNull().default(false),
     attempt: integer().notNull().default(0),
     fence: uuid(),
     leaseUntil: timestamp('lease_until', { withTimezone: true }),
@@ -155,6 +157,7 @@ export const generationJobs = recollect.table(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    unique('generation_jobs_owner_id_id_key').on(t.ownerId, t.id),
     unique().on(t.ownerId, t.operationId),
     foreignKey({ columns: [t.ownerId, t.deckId], foreignColumns: [decks.ownerId, decks.id] }),
   ],
@@ -169,6 +172,17 @@ export const quotaBuckets = recollect.table(
     reserved: integer().notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.ownerId, t.quotaDate] })],
+);
+export const generationCancellations = recollect.table(
+  'generation_cancellations',
+  {
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    operationId: uuid('operation_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.ownerId, t.operationId] })],
 );
 export const acceptanceReceipts = recollect.table(
   'acceptance_receipts',
@@ -215,6 +229,119 @@ export const rateBuckets = recollect.table(
     count: integer().notNull(),
   },
   (t) => [primaryKey({ columns: [t.scope, t.bucket] })],
+);
+
+export const tokenSubscriptionOwners = recollect.table(
+  'token_subscription_owners',
+  {
+    originalTransactionId: text('original_transaction_id').primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+  },
+  (t) => [unique().on(t.ownerId, t.originalTransactionId)],
+);
+export const tokenPurchases = recollect.table(
+  'token_purchases',
+  {
+    transactionId: text('transaction_id').primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    originalTransactionId: text('original_transaction_id').notNull(),
+    productId: text('product_id').notNull(),
+    environment: text().notNull(),
+    purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    signedAt: timestamp('signed_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    refundEventAt: timestamp('refund_event_at', { withTimezone: true }),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.ownerId, t.originalTransactionId],
+      foreignColumns: [
+        tokenSubscriptionOwners.ownerId,
+        tokenSubscriptionOwners.originalTransactionId,
+      ],
+    }).onDelete('cascade'),
+    check('token_purchases_check', sql`${t.expiresAt} > ${t.purchasedAt}`),
+    index('token_purchases_owner_expiry').on(t.ownerId, t.expiresAt.desc()),
+  ],
+);
+export const tokenGrants = recollect.table(
+  'token_grants',
+  {
+    id: uuid().primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    source: text().notNull(),
+    grantKey: text('grant_key').notNull().unique(),
+    amount: integer().notNull(),
+    consumed: integer().notNull().default(0),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.ownerId, t.id),
+    check('token_grants_source_check', sql`${t.source} IN ('free','paid','earned')`),
+    check('token_grants_amount_check', sql`${t.amount} > 0`),
+    check('token_grants_consumed_check', sql`${t.consumed} >= 0 AND ${t.consumed} <= ${t.amount}`),
+    check('token_grants_check', sql`${t.source}='free' OR ${t.expiresAt} IS NULL`),
+    index('token_grants_owner').on(t.ownerId),
+  ],
+);
+export const tokenGenerationHolds = recollect.table(
+  'token_generation_holds',
+  {
+    jobId: uuid('job_id').primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    grantId: uuid('grant_id').notNull(),
+    state: text().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.ownerId, t.jobId],
+      foreignColumns: [generationJobs.ownerId, generationJobs.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [t.ownerId, t.grantId],
+      foreignColumns: [tokenGrants.ownerId, tokenGrants.id],
+    }).onDelete('cascade'),
+    check(
+      'token_generation_holds_state_check',
+      sql`${t.state} IN ('reserved','captured','released')`,
+    ),
+    index('token_holds_grant')
+      .on(t.grantId)
+      .where(sql`${t.state}='reserved'`),
+  ],
+);
+export const tokenMarketplaceRewards = recollect.table(
+  'token_marketplace_rewards',
+  {
+    publisherId: uuid('publisher_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    recipientId: uuid('recipient_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sourceDeckId: uuid('source_deck_id').notNull(),
+    listingId: uuid('listing_id').notNull(),
+    downloadId: uuid('download_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.publisherId, t.recipientId, t.sourceDeckId] }),
+    check('token_marketplace_rewards_check', sql`${t.publisherId} <> ${t.recipientId}`),
+  ],
 );
 
 export const friendships = recollect.table(

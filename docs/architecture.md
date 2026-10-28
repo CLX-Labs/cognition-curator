@@ -66,6 +66,73 @@ Every attempt has a deadline/fence. Completion must still match the active unexp
 
 Successful candidates receive stable UUIDs. Acceptance creates cards with those IDs and saves an idempotent receipt. The quota is conservative: failed/canceled requests do not automatically refund potential provider cost. It is not billing or a claim of exactly-once external charging.
 
+## Generation tokens — unreleased branch implementation
+
+The `codex/token-economy` branch is a local first pass, with no OTA, backend rollout,
+store product configuration, or live purchase enabled. `GENERATION_TOKENS_ENABLED`
+and `APPLE_BILLING_ENABLED` default to false. Do not enable charging for the 7.0.0
+binary currently waiting for App Review: it has no token disclosures or billing module.
+
+- One token buys one **accepted generation job**, regardless of how many cards from
+  that batch are kept. A generated answer costs one token after the user confirms
+  using it, before the answer enters the editor. Manual cards and practice are free.
+- The free plan grants ten tokens per UTC calendar month. Unused free tokens reset
+  on the first of the month; purchased and earned tokens do not expire.
+- A verified monthly Apple subscription payment grants 100 tokens. The intended US
+  price is $3.99/month; the app displays Apple's actual localized price. While the
+  subscription is active, its paid allowance replaces the free allowance. Upgrading
+  retires the unused current free allocation, without undoing prior acceptances.
+- A first Marketplace download by another account grants the publisher one token,
+  once per recipient/source deck. Repeat downloads, self-downloads, and republishing
+  the same source deck cannot earn again. Download/usage visibility and recipient
+  practice-sharing consent do not affect rewards. This first pass assumes **first
+  download**, rather than first practice; reward timing remains a product choice.
+
+The API owns all balances. Additive migrations introduce credit grants, per-job
+reservations, verified purchase receipts, subscription ownership, and Marketplace
+reward receipts. A wallet advisory lock serializes debits, renewals, refunds and
+rewards without locking another publisher's sync head. Card acceptance, the token
+capture and its retry receipt commit in the same database transaction. Retries and
+accepting more candidates from the same job cannot debit another token.
+
+Starting a generation reserves a token. Failures, cancellation and dismissing an
+unaccepted draft release it. Unused reservations expire after 24 hours or when the
+free allocation expires; accepting an older successful draft reserves a currently
+available token again. Cancellation-by-operation records a tombstone even before a
+lost create response arrives, so a delayed POST cannot resurrect a dismissed job.
+The preexisting daily inference quota remains separate: rejected suggestions still
+cost inference even though they do not cost the user a token. The economic model
+does not prevent copying unaccepted suggestion text, or collusion between newly
+created accounts; stronger abuse detection is a separate operational requirement.
+
+Every job snapshots whether tokens were required when it was created. Pre-rollout
+jobs remain free; when charging is enabled, new generation requests must identify
+the token-aware `cards` or `answer` protocol. Existing strict response contracts do
+not gain new fields. `GET /v1/tokens` supplies the authenticated wallet, while the
+new answer-accept endpoint records an acceptance without inserting a second card.
+
+The optional local iOS Expo module uses StoreKit 2. It associates purchases with
+the Recollect account UUID, sends the signed transaction to the API, and finishes
+only after the API acknowledges that exact transaction. Restore includes historical
+payments, and interrupted transactions recover after sign-in. The API verifies
+Apple's certificate chain, bundle, environment, product, purchase ownership and
+account token; neither a client entitlement flag nor unsigned receipt fields can
+grant tokens. Signed V2 renewal notifications and client restoration share the same
+idempotent ledger. Refunds retire unspent credits without producing negative balances.
+Production refuses Sandbox billing configuration. New wallet rows cascade on account
+deletion; deleting an account does not cancel its Apple subscription.
+
+Before releasing billing, create the monthly subscription group/product
+`collect.software.recollect.tokens.monthly` in App Store Connect at the intended
+price, complete the owner's Paid Apps agreement/banking/tax setup, configure the
+V2 notification URL `/v1/billing/apple/notifications`, and test purchases, renewal,
+restore, refund, offline recovery and account switching in a separate Sandbox
+environment. Update the privacy disclosures for linked purchase history and review
+the publisher's trader classification for the paid business. Submit a new native
+binary and IAP for Apple review. A source or Swift typecheck is not a full native
+build or proof of a real StoreKit transaction. Keep the feature flags off until the
+reviewed client and verified store configuration are ready for a coordinated rollout.
+
 ## Recovery
 
 The server importer reads inspected legacy public tables, preserves internal UUIDs, converts day-based intervals, archives history and saves a manifest fingerprint. Repeating an unchanged import is safe. Changed input, identity collisions or invalid schedule values require reconciliation.

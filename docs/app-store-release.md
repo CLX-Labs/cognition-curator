@@ -16,12 +16,11 @@ This is a preparation document, not proof that an app has been approved, submitt
 
 ## Submission preparation status — October 28, 2026
 
-- App Store Connect currently has an iOS version **7.0.0** in **Prepare for Submission**, with product copy, review notes, and the owner-provided private review contact saved. This is a draft, not a submitted or approved release.
-- The latest completed store/TestFlight binary is **6.0.0 (7)**, EAS build `b65e3fd7-a51f-479f-93ef-f6e3b8c53d38`, built on October 24 from `bad082c46725bc8f2993b2adaaf7c34ffb5b296c`. Its embedded bundle predates the current review improvements.
-- Current main is `1c1812c43a31df4e58385a0b8a6e5c6ea9483d01`, delivered as OTA **6.7.0** for native version **6.0.0**. An installed OTA does not change the embedded bundle in the binary selected for App Review.
-- A fresh **7.0.0** native release is planned. The first cloud attempt exhausted the account's free iOS build allowance; it did not deliver a new binary. The release pipeline must complete its build and upload before that build can be selected for review. Match the processed candidate to the draft version; do not select the older binary by accident.
-- Capture actual current-app iPhone and iPad screenshots at accepted device resolutions. The screenshot upload, App Privacy declarations, and required App Review contact fields are still pending.
-- Submission has not been confirmed. Record the selected build and App Store Connect submission status only after those actions succeed.
+- On October 28, App Store Connect confirmed **7.0.0 (10)** was submitted and **Waiting for Review**. This is submission evidence, not approval or public availability.
+- That build came from main `f3aaa74f167ac1f4026f83bebeb064aff7393cc4`, native GitHub run `40637895074`, with runtime `663e1a26c733f6898f78fc8f655563e2ca287587` on the `testflight` update channel. The same binary retains that channel after App Store promotion.
+- Six current-app iPhone and six iPad screenshots finished processing. Metadata, the original icon, ten App Privacy data types, content rights, worldwide availability and the owner-declared non-trader DSA classification were saved. Release after approval is automatic.
+- Apple account-deletion credentials were installed in the existing Railway service, deployment succeeded, and `/health` returned ok. Local key signing passed; this does not prove an end-to-end production account deletion.
+- The **unreleased token-economy branch** adds native StoreKit code and new monetization. It is excluded from this submission. No OTA should publish these changes to 7.0.0. Before a later paid release, complete the subscription setup, purchase-history privacy disclosures, owner agreements/commercial classification review, Sandbox device testing and a new native/IAP review described in [architecture](architecture.md#generation-tokens--unreleased-branch-implementation).
 
 The simulator EAS profile retains its development-client behavior. The local Xcode 16.3 toolchain cannot compile Expo SDK 57, which requires Xcode 26.4 or newer. The manual `recollect-ios-simulator.yml` workflow builds with EAS `--local` on a GitHub-hosted macOS 26 runner using Xcode 26.4.1, then uploads the verified simulator app as a short-lived artifact for native screenshot capture. It does not use an EAS cloud build slot.
 

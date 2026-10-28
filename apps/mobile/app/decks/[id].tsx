@@ -188,36 +188,39 @@ export default function DeckDetail() {
         </Text>
       )}
       {cards.length > 0 && (
-        <View style={s.row}>
-          {due.length > 0 && (
+        <>
+          <View style={s.row}>
+            {due.length > 0 && (
+              <View style={{ flex: 1 }}>
+                <Button
+                  title={'Review ' + due.length + ' due'}
+                  variant="secondary"
+                  size="compact"
+                  onPress={() =>
+                    router.push({
+                      pathname: '/review',
+                      params: { deckId: deck.id, practice: 'false' },
+                    })
+                  }
+                />
+              </View>
+            )}
             <View style={{ flex: 1 }}>
               <Button
-                title={'Review ' + due.length + ' due'}
+                title="Practice all cards"
                 variant="secondary"
                 size="compact"
                 onPress={() =>
                   router.push({
                     pathname: '/review',
-                    params: { deckId: deck.id, practice: 'false' },
+                    params: { deckId: deck.id, practice: 'true' },
                   })
                 }
               />
             </View>
-          )}
-          <View style={{ flex: 1 }}>
-            <Button
-              title={due.length ? 'Practice all' : 'Practice this deck'}
-              variant="secondary"
-              size="compact"
-              onPress={() =>
-                router.push({
-                  pathname: '/review',
-                  params: { deckId: deck.id, practice: 'true' },
-                })
-              }
-            />
           </View>
-        </View>
+          <Text style={s.caption}>Practice includes cards that are not due yet.</Text>
+        </>
       )}
       <DeckSharing key={deck.id} deckId={deck.id} />
       <DeckMarketplace key={'marketplace:' + deck.id} deckId={deck.id} />

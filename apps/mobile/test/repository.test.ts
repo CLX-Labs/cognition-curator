@@ -5,7 +5,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Card, Deck } from '@recollect/contracts';
 import { initialSchedule, reviewSchedule } from '@recollect/scheduler';
-import { Repository, cardContent, deckContent, installationDeviceId } from '../src/repository';
+import {
+  Repository,
+  cardContent,
+  deckContent,
+  dueCards,
+  installationDeviceId,
+} from '../src/repository';
 import { TestDatabase } from './sqlite';
 
 const timestamp = '2026-10-11T12:00:00.000Z';
@@ -122,6 +128,78 @@ describe('durable owner-isolated SQLite repository', () => {
     expect((await reopened.nextOperation())?.payload).toEqual(event);
     expect((await reopened.rateCard(f.card.id, 'good', 99)).deviceSequence).toBe(2);
   });
+  it.each([
+    { rating: 'good' as const, days: 7 },
+    { rating: 'again' as const, days: 3 },
+  ])(
+    'keeps a $rating card out of due review for exactly $days days through reopening, editing and sync',
+    async ({ rating, days }) => {
+      const directory = mkdtempSync(join(tmpdir(), 'recollect-review-cadence-'));
+      directories.push(directory);
+      const path = join(directory, 'library.db');
+      const f = await fixture(database(path));
+      const boundary = Date.parse(timestamp) + days * 86_400_000;
+      const assertCadence = async (repo: Repository) => {
+        const snapshot = await repo.snapshot();
+        expect(dueCards(snapshot, Date.parse(timestamp))).toEqual([]);
+        expect(dueCards(snapshot, boundary - 1)).toEqual([]);
+        expect(dueCards(snapshot, boundary).map((card) => card.id)).toEqual([f.card.id]);
+        expect(snapshot.cards[0]?.schedule.dueAt).toBe(new Date(boundary).toISOString());
+        expect(snapshot.cards[0]?.schedule.totalReviews).toBe(1);
+      };
+      expect(dueCards(await f.repo.snapshot(), Date.parse(timestamp))).toHaveLength(1);
+      const event = await f.repo.rateCard(f.card.id, rating, 2345);
+      await assertCadence(f.repo);
+
+      const reopened = new Repository(
+        database(path),
+        f.owner,
+        f.device,
+        randomUUID,
+        () => timestamp,
+      );
+      await reopened.initialize();
+      await assertCadence(reopened);
+      await reopened.saveCard({ ...cardContent(f.card), front: 'Edited question' });
+      await assertCadence(reopened);
+
+      const review = (await reopened.nextOperation())!;
+      expect(review.type).toBe('review.append');
+      const reviewed = { ...f.card, version: 2, schedule: reviewSchedule(f.card.schedule, event) };
+      await reopened.applyReceipt({
+        operationId: review.operationId,
+        status: 'accepted',
+        revision: '3',
+        canonical: { entity: 'card', data: reviewed },
+      });
+      await assertCadence(reopened);
+      const edit = (await reopened.nextOperation())!;
+      expect(edit.type).toBe('card.upsert');
+      const edited = { ...reviewed, version: 3, front: 'Edited question' };
+      await reopened.applyReceipt({
+        operationId: edit.operationId,
+        status: 'accepted',
+        revision: '4',
+        canonical: { entity: 'card', data: edited },
+      });
+      // A catch-up pull includes the original card and review revisions after
+      // acknowledgement. Neither may undo the review or apply it a second time.
+      await reopened.applyChanges(
+        [
+          { revision: '2', entity: 'card', data: f.card },
+          { revision: '3', entity: 'review', data: event },
+          { revision: '3', entity: 'card', data: reviewed },
+          { revision: '4', entity: 'card', data: edited },
+        ],
+        '4',
+      );
+      await assertCadence(reopened);
+      const synced = await reopened.snapshot();
+      expect(synced.cards[0]?.front).toBe('Edited question');
+      expect(synced.pending).toBe(0);
+      expect(synced.reviews).toEqual([event]);
+    },
+  );
   it('preserves the minute schedule of a v1 review already queued before the app upgrade', async () => {
     const { repo, db, owner, card } = await fixture();
     await repo.rateCard(card.id, 'good', 100);

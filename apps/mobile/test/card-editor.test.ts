@@ -347,13 +347,13 @@ it('offers both due review and all-card practice for the same deck with due card
     renderer = create(React.createElement(DeckDetail));
   });
   expect(button('Review 3 due')).toBeDefined();
-  expect(button('Practice all')).toBeDefined();
+  expect(button('Practice all cards')).toBeDefined();
   await act(async () => button('Review 3 due').props.onPress());
   expect(rig.push).toHaveBeenLastCalledWith({
     pathname: '/review',
     params: { deckId: 'deck-id', practice: 'false' },
   });
-  await act(async () => button('Practice all').props.onPress());
+  await act(async () => button('Practice all cards').props.onPress());
   expect(rig.push).toHaveBeenLastCalledWith({
     pathname: '/review',
     params: { deckId: 'deck-id', practice: 'true' },

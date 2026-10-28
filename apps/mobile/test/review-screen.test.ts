@@ -12,6 +12,7 @@ const rig = vi.hoisted(() => ({
   rate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   scrollTo: vi.fn(),
   alert: vi.fn(),
+  replace: vi.fn(),
   haptic: vi.fn<(remembered: boolean) => void>(),
   revealHaptic: vi.fn<() => void>(),
   cancelHaptic: vi.fn<() => void>(),
@@ -55,7 +56,7 @@ vi.mock('expo-router', () => ({
   router: {
     canGoBack: () => true,
     back: vi.fn(),
-    replace: vi.fn(),
+    replace: rig.replace,
     dismissTo: vi.fn(),
     navigate: vi.fn(),
   },
@@ -192,7 +193,7 @@ async function press(title: string | RegExp) {
 function footer(): ReactTestInstance {
   return renderer!.root
     .findAllByType('safe-area')
-    .find((node) => node.props.edges.includes('bottom'))!;
+    .find((node) => node.props.edges.length === 1 && node.props.edges[0] === 'bottom')!;
 }
 function text() {
   return renderer!.root
@@ -365,6 +366,40 @@ it('keeps long answers and context readable without adding a scroll view to the 
   expect(cardView().props.accessibilityLabel).toBe('Answer: ' + back);
   expect(rig.rate).not.toHaveBeenCalled();
 });
+
+it.each([
+  { action: 'Read in full', revealed: false },
+  { action: 'Read in full', revealed: true },
+  { action: 'Show a hint', revealed: false },
+  { action: 'More context', revealed: true },
+])(
+  'leaves $action (revealed=$revealed) to manage the same card without rating it',
+  async ({ action, revealed }) => {
+    rig.data = { ...rig.data!, cards: [{ ...first, explanation: 'The wider context.' }, second] };
+    await mount();
+    if (revealed) await flip();
+    await press(action);
+    const manage = button('Manage card').props.onPress;
+    await act(async () => {
+      manage();
+      manage();
+    });
+    expect(rig.replace).toHaveBeenCalledExactlyOnceWith({
+      pathname: '/cards/[id]',
+      params: { id: first.id },
+    });
+    expect(renderer!.root.findAllByType('modal')).toHaveLength(0);
+    expect(rig.setActiveHaptic).toHaveBeenLastCalledWith(false);
+    expect(cardView().props.disabled).toBe(true);
+    // Navigation can take a frame: callbacks from the departing review must stay inert.
+    await swipe(50);
+    await press('I remember →');
+    await flip();
+    expect(rig.rate).not.toHaveBeenCalled();
+    expect(rig.haptic).not.toHaveBeenCalled();
+    expect(feedback()).toHaveLength(0);
+  },
+);
 
 it('opens hints outside the swipe surface without flipping or saving the card', async () => {
   await mount();

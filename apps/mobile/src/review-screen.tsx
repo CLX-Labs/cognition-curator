@@ -63,6 +63,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     AppState.currentState !== 'background' && AppState.currentState !== 'inactive',
   );
   const saving = useRef(false);
+  const leaving = useRef(false);
   const started = useRef(Date.now());
   const card = data.cards.find((c) => c.id === queue[index]);
   useEffect(() => {
@@ -108,7 +109,15 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     setIndex((i) => i + 1);
   }
   async function answer(remembered: boolean) {
-    if (!card || !active.current || !focused.current || saving.current || reading) return;
+    if (
+      !card ||
+      !active.current ||
+      !focused.current ||
+      saving.current ||
+      leaving.current ||
+      reading
+    )
+      return;
     haptics.cancel();
     saving.current = true;
     setBusy(true);
@@ -130,10 +139,28 @@ function ReviewSession({ params }: { params: ReviewParams }) {
   }
 
   function openReading(section: 'card' | 'hint' | 'context') {
-    if (!active.current || !focused.current || saving.current || busy || reading) return;
+    if (!active.current || !focused.current || saving.current || leaving.current || busy || reading)
+      return;
     if (section === 'hint') haptics.reveal();
     else haptics.cancel();
     setReading(section);
+  }
+
+  function manageCard() {
+    if (
+      !card ||
+      !reading ||
+      !active.current ||
+      !focused.current ||
+      saving.current ||
+      leaving.current
+    )
+      return;
+    leaving.current = true;
+    haptics.setActive(false);
+    setBusy(true);
+    setReading(null);
+    router.replace({ pathname: '/cards/[id]', params: { id: card.id } });
   }
 
   if (!card)
@@ -262,7 +289,15 @@ function ReviewSession({ params }: { params: ReviewParams }) {
         revealed={revealed}
         disabled={busy || !!reading}
         onFlip={() => {
-          if (!active.current || !focused.current || saving.current || busy || reading) return;
+          if (
+            !active.current ||
+            !focused.current ||
+            saving.current ||
+            leaving.current ||
+            busy ||
+            reading
+          )
+            return;
           if (!revealed) haptics.reveal();
           else haptics.cancel();
           setRevealed(!revealed);
@@ -308,6 +343,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
           revealed={revealed}
           section={reading}
           onClose={() => setReading(null)}
+          onManage={manageCard}
         />
       )}
     </Screen>

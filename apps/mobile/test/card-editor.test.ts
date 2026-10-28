@@ -12,6 +12,7 @@ const rig = vi.hoisted(() => ({
   nextId: 0,
   failRefresh: false,
   saveCard: vi.fn(async () => {}),
+  remove: vi.fn(async () => {}),
   getState: vi.fn(async () => null),
   setState: vi.fn(async () => {}),
   dismissTo: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock('../src/store', () => ({
     const repository = {
       newId: () => 'stable-' + ++rig.nextId,
       saveCard: (...args: unknown[]) => rig.saveCard(...args),
+      remove: (...args: unknown[]) => rig.remove(...args),
       getState: (...args: unknown[]) => rig.getState(...args),
       setState: (...args: unknown[]) => rig.setState(...args),
     };
@@ -119,6 +121,7 @@ beforeEach(() => {
   rig.nextId = 0;
   rig.failRefresh = false;
   rig.saveCard.mockResolvedValue(undefined);
+  rig.remove.mockResolvedValue(undefined);
   rig.getState.mockResolvedValue(null);
 });
 afterEach(async () => {
@@ -143,6 +146,9 @@ async function enter(front: string, back: string) {
 }
 it('saves successive cards in the chosen deck, clears fields, and changes only the new answer scope', async () => {
   await mount();
+  expect(
+    renderer!.root.findAllByType('button').some((node) => node.props.title === 'Delete card'),
+  ).toBe(false);
   expect(renderer!.root.findByType('screen').props.subtitle).toBe('In Literature');
   expect(renderer!.root.findByType('answer-generator').props.cardId).toBe('new');
   await enter(' First question ', ' First answer ');
@@ -249,6 +255,63 @@ it('asks before discarding unsaved card entry on the visible Back action', async
     pathname: '/decks/[id]',
     params: { id: 'deck-id' },
   });
+});
+
+it('offers deletion without opening optional details and removes only after confirmation', async () => {
+  populateDeck(1);
+  rig.card = rig.extraCards[0]!;
+  rig.extraCards = [];
+  rig.params = { id: rig.card.id };
+  const baseline = rig.card;
+  await mount();
+  const details = renderer!.root.findByType('panel');
+  expect(details.findAllByType('button')).toHaveLength(0);
+  expect(renderer!.root.findAllByType('field').map((node) => node.props.label)).toEqual([
+    'Question',
+    'Answer',
+  ]);
+  await act(async () => button('Delete card').props.onPress());
+  expect(rig.alert).toHaveBeenLastCalledWith(
+    'Delete this card?',
+    expect.any(String),
+    expect.any(Array),
+  );
+  const firstActions = rig.alert.mock.calls.at(-1)![2] as {
+    text: string;
+    style?: string;
+    onPress?: () => void;
+  }[];
+  expect(firstActions.find((action) => action.text === 'Cancel')!.style).toBe('cancel');
+  await act(async () => firstActions.find((action) => action.text === 'Cancel')!.onPress?.());
+  expect(rig.remove).not.toHaveBeenCalled();
+  expect(rig.dismissTo).not.toHaveBeenCalled();
+
+  rig.card = { ...rig.card, front: 'Remote edit', version: 2 };
+  await act(async () => renderer!.update(React.createElement(CardEditor)));
+  await act(async () => button('Delete card').props.onPress());
+  const actions = rig.alert.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
+  await act(async () => actions.find((action) => action.text === 'Delete')!.onPress!());
+  expect(rig.remove).toHaveBeenCalledExactlyOnceWith('card', baseline.id, baseline);
+  expect(rig.dismissTo).toHaveBeenCalledWith({
+    pathname: '/decks/[id]',
+    params: { id: 'deck-id' },
+  });
+});
+
+it('keeps the editor open and reports a failed delete', async () => {
+  populateDeck(1);
+  rig.card = rig.extraCards[0]!;
+  rig.extraCards = [];
+  rig.params = { id: rig.card.id };
+  const error = new Error('Delete failed');
+  rig.remove.mockRejectedValueOnce(error);
+  await mount();
+  await act(async () => button('Delete card').props.onPress());
+  const actions = rig.alert.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
+  await act(async () => actions.find((action) => action.text === 'Delete')!.onPress!());
+  expect(rig.reportError).toHaveBeenCalledWith(error);
+  expect(rig.dismissTo).not.toHaveBeenCalled();
+  expect(button('Delete card')).toBeDefined();
 });
 
 function populateDeck(count: number) {

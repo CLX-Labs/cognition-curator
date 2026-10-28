@@ -6,7 +6,7 @@ This is a preparation document, not proof that an app has been approved, submitt
 
 - App: Recollect AI; bundle ID `collect.software.cognition-curator`.
 - Owner-confirmed public publisher: Collect Software; monitored support email: `collectsoftwarev2@gmail.com`.
-- Apple team ID: `KF8643NB33`; Apple app ID previously identified: `6749138102` (confirm in App Store Connect).
+- Apple team ID: `KF8643NB33`; Apple app ID confirmed in App Store Connect: `6749138102`.
 - Marketing URL: `https://recollect-ai.netlify.app/`.
 - Support URL: `https://recollect-ai.netlify.app/support/`.
 - Privacy URL: `https://recollect-ai.netlify.app/privacy/`.
@@ -14,9 +14,20 @@ This is a preparation document, not proof that an app has been approved, submitt
 - Friend invitations: `https://recollect-ai.netlify.app/friends?invite=…`.
 - Download destination is intentionally `null` in `apps/landing/site-config.js` until a public App Store or TestFlight URL is verified.
 
+## Submission preparation status — October 28, 2026
+
+- App Store Connect currently has an iOS version **1.0** in **Prepare for Submission**. This is a draft, not a submitted or approved release.
+- The latest completed store/TestFlight binary is **6.0.0 (7)**, EAS build `b65e3fd7-a51f-479f-93ef-f6e3b8c53d38`, built on October 24 from `bad082c46725bc8f2993b2adaaf7c34ffb5b296c`. Its embedded bundle predates the current review improvements.
+- Current main is `1c1812c43a31df4e58385a0b8a6e5c6ea9483d01`, delivered as OTA **6.7.0** for native version **6.0.0**. An installed OTA does not change the embedded bundle in the binary selected for App Review.
+- A fresh **7.0.0** native release is planned through `feature/app-store-submission`. The release pipeline must complete its build and upload before that build can be selected for review. Update the draft App Store version to match the processed candidate; do not select the older binary by accident.
+- Capture actual current-app iPhone and iPad screenshots at accepted device resolutions. The screenshot upload, App Privacy declarations, and required App Review contact fields are still pending.
+- Submission has not been confirmed. Record the selected build and App Store Connect submission status only after those actions succeed.
+
+The simulator EAS profile uses the `sdk-57` image and Node `24.21.0`, while retaining its development-client behavior. The local Xcode 16.3 toolchain cannot compile the Expo SDK 57 Swift 6.2 requirements; use the cloud simulator build for native screenshot capture. Store builds retain the existing `testflight` profile, preview environment, TestFlight OTA channel, and Apple team.
+
 ## Remaining release verification
 
-The public pages were published on October 23, 2026 in Netlify deployment `6adaf542d8f213db0980a35e`. Netlify lists `recollect-support` and `recollect-waitlist` as active forms with detection enabled. No support message was submitted as a test. This document is not part of the published static directory.
+The latest verified public website deployment is Netlify `6ae10686a6d66236429082f9`, published October 27, 2026 from the editorial website changes merged in `9eb469b`. Netlify lists `recollect-support` and `recollect-waitlist` as active forms with detection enabled. No support message was submitted as a test. This document is not part of the published static directory.
 
 - Confirm receipt when an actual support message is submitted. A native POST fallback and success page are provided; form detection alone does not prove delivery to a person's inbox.
 - Verify deletion in the production service: confirm Apple revocation credentials and processing configuration, test fresh Apple confirmation, distinguish accepted/pending from completed, and inspect a real request’s final status. A request must stay pending until Apple revocation and owned-data erasure complete.

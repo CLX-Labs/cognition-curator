@@ -54,7 +54,7 @@ jobs:
     needs: [checks, plan]
     permissions:
       contents: write
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.plan.outputs.release_type == 'native' && 'macos-26' || 'ubuntu-latest' }}
     timeout-minutes: 180
     environment: main
     env:
@@ -66,6 +66,9 @@ jobs:
       RELEASE_TYPE: ${{ needs.plan.outputs.release_type }}
       RELEASE_PLAN_JSON: ${{ needs.plan.outputs.plan }}
       RELEASE_PLAN_FILE: /tmp/recollect-release-plan.json
+      LOCAL_NATIVE_BUILD: 'true'
+      EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
+      EXPO_PUBLIC_ENABLE_DEV_AUTH: 'false'
       SLACK_RELEASE_WEBHOOK: ${{ secrets.SLACK_RELEASE_WEBHOOK }}
     steps:
       - uses: actions/checkout@v4
@@ -75,6 +78,23 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Select Xcode 26.2 and verify Swift
+        if: needs.plan.outputs.release_type == 'native'
+        run: |
+          xcode_developer_dir=/Applications/Xcode_26.2.app/Contents/Developer
+          test -d "$xcode_developer_dir"
+          sudo xcode-select --switch "$xcode_developer_dir"
+          echo "DEVELOPER_DIR=$xcode_developer_dir" >> "$GITHUB_ENV"
+          xcodebuild -version
+          node --input-type=module <<'JS'
+          import { execFileSync } from 'node:child_process';
+          const output = execFileSync('xcrun', ['swift', '--version'], { encoding: 'utf8' });
+          const match = output.match(/Swift version (\d+)\.(\d+)/);
+          if (!match || Number(match[1]) < 6 || (Number(match[1]) === 6 && Number(match[2]) < 2)) {
+            throw new Error('Expo native modules require Swift 6.2 or later.');
+          }
+          console.log(output.trim());
+          JS
       - name: Apply release and native versions
         run: node scripts/release-policy.mjs hydrate
       - name: Stamp the app release

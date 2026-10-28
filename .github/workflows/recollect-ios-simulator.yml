@@ -1,0 +1,121 @@
+name: Recollect iOS simulator build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Native app version for this simulator build
+        type: string
+        required: true
+        default: '7.0.0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recollect-ios-simulator-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 120
+    environment: main
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_PUBLIC_ENABLE_DEV_AUTH: 'false'
+      EXPO_PUBLIC_API_URL: ${{ vars.API_URL || 'https://cognition-curator-production.up.railway.app' }}
+      SIMULATOR_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Validate and apply simulator configuration
+        run: |
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs';
+          const version = process.env.SIMULATOR_VERSION;
+          if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version ?? '')) {
+            throw new Error('Version must be a numeric major.minor.patch without leading zeroes.');
+          }
+          const url = new URL(process.env.EXPO_PUBLIC_API_URL);
+          if (url.protocol !== 'https:' || url.username || url.password) {
+            throw new Error('The app API must use HTTPS without URL credentials.');
+          }
+          // This changes only the disposable checkout, not the repository version.
+          writeFileSync('apps/mobile/native-version.json', JSON.stringify({ version }, null, 2) + '\n');
+          JS
+      - name: Select Xcode 26.2 and verify Swift
+        run: |
+          xcode_developer_dir=/Applications/Xcode_26.2.app/Contents/Developer
+          test -d "$xcode_developer_dir"
+          sudo xcode-select --switch "$xcode_developer_dir"
+          echo "DEVELOPER_DIR=$xcode_developer_dir" >> "$GITHUB_ENV"
+          xcodebuild -version
+          node --input-type=module <<'JS'
+          import { execFileSync } from 'node:child_process';
+          const output = execFileSync('xcrun', ['swift', '--version'], { encoding: 'utf8' });
+          const match = output.match(/Swift version (\d+)\.(\d+)/);
+          if (!match || Number(match[1]) < 6 || (Number(match[1]) === 6 && Number(match[2]) < 2)) {
+            throw new Error('Expo native modules require Swift 6.2 or later.');
+          }
+          console.log(output.trim());
+          JS
+      - run: npm ci
+      - run: npm install --global eas-cli@24.12.1
+      - name: Build the simulator app on the GitHub runner
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_LOCAL_BUILD_WORKINGDIR: ${{ runner.temp }}/recollect-simulator-build
+        run: |
+          test -n "$EXPO_TOKEN" || { echo 'Configure EXPO_TOKEN in the main environment.' >&2; exit 1; }
+          # --local compiles here; it does not start an EAS cloud build.
+          eas build --local --profile simulator --platform ios \
+            --output "$RUNNER_TEMP/recollect-simulator.tar.gz" --non-interactive
+      - name: Verify the archive contains only the simulator app
+        run: |
+          python3 <<'PY'
+          import os
+          import pathlib
+          import plistlib
+          import tarfile
+
+          archive_path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'recollect-simulator.tar.gz'
+          with tarfile.open(archive_path, 'r:gz') as archive:
+              members = archive.getmembers()
+              roots = set()
+              for member in members:
+                  path = pathlib.PurePosixPath(member.name)
+                  if path.is_absolute() or '..' in path.parts or not path.parts:
+                      raise RuntimeError('The simulator archive contains an unsafe path.')
+                  root = path.parts[0]
+                  if not root.endswith('.app'):
+                      raise RuntimeError('Only the produced .app may be uploaded.')
+                  roots.add(root)
+              if len(roots) != 1:
+                  raise RuntimeError('Expected exactly one simulator app.')
+              info_path = next(iter(roots)) + '/Info.plist'
+              info_file = archive.extractfile(info_path)
+              if info_file is None:
+                  raise RuntimeError('The simulator app is missing Info.plist.')
+              info = plistlib.load(info_file)
+              if info.get('CFBundleIdentifier') != 'collect.software.cognition-curator':
+                  raise RuntimeError('The archive contains a different app.')
+              if info.get('CFBundleShortVersionString') != os.environ['SIMULATOR_VERSION']:
+                  raise RuntimeError('The simulator app version does not match the requested version.')
+              if 'iPhoneSimulator' not in info.get('CFBundleSupportedPlatforms', []):
+                  raise RuntimeError('The archive is not an iOS simulator app.')
+          print('Verified Recollect simulator app archive.')
+          PY
+      - name: Upload the simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: recollect-ios-simulator-${{ inputs.version }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/recollect-simulator.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

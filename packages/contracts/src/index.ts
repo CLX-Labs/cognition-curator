@@ -1,13 +1,18 @@
 import { z } from 'zod';
 import { deckImageSchema } from './deck-image.ts';
+import { dateTimeSchema, recordFields, revisionSchema, uuidSchema } from './record-fields.ts';
+import {
+  reviewCadenceSchema,
+  reviewSettingsInputSchema,
+  reviewSettingsSchema,
+} from './review-settings.ts';
 export * from './deck-image.ts';
 export * from './account-deletion.ts';
 export * from './tokens.ts';
+export * from './review-settings.ts';
+export { dateTimeSchema, revisionSchema, uuidSchema } from './record-fields.ts';
 
 /** Wire format is deliberately explicit: UUIDs, UTC/offset ISO dates, seconds for intervals. */
-export const uuidSchema = z.uuid().toLowerCase();
-export const dateTimeSchema = z.iso.datetime({ offset: true });
-export const revisionSchema = z.string().regex(/^(0|[1-9][0-9]*)$/);
 export const ratingSchema = z.enum(['again', 'hard', 'good', 'easy']);
 export type Rating = z.infer<typeof ratingSchema>;
 export const LEGACY_ALGORITHM_VERSION = 'sm2-v1' as const;
@@ -82,13 +87,6 @@ export const deckInputSchema = z.strictObject({
   silencedUntil: dateTimeSchema.nullable(),
 });
 export type DeckInput = z.infer<typeof deckInputSchema>;
-const recordFields = {
-  ownerId: uuidSchema,
-  version: z.number().int().positive(),
-  createdAt: dateTimeSchema,
-  updatedAt: dateTimeSchema,
-  deletedAt: dateTimeSchema.nullable(),
-};
 export const deckSchema = deckInputSchema.extend(recordFields);
 export type Deck = z.infer<typeof deckSchema>;
 
@@ -119,8 +117,11 @@ export const reviewEventSchema = z.strictObject({
   reviewedAt: dateTimeSchema,
   elapsedMs: z.number().int().min(0).max(86_400_000),
   algorithmVersion: algorithmVersionSchema,
+  cadence: reviewCadenceSchema.optional(),
 });
 export type ReviewEvent = z.infer<typeof reviewEventSchema>;
+/** Version 1 requests must not silently discard newer scheduling decisions. */
+export const legacyReviewEventSchema = reviewEventSchema.omit({ cadence: true });
 
 const operationFields = {
   operationId: uuidSchema,
@@ -128,50 +129,80 @@ const operationFields = {
   createdAt: dateTimeSchema,
 };
 const baseVersion = z.number().int().nonnegative();
+const contentOperationSchemas = [
+  z.strictObject({
+    ...operationFields,
+    type: z.literal('deck.upsert'),
+    baseVersion,
+    payload: deckInputSchema,
+  }),
+  z.strictObject({
+    ...operationFields,
+    type: z.literal('card.upsert'),
+    baseVersion,
+    payload: cardInputSchema,
+  }),
+  z.strictObject({
+    ...operationFields,
+    type: z.literal('deck.delete'),
+    baseVersion,
+    payload: z.strictObject({ id: uuidSchema }),
+  }),
+  z.strictObject({
+    ...operationFields,
+    type: z.literal('card.delete'),
+    baseVersion,
+    payload: z.strictObject({ id: uuidSchema }),
+  }),
+] as const;
+const reviewOperationSchema = z.strictObject({
+  ...operationFields,
+  type: z.literal('review.append'),
+  payload: reviewEventSchema,
+});
+const reviewSettingsOperationSchema = z.strictObject({
+  ...operationFields,
+  type: z.literal('reviewSettings.upsert'),
+  baseVersion,
+  payload: reviewSettingsInputSchema,
+});
 export const syncOperationSchema = z
   .discriminatedUnion('type', [
-    z.strictObject({
-      ...operationFields,
-      type: z.literal('deck.upsert'),
-      baseVersion,
-      payload: deckInputSchema,
-    }),
-    z.strictObject({
-      ...operationFields,
-      type: z.literal('card.upsert'),
-      baseVersion,
-      payload: cardInputSchema,
-    }),
-    z.strictObject({
-      ...operationFields,
-      type: z.literal('deck.delete'),
-      baseVersion,
-      payload: z.strictObject({ id: uuidSchema }),
-    }),
-    z.strictObject({
-      ...operationFields,
-      type: z.literal('card.delete'),
-      baseVersion,
-      payload: z.strictObject({ id: uuidSchema }),
-    }),
-    z.strictObject({
-      ...operationFields,
-      type: z.literal('review.append'),
-      payload: reviewEventSchema,
-    }),
+    ...contentOperationSchemas,
+    reviewOperationSchema,
+    reviewSettingsOperationSchema,
   ])
   .refine((op) => op.type !== 'review.append' || op.deviceId === op.payload.deviceId, {
     message: 'Operation and review must use the same device ID',
   });
 export type SyncOperation = z.infer<typeof syncOperationSchema>;
+export const legacySyncOperationSchema = z
+  .discriminatedUnion('type', [
+    ...contentOperationSchemas,
+    reviewOperationSchema.extend({ payload: legacyReviewEventSchema }),
+  ])
+  .refine((op) => op.type !== 'review.append' || op.deviceId === op.payload.deviceId, {
+    message: 'Operation and review must use the same device ID',
+  });
 export const pushRequestSchema = z.strictObject({
   operations: z.array(syncOperationSchema).min(1).max(100),
 });
 export type PushRequest = z.infer<typeof pushRequestSchema>;
+export const legacyPushRequestSchema = z.strictObject({
+  operations: z.array(legacySyncOperationSchema).min(1).max(100),
+});
 export const errorSchema = z.strictObject({ code: z.string(), message: z.string() });
-export const canonicalEntitySchema = z.discriminatedUnion('entity', [
+const legacyCanonicalEntitySchemas = [
   z.strictObject({ entity: z.literal('deck'), data: deckSchema }),
   z.strictObject({ entity: z.literal('card'), data: cardSchema }),
+] as const;
+export const legacyCanonicalEntitySchema = z.discriminatedUnion(
+  'entity',
+  legacyCanonicalEntitySchemas,
+);
+export const canonicalEntitySchema = z.discriminatedUnion('entity', [
+  ...legacyCanonicalEntitySchemas,
+  z.strictObject({ entity: z.literal('reviewSettings'), data: reviewSettingsSchema }),
 ]);
 export type CanonicalEntity = z.infer<typeof canonicalEntitySchema>;
 export const syncReceiptSchema = z.strictObject({
@@ -182,16 +213,38 @@ export const syncReceiptSchema = z.strictObject({
   error: errorSchema.optional(),
 });
 export type SyncReceipt = z.infer<typeof syncReceiptSchema>;
+export const legacySyncReceiptSchema = syncReceiptSchema.extend({
+  canonical: legacyCanonicalEntitySchema.optional(),
+});
 export const pushResponseSchema = z.strictObject({ receipts: z.array(syncReceiptSchema) });
 export type PushResponse = z.infer<typeof pushResponseSchema>;
+export const legacyPushResponseSchema = z.strictObject({
+  receipts: z.array(legacySyncReceiptSchema),
+});
 
-export const syncChangeSchema = z.discriminatedUnion('entity', [
+const contentChangeSchemas = [
   z.strictObject({ revision: revisionSchema, entity: z.literal('deck'), data: deckSchema }),
   z.strictObject({ revision: revisionSchema, entity: z.literal('card'), data: cardSchema }),
+] as const;
+export const legacySyncChangeSchema = z.discriminatedUnion('entity', [
+  ...contentChangeSchemas,
+  z.strictObject({
+    revision: revisionSchema,
+    entity: z.literal('review'),
+    data: legacyReviewEventSchema,
+  }),
+]);
+export const syncChangeSchema = z.discriminatedUnion('entity', [
+  ...contentChangeSchemas,
   z.strictObject({
     revision: revisionSchema,
     entity: z.literal('review'),
     data: reviewEventSchema,
+  }),
+  z.strictObject({
+    revision: revisionSchema,
+    entity: z.literal('reviewSettings'),
+    data: reviewSettingsSchema,
   }),
 ]);
 export type SyncChange = z.infer<typeof syncChangeSchema>;
@@ -202,14 +255,21 @@ export const pullResponseSchema = z.strictObject({
   changes: z.array(syncChangeSchema),
 });
 export type PullResponse = z.infer<typeof pullResponseSchema>;
+export const legacyPullResponseSchema = pullResponseSchema.extend({
+  changes: z.array(legacySyncChangeSchema),
+});
 export const snapshotSchema = z.strictObject({
   user: userSchema,
   cursor: revisionSchema,
   decks: z.array(deckSchema),
   cards: z.array(cardSchema),
   reviews: z.array(reviewEventSchema),
+  reviewSettings: reviewSettingsSchema.nullable().optional(),
 });
 export type Snapshot = z.infer<typeof snapshotSchema>;
+export const legacySnapshotSchema = snapshotSchema.omit({ reviewSettings: true }).extend({
+  reviews: z.array(legacyReviewEventSchema),
+});
 
 export const appleChallengeSchema = z.strictObject({
   challengeId: uuidSchema,

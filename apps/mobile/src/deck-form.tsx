@@ -6,13 +6,27 @@ import { useStore } from './store';
 import { Button, Field, colors, reportError, s, Text } from './ui';
 import { DeckArtwork } from './brand-patterns';
 import { chooseDeckPhoto } from './deck-photo';
+import { CategoryChoices } from './review-settings-ui';
+import { categoryForDeck } from '@recollect/contracts';
 
-export default function DeckForm({ deck, complete }: { deck?: Deck; complete?(): void }) {
-  const { repository, mutate } = useStore();
+export default function DeckForm({
+  deck,
+  complete,
+  categoryId,
+}: {
+  deck?: Deck;
+  complete?(): void;
+  categoryId?: string;
+}) {
+  const { repository, data, mutate } = useStore();
   const [baseline] = useState(deck);
   const [formOwner] = useState(repository?.ownerId);
   const [id] = useState(() => deck?.id ?? repository?.newId() ?? '');
   const [name, setName] = useState(deck?.name ?? '');
+  const [category, setCategory] = useState<string | null>(
+    () =>
+      categoryId ?? (deck ? (categoryForDeck(data?.reviewSettings, deck.id)?.id ?? null) : null),
+  );
   const [description, setDescription] = useState(deck?.description ?? '');
   const [color, setColor] = useState(deck?.color ?? colors.yellow);
   const [icon, setIcon] = useState(deck?.icon ?? '📚');
@@ -66,19 +80,21 @@ export default function DeckForm({ deck, complete }: { deck?: Deck; complete?():
       await mutate((repo) => {
         if (repo.ownerId !== formOwner || (baseline && baseline.ownerId !== repo.ownerId))
           throw new Error('The signed-in account changed. Open this deck again before saving.');
-        return repo.saveDeck(
-          {
-            id,
-            name: name.trim(),
-            description,
-            color,
-            icon,
-            ...(imageDataUrl === undefined ? {} : { imageDataUrl }),
-            isSilenced: baseline?.isSilenced ?? false,
-            silencedUntil: baseline?.silencedUntil ?? null,
-          },
-          baseline,
-        );
+        const input = {
+          id,
+          name: name.trim(),
+          description,
+          color,
+          icon,
+          ...(imageDataUrl === undefined ? {} : { imageDataUrl }),
+          isSilenced: baseline?.isSilenced ?? false,
+          silencedUntil: baseline?.silencedUntil ?? null,
+        };
+        // Existing deck categorization has its own immediate control. New deck
+        // creation queues its membership in the same local transaction.
+        return !deck && category
+          ? repo.saveDeckInCategory(input, category, baseline)
+          : repo.saveDeck(input, baseline);
       });
       if (scope.current !== epoch || owner.current !== expectedOwner) return;
       if (complete) complete();
@@ -102,6 +118,17 @@ export default function DeckForm({ deck, complete }: { deck?: Deck; complete?():
         editable={busy === null}
         onChangeText={setName}
       />
+      {!deck && !!data?.reviewSettings?.categories.length && (
+        <View style={{ gap: 8 }}>
+          <Text style={s.label}>Category</Text>
+          <CategoryChoices
+            categories={data.reviewSettings.categories}
+            selected={category}
+            onSelect={setCategory}
+            disabled={busy !== null}
+          />
+        </View>
+      )}
       <View style={{ gap: 12 }}>
         <Text style={s.label}>Deck image</Text>
         <View style={[s.row, { alignItems: 'center', gap: 18 }]}>

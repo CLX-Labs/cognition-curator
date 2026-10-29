@@ -6,9 +6,15 @@ import {
   generationAnswerAcceptSchema,
   generationRequestSchema,
   importRequestSchema,
+  legacyPushRequestSchema,
+  legacyPullResponseSchema,
+  legacySnapshotSchema,
+  legacySyncOperationSchema,
   pushRequestSchema,
   revisionSchema,
-  syncOperationSchema,
+  scheduledReviewEnabled,
+  type Snapshot,
+  type PullResponse,
   type GenerationJob,
   tokenWalletSchema,
   PAID_MONTHLY_TOKENS,
@@ -39,6 +45,28 @@ function generationLog(job: GenerationJob) {
     candidateCount: job.candidates.length,
     errorCode: job.error?.code ?? null,
   };
+}
+
+/** Installed clients decode strict v1 records. Projection happens after paging
+ * so settings-only revisions still advance their cursors without losing data. */
+function legacySnapshot(snapshot: Snapshot) {
+  const { reviewSettings, ...legacy } = snapshot;
+  return legacySnapshotSchema.parse({
+    ...legacy,
+    reviews: snapshot.reviews.map(({ cadence, ...review }) => review),
+  });
+}
+function legacyPull(response: PullResponse) {
+  return legacyPullResponseSchema.parse({
+    ...response,
+    changes: response.changes
+      .filter((change) => change.entity !== 'reviewSettings')
+      .map((change) => {
+        if (change.entity !== 'review') return change;
+        const { cadence, ...data } = change.data;
+        return { ...change, data };
+      }),
+  });
 }
 
 export async function buildApp(options: {
@@ -283,20 +311,32 @@ export async function buildApp(options: {
       return community.shareInsights(request.identity!.ownerId, id, userId, request.query);
     });
     secured.get('/v1/me', async (request) => (await sync.snapshot(request.identity!.ownerId)).user);
-    secured.get('/v1/snapshot', (request) => sync.snapshot(request.identity!.ownerId));
-    secured.get('/v1/sync/snapshot', (request) => sync.snapshot(request.identity!.ownerId));
+    secured.get('/v1/snapshot', async (request) =>
+      legacySnapshot(await sync.snapshot(request.identity!.ownerId)),
+    );
+    secured.get('/v1/sync/snapshot', async (request) =>
+      legacySnapshot(await sync.snapshot(request.identity!.ownerId)),
+    );
+    secured.get('/v2/sync/snapshot', (request) => sync.snapshot(request.identity!.ownerId));
     secured.post('/v1/sync/push', (request) =>
+      sync.push(request.identity!.ownerId, legacyPushRequestSchema.parse(request.body).operations),
+    );
+    secured.post('/v2/sync/push', (request) =>
       sync.push(request.identity!.ownerId, pushRequestSchema.parse(request.body).operations),
     );
-    secured.get('/v1/sync/pull', (request) => {
-      const q = z
-        .object({
-          cursor: revisionSchema.default('0'),
-          until: revisionSchema.optional(),
-          limit: z.coerce.number().int().min(1).max(100).default(30),
-        })
-        .strict()
-        .parse(request.query);
+    const pullQuerySchema = z
+      .object({
+        cursor: revisionSchema.default('0'),
+        until: revisionSchema.optional(),
+        limit: z.coerce.number().int().min(1).max(100).default(30),
+      })
+      .strict();
+    secured.get('/v1/sync/pull', async (request) => {
+      const q = pullQuerySchema.parse(request.query);
+      return legacyPull(await sync.pull(request.identity!.ownerId, q.cursor, q.until, q.limit));
+    });
+    secured.get('/v2/sync/pull', (request) => {
+      const q = pullQuerySchema.parse(request.query);
       return sync.pull(request.identity!.ownerId, q.cursor, q.until, q.limit);
     });
     secured.get('/v1/decks', async (request) => ({
@@ -315,7 +355,7 @@ export async function buildApp(options: {
       ['/v1/cards/commands', 'card'],
     ] as const)
       secured.post(path, async (request) => {
-        const op = syncOperationSchema.parse(request.body);
+        const op = legacySyncOperationSchema.parse(request.body);
         if (!op.type.startsWith(kind + '.'))
           throw new DomainError('invalid_operation', 'Command type does not match the route.');
         return sync.push(request.identity!.ownerId, [op]);
@@ -340,7 +380,8 @@ export async function buildApp(options: {
           activeDecks
             .filter(
               (d) =>
-                !d.isSilenced || Boolean(d.silencedUntil && Date.parse(d.silencedUntil) <= now),
+                scheduledReviewEnabled(s.reviewSettings, d.id) &&
+                (!d.isSilenced || Boolean(d.silencedUntil && Date.parse(d.silencedUntil) <= now)),
             )
             .map((d) => d.id),
         );

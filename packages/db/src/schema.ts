@@ -15,7 +15,14 @@ import {
   index,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import type { Card, Deck, ReviewEvent, ScheduleState, SyncReceipt } from '@recollect/contracts';
+import type {
+  Card,
+  Deck,
+  ReviewEvent,
+  ReviewSettings,
+  ScheduleState,
+  SyncReceipt,
+} from '@recollect/contracts';
 export const recollect = pgSchema('recollect');
 export const users = recollect.table('users', {
   id: uuid().primaryKey(),
@@ -59,6 +66,12 @@ export const syncHeads = recollect.table('sync_heads', {
     .primaryKey()
     .references(() => users.id),
   revision: bigint({ mode: 'bigint' }).notNull().default(0n),
+});
+export const reviewSettings = recollect.table('review_settings', {
+  ownerId: uuid('owner_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  data: jsonb().$type<ReviewSettings>().notNull(),
 });
 export const decks = recollect.table(
   'decks',
@@ -129,7 +142,10 @@ export const changes = recollect.table(
     entity: text().notNull(),
     data: jsonb().notNull(),
   },
-  (t) => [primaryKey({ columns: [t.ownerId, t.revision, t.ordinal] })],
+  (t) => [
+    primaryKey({ columns: [t.ownerId, t.revision, t.ordinal] }),
+    check('changes_entity_check', sql`${t.entity} IN ('deck','card','review','reviewSettings')`),
+  ],
 );
 export const generationJobs = recollect.table(
   'generation_jobs',

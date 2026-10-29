@@ -44,6 +44,54 @@ New reviews bound ease to 1.3–3.0 and round intervals to whole seconds, with a
 
 A review transaction inserts a unique immutable event, replays post-checkpoint history in effective-time/device/sequence/ID order, updates the current schedule, and publishes changes atomically. Future clock skew above five minutes is rejected. Reviews older than the recoverable checkpoint stay available for explicit recovery, rather than being replayed against unavailable history.
 
+### Categories and review rules — unreleased
+
+`codex/deck-categories` builds on the local token-economy branch. It has not been
+pushed, deployed, or published as an OTA. Existing decks start in **Uncategorized**;
+each owned deck can belong to one private category. Category removal unassigns
+decks and preserves every card, due date, and review event. Shared and marketplace
+copies do not inherit a publisher's private categories or review rules.
+
+Global review rules apply to all decks. Categories can inherit the global cadence
+or override it, and can be paused independently. Global pause takes priority over
+every category; deck-level pauses still apply. Pauses remove cards from scheduled
+queues immediately without altering their stored dates. Manual practice remains
+available, and rating a practice card updates its next scheduled review as before.
+The app shows category due counts and next scheduled dates and can start a review
+or practice session scoped to a category, including Uncategorized. A session keeps
+its original queue, removes cards that leave its scope, and never adds newly synced
+cards midway through practice.
+
+Cadence specifies whole-day Again, Hard, Good and Easy intervals, a maximum
+interval, and whether familiar cards receive growing intervals. Defaults remain
+3/3/7/14 days with growth and a 3,650-day maximum. Fixed cadence always uses the
+chosen rating's interval; growing cadence treats these values as floors for the
+existing scheduler. Intervals must be ordered and bounded. Changing cadence applies
+to the next rating and never moves an already scheduled due date. Each new review
+captures its effective cadence so replay, delayed offline uploads and later settings
+edits cannot rewrite the meaning of that review.
+
+A single versioned `reviewSettings` entity per owner contains global rules,
+categories and deck assignments. It uses the same SQLite transaction/outbox,
+durable receipts, explicit conflict resolution and recovery export as library edits.
+Creating a deck inside a category queues both changes atomically and waits for its
+deck creation acknowledgement before sending the assignment. Migration `0010`
+adds the server table with account-deletion cascading; no existing library data
+is rewritten.
+
+The category client uses `/v2/sync/*`. The first v2 pull starts at revision zero
+using a separate cursor without deleting local drafts or the outbox. Existing
+`/v1` sync/snapshot contracts omit category entities and review cadence fields;
+their cursors still advance across category-only revisions. Older clients retain
+their declared scheduling behavior and cannot manage category gates or cadence.
+Deploy the additive server migration/API before distributing the new client.
+
+The first pass passes the full workspace typecheck and 678 tests across 66 suites
+against disposable PostgreSQL plus real SQLite, including owner isolation, settings
+conflicts, lost acknowledgements, category-scoped sessions, account-switch fencing
+and legacy sync compatibility. The local iOS JavaScript export succeeds. A new
+native build, physical-device UI review and production rollout have not been run.
+
 ## Profile
 
 Authenticated `GET/PATCH /v1/profile` reads and edits only the signed-in user's name and photo. Patches update only submitted fields. The photo picker crops and resizes images to 512 × 512 JPEGs; the API bounds the encoded payload and checks the JPEG envelope. The small private image is stored with the user, with no public URL or separate hosting service. Session and auth contracts stay unchanged, and photo payloads never enter SecureStore. An owner-scoped SQLite cache keeps the saved profile available offline. Profile refresh runs on account startup, profile focus, and foreground activation with a cooldown; it does not share library polling or reset editing state.
@@ -69,7 +117,8 @@ Successful candidates receive stable UUIDs. Acceptance creates cards with those 
 ## Generation tokens — unreleased branch implementation
 
 The `codex/token-economy` branch is a local first pass, with no OTA, backend rollout,
-store product configuration, or live purchase enabled. `GENERATION_TOKENS_ENABLED`
+or live purchase enabled. App Store Connect has a draft subscription configured,
+but it has not been submitted or approved. `GENERATION_TOKENS_ENABLED`
 and `APPLE_BILLING_ENABLED` default to false. Do not enable charging for the 7.0.0
 binary currently waiting for App Review: it has no token disclosures or billing module.
 
@@ -122,12 +171,57 @@ idempotent ledger. Refunds retire unspent credits without producing negative bal
 Production refuses Sandbox billing configuration. New wallet rows cascade on account
 deletion; deleting an account does not cancel its Apple subscription.
 
-Before releasing billing, create the monthly subscription group/product
-`collect.software.recollect.tokens.monthly` in App Store Connect at the intended
-price, complete the owner's Paid Apps agreement/banking/tax setup, configure the
-V2 notification URL `/v1/billing/apple/notifications`, and test purchases, renewal,
-restore, refund, offline recovery and account switching in a separate Sandbox
-environment. Update the privacy disclosures for linked purchase history and review
+### App Store preparation — October 28, 2026
+
+The [monthly subscription draft](https://appstoreconnect.apple.com/apps/6749138102/distribution/subscriptions/6828189741)
+is saved as **Prepare for Submission**, separate from the submitted 7.0.0 app:
+
+- Group: **Recollect Tokens**, ID `22523859`, English (U.S.) localization saved.
+- Reference: **Recollect Tokens Monthly**, Apple ID `6828189741`.
+- Product: `collect.software.recollect.tokens.monthly`, duration one month.
+- US price: **$3.99 USD**, with Apple-calculated regional prices and all 175
+  countries/regions selected. This does not mean every USD-priced region is $3.99.
+- English (U.S.) display name: **100 tokens monthly**. Description:
+  **100 tokens each month. Unused tokens roll over.**
+- Family Sharing is off; multiseat purchases are not allowed. No introductory
+  offer or trial is configured. Tax category matches the parent app.
+- Review notes describe acceptance-only charging, rollover, free manual practice,
+  account-linked ownership and the intended next native release. The required
+  purchase-screen screenshot still needs to come from that native build.
+
+The Paid Apps Agreement was accepted on **October 28, 2026**, with explicit owner
+confirmation and Apple two-factor authentication. Its status remains **Pending User
+Info**. **U.S. Form W-9** was submitted on **October 28, 2026**, and is **Active**.
+Business shows no bank accounts and offers **Add Bank Account**. The owner explicitly
+chose to skip bank setup for now; no banking data was submitted. The remaining
+required banking setup must be completed before paid distribution.
+The current 7.0.0 review was not changed. The subscription remains a draft, has not
+been submitted, and is not live. Both billing feature flags remain off; no push or
+OTA release was made.
+
+### Remaining billing release gates
+
+The current production verifier rejects Sandbox configuration. Apple review and
+TestFlight purchases use Sandbox, so this is a real testing/review blocker. Do not
+remove that guard alone: the existing wallet, subscription and generation records
+are not separated by store environment. Verified Sandbox receipts must not mint
+production-spendable credits. Implement server-enforced Sandbox isolation for
+wallets, renewals, restores, refunds, reservations and generation authorization,
+with isolated execution or an explicit capped test inference budget. A second
+Railway service is not inherently required; the isolation must hold in the data
+and authorization model.
+
+Streamlined Purchasing remains Apple's default **Turned On**. The account-bound
+purchase flow must be reconciled with purchases initiated outside the app before
+launch. Apple's UI states that disabling it requires the latest approved binary
+to include the necessary StoreKit APIs; that capability has not been verified in
+7.0.0. No change to this setting was made.
+
+Before releasing billing, complete the owner's Paid Apps agreement/banking/tax
+setup, configure the V2 notification URL `/v1/billing/apple/notifications` and its
+Sandbox routing, and test purchases, renewal, restore, refund, offline recovery
+and account switching on a real new native build with isolated Sandbox handling.
+Update the privacy disclosures for linked purchase history and review
 the publisher's trader classification for the paid business. Submit a new native
 binary and IAP for Apple review. A source or Swift typecheck is not a full native
 build or proof of a real StoreKit transaction. Keep the feature flags off until the

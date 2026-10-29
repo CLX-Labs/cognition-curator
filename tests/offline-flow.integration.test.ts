@@ -170,7 +170,7 @@ describe.skipIf(!url)('real SQLite → sync engine → authenticated API → Pos
       {
         request: async (path, options) => {
           const result = await online.request(path, options);
-          if (path === '/v1/sync/push' && !dropped) {
+          if (path === '/v2/sync/push' && !dropped) {
             dropped = true;
             throw new Error('Connection dropped after server commit');
           }
@@ -195,7 +195,7 @@ describe.skipIf(!url)('real SQLite → sync engine → authenticated API → Pos
     expect(server.reviews).toHaveLength(1);
     expect(server.cards[0]!.schedule).toEqual(local.cards[0]!.schedule);
     const replay = pushResponseSchema.parse(
-      await online.request('/v1/sync/push', {
+      await online.request('/v2/sync/push', {
         method: 'POST',
         body: {
           operations: [

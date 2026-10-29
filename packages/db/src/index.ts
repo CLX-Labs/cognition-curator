@@ -66,7 +66,7 @@ export async function lockOwner(
   );
   return BigInt(r.rows[0]!.revision);
 }
-export type Change = { entity: 'deck' | 'card' | 'review'; data: unknown };
+export type Change = { entity: 'deck' | 'card' | 'review' | 'reviewSettings'; data: unknown };
 export async function appendChanges(
   tx: Transaction,
   owner: string,

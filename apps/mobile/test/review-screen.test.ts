@@ -1,13 +1,24 @@
 import React from 'react';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { Card, Deck } from '@recollect/contracts';
+import {
+  defaultReviewSettingsInput,
+  type Card,
+  type Deck,
+  type ReviewSettings,
+} from '@recollect/contracts';
 import { initialSchedule } from '@recollect/scheduler';
 import type { LocalSnapshot, Repository } from '../src/repository';
 
 const rig = vi.hoisted(() => ({
   data: null as LocalSnapshot | null,
-  params: {} as { practice?: string; deckId?: string; cardId?: string; id?: string },
+  params: {} as {
+    practice?: string;
+    deckId?: string;
+    categoryId?: string;
+    cardId?: string;
+    id?: string;
+  },
   mutate: vi.fn<(work: (repository: Repository) => Promise<unknown>) => Promise<unknown>>(),
   rate: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   scrollTo: vi.fn(),
@@ -219,6 +230,118 @@ beforeEach(() => {
   rig.mutate.mockImplementation(async (work) =>
     work({ rateCard: rig.rate } as unknown as Repository),
   );
+});
+
+function categoryLibrary() {
+  const categoryId = 'f0000000-0000-4000-8000-000000000000';
+  const otherDeck = {
+    ...deck,
+    id: 'e0000000-0000-4000-8000-000000000000',
+    name: 'Outside this category',
+  };
+  const settings: ReviewSettings = {
+    ...defaultReviewSettingsInput(deck.ownerId),
+    ownerId: deck.ownerId,
+    version: 1,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    deletedAt: null,
+    categories: [
+      {
+        id: categoryId,
+        name: 'Jeopardy trivia',
+        color: '#DDD9E8',
+        reviewEnabled: true,
+        cadence: {
+          againDays: 5,
+          hardDays: 5,
+          goodDays: 10,
+          easyDays: 20,
+          maxIntervalDays: 100,
+          growIntervals: false,
+        },
+      },
+    ],
+    deckCategories: { [deck.id]: categoryId },
+  };
+  rig.data = {
+    decks: [deck, otherDeck],
+    cards: [first, { ...second, deckId: otherDeck.id }],
+    reviews: [],
+    pending: 0,
+    issues: [],
+    reviewSettings: settings,
+  };
+  rig.params = { categoryId };
+  return { categoryId, settings, otherDeck };
+}
+
+it.each([false, true])(
+  'limits category sessions to their decks, including free practice (practice=%s)',
+  async (practice) => {
+    categoryLibrary();
+    rig.params.practice = String(practice);
+    await mount();
+    expect(text()).toContain(first.front);
+    expect(text()).not.toContain(second.front);
+    expect(text()).toContain('Not sure: 5d');
+    expect(text()).toContain('Remembered: 10d');
+    await swipe(140);
+    expect(rig.rate).toHaveBeenCalledExactlyOnceWith(first.id, 'good', 0);
+    expect(text()).toContain(practice ? 'PRACTICE COMPLETE' : 'SESSION COMPLETE');
+    expect(text()).not.toContain(second.front);
+    expect(button('Back to category')).toBeDefined();
+  },
+);
+
+it('removes a category from an open due session as soon as its review gate is paused', async () => {
+  const { settings } = categoryLibrary();
+  await mount();
+  const oldAnswer = button('I remember →').props.onPress;
+  rig.data = {
+    ...rig.data!,
+    reviewSettings: {
+      ...settings,
+      categories: settings.categories.map((category) => ({ ...category, reviewEnabled: false })),
+    },
+  };
+  await act(async () => {
+    renderer!.update(React.createElement(ReviewScreen));
+  });
+  await act(async () => {
+    oldAnswer();
+  });
+  expect(rig.rate).not.toHaveBeenCalled();
+  expect(text()).not.toContain(first.front);
+  expect(button('Practice all cards')).toBeDefined();
+});
+
+it('never pulls a card moved into a category into an already started category session', async () => {
+  const { settings, categoryId, otherDeck } = categoryLibrary();
+  await mount();
+  rig.data = {
+    ...rig.data!,
+    reviewSettings: {
+      ...settings,
+      deckCategories: { ...settings.deckCategories, [otherDeck.id]: categoryId },
+    },
+  };
+  await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+  await swipe(140);
+  expect(text()).toContain('SESSION COMPLETE');
+  expect(text()).not.toContain(second.front);
+});
+
+it('does not leak another category into a removed category session or its practice fallback', async () => {
+  const { settings } = categoryLibrary();
+  await mount();
+  rig.data = { ...rig.data!, reviewSettings: { ...settings, categories: [], deckCategories: {} } };
+  await act(async () => renderer!.update(React.createElement(ReviewScreen)));
+  expect(text()).toContain('SESSION COMPLETE');
+  expect(
+    renderer!.root.findAllByType(Button).some((node) => node.props.title === 'Practice all cards'),
+  ).toBe(false);
+  expect(rig.rate).not.toHaveBeenCalled();
 });
 afterEach(async () => {
   await act(async () => {

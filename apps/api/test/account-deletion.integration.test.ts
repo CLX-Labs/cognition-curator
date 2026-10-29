@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import {
   ALGORITHM_VERSION,
   accountDeletionReceiptSchema,
+  defaultReviewSettingsInput,
   marketplaceSnapshotValue,
   sessionSchema,
   snapshotSchema,
@@ -42,6 +43,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('verified whole-account deletion
     'sessions',
     'session_families',
     'sync_heads',
+    'review_settings',
     'decks',
     'cards',
     'review_events',
@@ -867,6 +869,18 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('verified whole-account deletion
       [randomUUID(), recipient.user.id, secretHash(randomUUID()), owner.user.id],
     );
     await generation(owner.user.id, source.deckId, 'running');
+    const settingsTime = new Date().toISOString();
+    await db.query('INSERT INTO recollect.review_settings(owner_id,data) VALUES($1,$2)', [
+      owner.user.id,
+      {
+        ...defaultReviewSettingsInput(owner.user.id),
+        ownerId: owner.user.id,
+        version: 1,
+        createdAt: settingsTime,
+        updatedAt: settingsTime,
+        deletedAt: null,
+      },
+    ]);
     await db.query(
       'INSERT INTO recollect.quota_buckets(owner_id,quota_date,reserved) VALUES($1,current_date,3)',
       [owner.user.id],

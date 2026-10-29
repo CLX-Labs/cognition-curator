@@ -2,6 +2,8 @@ import type {
   Card,
   Deck,
   ReviewEvent,
+  ReviewSettings,
+  ReviewSettingsInput,
   ScheduleState,
   Snapshot,
   SyncOperation,
@@ -71,6 +73,51 @@ export async function saveCard(tx: Transaction, card: Card): Promise<void> {
     card.deckId,
   ]);
 }
+export async function getReviewSettings(
+  tx: Transaction,
+  owner: string,
+): Promise<ReviewSettings | null> {
+  return (
+    (
+      await tx.query<{ data: ReviewSettings }>(
+        'SELECT data FROM recollect.review_settings WHERE owner_id=$1',
+        [owner],
+      )
+    ).rows[0]?.data ?? null
+  );
+}
+async function saveReviewSettings(tx: Transaction, settings: ReviewSettings): Promise<void> {
+  await tx.query(
+    'INSERT INTO recollect.review_settings(owner_id,data) VALUES($1,$2) ON CONFLICT(owner_id) DO UPDATE SET data=excluded.data',
+    [settings.ownerId, settings],
+  );
+}
+async function ownedDeckCategories(
+  tx: Transaction,
+  owner: string,
+  input: ReviewSettingsInput,
+): Promise<ReviewSettingsInput['deckCategories']> {
+  const ids = Object.keys(input.deckCategories);
+  if (!ids.length) return {};
+  const decks = new Map(
+    (
+      await tx.query<{ id: string; data: Deck }>(
+        'SELECT id,data FROM recollect.decks WHERE owner_id=$1 AND id=ANY($2::uuid[])',
+        [owner, ids],
+      )
+    ).rows.map((row) => [row.id, row.data]),
+  );
+  const entries: [string, string][] = [];
+  for (const id of ids) {
+    const deck = decks.get(id);
+    if (!deck)
+      throw new DomainError('not_found', 'Category assignments require an owned deck.', 404);
+    // An offline preferences edit may still contain a deck deleted elsewhere.
+    // Keep the remaining preferences and prune only that tombstoned assignment.
+    if (!deck.deletedAt) entries.push([id, input.deckCategories[id]!]);
+  }
+  return Object.fromEntries(entries);
+}
 function checkClock(value: string): void {
   if (Date.parse(value) > Date.now() + 300_000)
     throw new DomainError('clock_in_future', 'The device clock is more than five minutes ahead.');
@@ -84,7 +131,30 @@ export async function applyOperation(
   const now = new Date().toISOString();
   const changes: Change[] = [];
   let canonical: SyncReceipt['canonical'];
-  if (op.type === 'deck.upsert' || op.type === 'deck.delete') {
+  if (op.type === 'reviewSettings.upsert') {
+    if (op.payload.id !== owner)
+      throw new DomainError('invalid_owner', 'Review settings must belong to this account.', 403);
+    const existing = await getReviewSettings(tx, owner);
+    if ((existing?.version ?? 0) !== op.baseVersion)
+      return {
+        operationId: op.operationId,
+        status: 'conflict',
+        ...(existing ? { canonical: { entity: 'reviewSettings', data: existing } } : {}),
+        error: { code: 'version_conflict', message: 'Review settings changed on another device.' },
+      };
+    const settings: ReviewSettings = {
+      ...op.payload,
+      deckCategories: await ownedDeckCategories(tx, owner, op.payload),
+      ownerId: owner,
+      createdAt: existing?.createdAt ?? op.createdAt,
+      updatedAt: now,
+      deletedAt: null,
+      version: (existing?.version ?? 0) + 1,
+    };
+    await saveReviewSettings(tx, settings);
+    changes.push({ entity: 'reviewSettings', data: settings });
+    canonical = { entity: 'reviewSettings', data: settings };
+  } else if (op.type === 'deck.upsert' || op.type === 'deck.delete') {
     const existing = await getDeck(tx, owner, op.payload.id);
     if ((existing?.version ?? 0) !== op.baseVersion)
       return {
@@ -112,6 +182,11 @@ export async function applyOperation(
           await saveCard(tx, child);
           changes.push({ entity: 'card', data: child });
         }
+      // Do not write review settings as a hidden side effect of deck deletion.
+      // A device may already have queued a settings edit at its current version;
+      // changing that version here would make its own causal edit conflict.
+      // Tombstoned decks never enter review, and the next settings save prunes
+      // their assignments in ownedDeckCategories without weakening conflicts.
     } else
       deck = {
         ...op.payload,
@@ -346,8 +421,8 @@ export class SyncService {
       const changes = (
         await tx.query<{
           revision: string;
-          entity: 'deck' | 'card' | 'review';
-          data: Deck | Card | ReviewEvent;
+          entity: 'deck' | 'card' | 'review' | 'reviewSettings';
+          data: Deck | Card | ReviewEvent | ReviewSettings;
         }>(
           'SELECT c.revision::text,c.entity,c.data FROM recollect.changes c WHERE c.owner_id=$1 AND c.revision>$2 AND c.revision<=$3 ORDER BY c.revision,c.ordinal',
           [owner, cursor, end],
@@ -385,7 +460,8 @@ export class SyncService {
           [owner],
         )
       ).rows.map((r) => r.data);
-      return { user, cursor: head.toString(), decks, cards, reviews };
+      const reviewSettings = await getReviewSettings(tx, owner);
+      return { user, cursor: head.toString(), decks, cards, reviews, reviewSettings };
     });
   }
 }

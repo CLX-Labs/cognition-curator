@@ -225,6 +225,18 @@ export default function ProfileScreen() {
         />
       </Panel>
       <TokenBalancePanel />
+      <Panel>
+        <Text style={s.sectionTitle}>Your review rhythm</Text>
+        <Text style={s.body}>
+          Organize decks into categories, pause subjects, and set the spacing that works for you.
+        </Text>
+        <Button
+          title="Categories & review rules"
+          variant="secondary"
+          size="compact"
+          onPress={() => router.push('/categories')}
+        />
+      </Panel>
       <ReleasePanel />
       <AIPermissionPanel consent={aiConsent} settings />
       <Panel>
@@ -326,7 +338,11 @@ export default function ProfileScreen() {
                   >
                     <Text style={s.label}>Server version</Text>
                     <Text style={s.body}>
-                      {'name' in issue.canonical ? issue.canonical.name : issue.canonical.front}
+                      {'name' in issue.canonical
+                        ? issue.canonical.name
+                        : 'front' in issue.canonical
+                          ? issue.canonical.front
+                          : 'Review rules and categories'}
                     </Text>
                     {'back' in issue.canonical && (
                       <Text style={s.body}>{issue.canonical.back}</Text>

@@ -27,7 +27,14 @@ import { createRefreshQueue, shareSnapshot } from './store-refresh';
 
 const widgets = new WidgetCoordinator({ publishWidget, setWidgetOwner });
 
-const empty: LocalSnapshot = { decks: [], cards: [], reviews: [], pending: 0, issues: [] };
+const empty: LocalSnapshot = {
+  decks: [],
+  cards: [],
+  reviews: [],
+  pending: 0,
+  issues: [],
+  reviewSettings: null,
+};
 type AppStore = {
   session: Session | null;
   ready: boolean;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { type ReviewEvent } from '@recollect/contracts';
+import {
+  DEFAULT_REVIEW_CADENCE,
+  defaultReviewSettingsInput,
+  effectiveReviewCadence,
+  type ReviewEvent,
+} from '@recollect/contracts';
 import {
   compareReviews,
   DAY_SECONDS,
@@ -189,6 +194,129 @@ describe('legacy v1 scheduler replay', () => {
 });
 
 describe('day-based v2 review cadence', () => {
+  it('uses exact rating intervals when growth is disabled, including established cards', () => {
+    const cadence = {
+      againDays: 2,
+      hardDays: 4,
+      goodDays: 9,
+      easyDays: 20,
+      maxIntervalDays: 30,
+      growIntervals: false,
+    };
+    const state = {
+      ...initialSchedule(at),
+      phase: 'review' as const,
+      intervalSeconds: 100 * DAY_SECONDS,
+      easeFactor: 3,
+    };
+    const before = structuredClone(state);
+    expect(previewIntervals(state, at, 'sm2-v2', cadence)).toEqual({
+      again: 2 * DAY_SECONDS,
+      hard: 4 * DAY_SECONDS,
+      good: 9 * DAY_SECONDS,
+      easy: 20 * DAY_SECONDS,
+    });
+    const next = currentReviewSchedule(state, { rating: 'good', reviewedAt: at, cadence });
+    expect(next.dueAt).toBe('2026-10-20T12:00:00.000Z');
+    expect(next.phase).toBe('review');
+    expect(state).toEqual(before);
+    expect(cadence.goodDays).toBe(9);
+  });
+
+  it('uses configured floors, retains growth multipliers, and enforces the configured cap', () => {
+    const cadence = {
+      againDays: 2,
+      hardDays: 4,
+      goodDays: 9,
+      easyDays: 20,
+      maxIntervalDays: 30,
+      growIntervals: true,
+    };
+    expect(previewIntervals(initialSchedule(at), at, 'sm2-v2', cadence)).toEqual({
+      again: 2 * DAY_SECONDS,
+      hard: 4 * DAY_SECONDS,
+      good: 9 * DAY_SECONDS,
+      easy: 20 * DAY_SECONDS,
+    });
+    const state = {
+      ...initialSchedule(at),
+      phase: 'review' as const,
+      intervalSeconds: 10 * DAY_SECONDS,
+      easeFactor: 2.5,
+    };
+    expect(previewIntervals(state, at, 'sm2-v2', cadence)).toEqual({
+      again: 2 * DAY_SECONDS,
+      hard: 12 * DAY_SECONDS,
+      good: 25 * DAY_SECONDS,
+      easy: 30 * DAY_SECONDS,
+    });
+    const next = currentReviewSchedule(state, { rating: 'again', reviewedAt: at, cadence });
+    expect(next.lapses).toBe(1);
+    expect(next.repetitions).toBe(0);
+    expect(next.phase).toBe('relearning');
+  });
+
+  it('captures cadence in each event so preference edits cannot reinterpret past reviews', () => {
+    const preferences = defaultReviewSettingsInput(uuid(500));
+    preferences.cadence = { ...DEFAULT_REVIEW_CADENCE, goodDays: 10, growIntervals: false };
+    const first = event(1, {
+      algorithmVersion: 'sm2-v2',
+      cadence: effectiveReviewCadence(preferences, uuid(200)),
+    });
+    const firstResult = replayReviews(initialSchedule(at), [first]);
+    preferences.cadence.goodDays = 12;
+    expect(replayReviews(initialSchedule(at), [first])).toEqual(firstResult);
+    expect(firstResult.intervalSeconds).toBe(10 * DAY_SECONDS);
+    const second = event(2, {
+      algorithmVersion: 'sm2-v2',
+      reviewedAt: firstResult.dueAt,
+      cadence: effectiveReviewCadence(preferences, uuid(200)),
+    });
+    const expected = currentReviewSchedule(firstResult, second);
+    expect(expected.intervalSeconds).toBe(12 * DAY_SECONDS);
+    expect(replayReviews(initialSchedule(at), [second, first, second])).toEqual(expected);
+  });
+
+  it('treats different cadence snapshots as an event ID collision with stable key ordering', () => {
+    const first = event(1, { algorithmVersion: 'sm2-v2', cadence: { ...DEFAULT_REVIEW_CADENCE } });
+    expect(() =>
+      replayReviews(initialSchedule(at), [
+        first,
+        { ...first, cadence: { ...DEFAULT_REVIEW_CADENCE, goodDays: 9 } },
+      ]),
+    ).toThrow('different content');
+    const reordered = {
+      growIntervals: true,
+      maxIntervalDays: 3_650,
+      easyDays: 14,
+      goodDays: 7,
+      hardDays: 3,
+      againDays: 3,
+    };
+    expect(
+      replayReviews(initialSchedule(at), [first, { ...first, cadence: reordered }]).totalReviews,
+    ).toBe(1);
+    expect(() =>
+      replayReviews(initialSchedule(at), [first, { ...first, cadence: undefined }]),
+    ).toThrow('different content');
+  });
+
+  it('does not apply a new cadence to legacy minute-scale scheduling', () => {
+    const cadence = {
+      againDays: 2,
+      hardDays: 4,
+      goodDays: 9,
+      easyDays: 20,
+      maxIntervalDays: 30,
+      growIntervals: false,
+    };
+    expect(previewIntervals(initialSchedule(at), at, 'sm2-v1', cadence)).toEqual(
+      previewIntervals(initialSchedule(at), at, 'sm2-v1'),
+    );
+    const old = event(1, { cadence });
+    expect(replayReviews(initialSchedule(at), [old]).intervalSeconds).toBe(600);
+  });
+
   it('gives an uncertain card three days and a remembered card a week, including old learning cards', () => {
     for (const phase of ['new', 'learning', 'review', 'relearning'] as const) {
       const state = { ...initialSchedule(at), phase, intervalSeconds: 60 };

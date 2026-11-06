@@ -1,5 +1,6 @@
 import {
   generationAcceptResponseSchema,
+  generationAnswerAcceptResponseSchema,
   generationJobSchema,
   type CardInput,
   type DeckInput,
@@ -10,6 +11,7 @@ import {
 import { api } from './api';
 import { cardContent, type Repository } from './repository';
 import { requireAIConsent } from './ai-consent';
+import { notifyTokenWalletChanged } from './tokens';
 
 export type GenerationWorkflow = {
   newDeck?: DeckInput;
@@ -25,6 +27,10 @@ export type GenerationWorkflow = {
     candidateIds: string[];
     edits: Record<string, GenerationCandidate>;
   } | null;
+  answerAcceptance?: {
+    operationId: string;
+    answer?: string;
+  };
   accepted: boolean;
 };
 export const GENERATION_KEY = 'generation';
@@ -102,6 +108,8 @@ export async function fetchGeneration(
   const next = { ...state, job, drafts, selectedIds };
   if (JSON.stringify(next) === JSON.stringify(state)) return state;
   await repo.setState(storageKey, next);
+  if (!state.job || ['failed', 'canceled'].includes(job.status))
+    notifyTokenWalletChanged(repo.ownerId);
   return next;
 }
 
@@ -171,11 +179,84 @@ export async function acceptGeneration(
   };
   // One transaction prevents a crash from replaying an already queued edit.
   // Do not advance the pull cursor: earlier account changes may be missing.
-  return repo.completeGeneration(
+  const completed = await repo.completeGeneration(
     result.cards,
     edits,
     GENERATION_KEY,
     acceptance.operationId,
     complete,
   );
+  notifyTokenWalletChanged(repo.ownerId);
+  return completed;
+}
+
+/** Charge only the explicit Use action; copying the answer never creates a card. */
+export async function acceptGenerationAnswer(
+  repo: Repository,
+  state: GenerationWorkflow,
+  storageKey: string,
+): Promise<GenerationWorkflow> {
+  const saved = await repo.getState<GenerationWorkflow>(storageKey);
+  const current = saved?.request.operationId === state.request.operationId ? saved : state;
+  if (current.accepted && current.answerAcceptance?.answer) return current;
+  if (current.job?.status !== 'succeeded' || !current.job.candidates[0]?.back)
+    throw new Error('Wait for the suggested answer to finish.');
+  const acceptance = current.answerAcceptance ?? { operationId: repo.newId() };
+  const pending = { ...current, answerAcceptance: acceptance };
+  await repo.setState(storageKey, pending);
+  // Saved requests made by earlier app versions were generated as card drafts.
+  // Keep those drafts usable without retroactively introducing a token charge.
+  const result =
+    current.request.mode === 'answer'
+      ? generationAnswerAcceptResponseSchema.parse(
+          await api.request('/v1/generations/' + current.job.id + '/accept-answer', {
+            method: 'POST',
+            body: { operationId: acceptance.operationId },
+            ownerId: repo.ownerId,
+          }),
+        )
+      : { answer: current.job.candidates[0].back, tokenCharged: false };
+  const complete: GenerationWorkflow = {
+    ...pending,
+    accepted: true,
+    answerAcceptance: { ...acceptance, answer: result.answer },
+    job: {
+      ...current.job,
+      acceptedCandidateIds: current.job.candidates.map((candidate) => candidate.id),
+    },
+  };
+  await repo.setState(storageKey, complete);
+  notifyTokenWalletChanged(repo.ownerId);
+  return complete;
+}
+
+/** Preserve local recovery state until the server has released an unaccepted draft. */
+export async function discardGeneration(
+  repo: Repository,
+  state: GenerationWorkflow,
+): Promise<void> {
+  if (state.accepted) return;
+  if (state.acceptance || state.answerAcceptance)
+    throw new Error('Finish the saved acceptance before setting this draft aside.');
+  if (state.job) {
+    const canceled = generationJobSchema.parse(
+      await api.request('/v1/generations/' + state.job.id, {
+        method: 'DELETE',
+        ownerId: repo.ownerId,
+      }),
+    );
+    if (canceled.acceptedCandidateIds.length)
+      throw new Error('This draft was already accepted. Retry its saved acceptance to finish.');
+    notifyTokenWalletChanged(repo.ownerId);
+    return;
+  }
+  // Operation cancellation also records a tombstone for an unknown, delayed POST.
+  // It never resubmits the prompt or starts another inference request.
+  const result = (await api.request('/v1/generations/by-operation/' + state.request.operationId, {
+    method: 'DELETE',
+    ownerId: repo.ownerId,
+  })) as { canceled: boolean };
+  if (!result.canceled)
+    throw new Error('This draft was already accepted. Retry its saved acceptance to finish.');
+  notifyTokenWalletChanged(repo.ownerId);
 }

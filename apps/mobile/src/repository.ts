@@ -1,12 +1,20 @@
 import {
   ALGORITHM_VERSION,
   cardInputSchema,
+  categoryForDeck,
   deckInputSchema,
+  defaultReviewSettingsInput,
+  effectiveReviewCadence,
+  reviewSettingsInputSchema,
+  scheduledReviewEnabled,
   type Card,
   type CardInput,
+  type Category,
   type Deck,
   type DeckInput,
   type ReviewEvent,
+  type ReviewSettings,
+  type ReviewSettingsInput,
   type SyncOperation,
 } from '@recollect/contracts';
 import { initialSchedule, reviewSchedule } from '@recollect/scheduler';
@@ -19,8 +27,8 @@ export interface SqlExecutor {
 export interface SqlDatabase extends SqlExecutor {
   transaction<T>(work: (db: SqlExecutor) => Promise<T>): Promise<T>;
 }
-type Entity = Deck | Card;
-type EntityKind = 'deck' | 'card';
+type Entity = Deck | Card | ReviewSettings;
+type EntityKind = 'deck' | 'card' | 'reviewSettings';
 type Row = { data: string };
 type OperationRow = {
   sequence: number;
@@ -60,6 +68,8 @@ export type LocalSnapshot = {
   reviews: ReviewEvent[];
   pending: number;
   issues: LocalIssue[];
+  /** Optional only for older fixtures; real repository snapshots always include it. */
+  reviewSettings?: ReviewSettings | null;
 };
 
 const schema = [
@@ -134,7 +144,83 @@ function decode<T>(row: Row | undefined): T | undefined {
 function target(operation: SyncOperation): { entity: EntityKind; id: string } {
   return operation.type === 'review.append'
     ? { entity: 'card', id: operation.payload.cardId }
-    : { entity: operation.type.startsWith('deck.') ? 'deck' : 'card', id: operation.payload.id };
+    : {
+        entity:
+          operation.type === 'reviewSettings.upsert'
+            ? 'reviewSettings'
+            : operation.type.startsWith('deck.')
+              ? 'deck'
+              : 'card',
+        id: operation.payload.id,
+      };
+}
+
+export function reviewSettingsContent(
+  settings: ReviewSettingsInput | ReviewSettings,
+): ReviewSettingsInput {
+  return {
+    id: settings.id,
+    reviewEnabled: settings.reviewEnabled,
+    cadence: settings.cadence,
+    categories: settings.categories,
+    // JSONB and devices can enumerate UUID mapping keys in different orders.
+    // Membership equality must not turn an acknowledged edit into a conflict.
+    deckCategories: Object.fromEntries(
+      Object.entries(settings.deckCategories).sort(([a], [b]) => a.localeCompare(b)),
+    ),
+  };
+}
+function entityContent(entity: Entity) {
+  return 'categories' in entity
+    ? reviewSettingsContent(entity)
+    : 'schedule' in entity
+      ? cardContent(entity)
+      : deckContent(entity);
+}
+
+/** The server may prune assignments to decks deleted on another device. This
+ * normalization is the only server-side settings edit that can preserve causality. */
+function settingsAcknowledgementMatches(
+  baseContent: string | null,
+  predecessor: SyncOperation,
+  canonical: Receipt['canonical'],
+) {
+  if (
+    !baseContent ||
+    predecessor.type !== 'reviewSettings.upsert' ||
+    canonical?.entity !== 'reviewSettings'
+  )
+    return false;
+  const acknowledged = reviewSettingsContent(canonical.data as ReviewSettings);
+  const submitted = reviewSettingsContent(predecessor.payload);
+  const pruned = Object.keys(submitted.deckCategories).filter(
+    (id) => !Object.hasOwn(acknowledged.deckCategories, id),
+  );
+  if (!pruned.length) return false;
+  const normalizedSubmitted = {
+    ...submitted,
+    deckCategories: { ...submitted.deckCategories },
+  };
+  for (const id of pruned) delete normalizedSubmitted.deckCategories[id];
+  const acknowledgedContent = JSON.stringify(acknowledged);
+  // Do not excuse changed category contents, gates, cadence, added mappings,
+  // or reassignment to a different category in the canonical acknowledgement.
+  if (JSON.stringify(normalizedSubmitted) !== acknowledgedContent) return false;
+  let baseline: ReviewSettingsInput;
+  try {
+    baseline = reviewSettingsContent(reviewSettingsInputSchema.parse(JSON.parse(baseContent)));
+  } catch {
+    return false;
+  }
+  for (const id of pruned) {
+    if (
+      Object.hasOwn(baseline.deckCategories, id) &&
+      baseline.deckCategories[id] !== submitted.deckCategories[id]
+    )
+      return false;
+    delete baseline.deckCategories[id];
+  }
+  return JSON.stringify(baseline) === acknowledgedContent;
 }
 
 /**
@@ -220,6 +306,8 @@ export class Repository {
   ) {
     if (data.ownerId !== this.ownerId)
       throw new Error('The server returned data for a different account.');
+    if (kind === 'reviewSettings' && data.id !== this.ownerId)
+      throw new Error('The server returned review settings for a different account.');
     await db.run(
       'INSERT INTO ' +
         table +
@@ -237,9 +325,7 @@ export class Repository {
         )
       )[0]?.id ?? null;
     const observed = baseline ?? (await this.get<Entity>(db, 'entities', entity, id));
-    const baseContent = observed
-      ? JSON.stringify('schedule' in observed ? cardContent(observed) : deckContent(observed))
-      : null;
+    const baseContent = observed ? JSON.stringify(entityContent(observed)) : null;
     await db.run(
       'INSERT INTO outbox(owner,id,entity,entity_id,data,next_attempt_at,depends_on,base_content) VALUES(?,?,?,?,?,?,?,?)',
       [
@@ -262,7 +348,14 @@ export class Repository {
     );
     for (const row of operations) {
       const operation = JSON.parse(row.data) as SyncOperation;
-      if (operation.type === 'deck.upsert') {
+      if (operation.type === 'reviewSettings.upsert') {
+        entity = {
+          ...(entity ?? { ownerId: this.ownerId, createdAt: operation.createdAt, version: 0 }),
+          ...operation.payload,
+          updatedAt: operation.createdAt,
+          deletedAt: null,
+        } as ReviewSettings;
+      } else if (operation.type === 'deck.upsert') {
         entity = {
           ...(entity ?? { ownerId: this.ownerId, createdAt: operation.createdAt, version: 0 }),
           ...operation.payload,
@@ -300,11 +393,16 @@ export class Repository {
               rating: operation.payload.rating,
               reviewedAt: operation.payload.reviewedAt,
               algorithmVersion: operation.payload.algorithmVersion,
+              cadence: operation.payload.cadence,
             }),
             updatedAt: operation.createdAt,
           };
         }
-      } else if ((operation.type === 'deck.delete' || operation.type === 'card.delete') && entity) {
+      } else if (
+        (operation.type === 'deck.delete' || operation.type === 'card.delete') &&
+        entity &&
+        !('categories' in entity)
+      ) {
         entity = { ...entity, deletedAt: operation.createdAt, updatedAt: operation.createdAt };
       }
     }
@@ -318,21 +416,117 @@ export class Repository {
   }
   async saveDeck(input: DeckInput, baseline?: Deck) {
     input = deckInputSchema.parse(deckContent(input));
+    await this.db.transaction((db) => this.saveDeckTransaction(db, input, baseline));
+  }
+  private async saveDeckTransaction(db: SqlExecutor, input: DeckInput, baseline?: Deck) {
+    const old = await this.get<Deck>(db, 'remote_entities', 'deck', input.id);
+    await this.enqueue(
+      db,
+      {
+        type: 'deck.upsert',
+        operationId: this.uuid(),
+        deviceId: this.deviceId,
+        createdAt: this.now(),
+        baseVersion: baseline?.version ?? old?.version ?? 0,
+        payload: deckContent(input),
+      },
+      baseline,
+    );
+    await this.materialize(db, 'deck', input.id);
+  }
+  /** Creating a deck in a category never leaves a partially created local deck. */
+  async saveDeckInCategory(input: DeckInput, categoryId: string | null, baseline?: Deck) {
+    input = deckInputSchema.parse(deckContent(input));
     await this.db.transaction(async (db) => {
-      const old = await this.get<Deck>(db, 'remote_entities', 'deck', input.id);
-      await this.enqueue(
-        db,
-        {
-          type: 'deck.upsert',
-          operationId: this.uuid(),
-          deviceId: this.deviceId,
-          createdAt: this.now(),
-          baseVersion: baseline?.version ?? old?.version ?? 0,
-          payload: deckContent(input),
-        },
-        baseline,
-      );
-      await this.materialize(db, 'deck', input.id);
+      await this.saveDeckTransaction(db, input, baseline);
+      await this.setDeckCategoryTransaction(db, input.id, categoryId);
+    });
+  }
+  private async visibleReviewSettings(db: SqlExecutor) {
+    return this.get<ReviewSettings>(db, 'entities', 'reviewSettings', this.ownerId);
+  }
+  private async saveReviewSettingsTransaction(
+    db: SqlExecutor,
+    input: ReviewSettingsInput,
+    baseline?: ReviewSettings,
+  ) {
+    input = reviewSettingsInputSchema.parse(reviewSettingsContent(input));
+    if (
+      input.id !== this.ownerId ||
+      (baseline && (baseline.ownerId !== this.ownerId || baseline.id !== this.ownerId))
+    )
+      throw new Error('Review settings belong to a different account.');
+    for (const deckId of Object.keys(input.deckCategories)) {
+      const deck = await this.get<Deck>(db, 'entities', 'deck', deckId);
+      if (!deck) throw new Error('Choose an available deck for this category.');
+      // A deck can have been deleted offline since this settings editor opened.
+      // Keep the deletion and unassign it, matching the server's tombstone policy.
+      if (deck.deletedAt) delete input.deckCategories[deckId];
+    }
+    const old = await this.get<ReviewSettings>(
+      db,
+      'remote_entities',
+      'reviewSettings',
+      this.ownerId,
+    );
+    await this.enqueue(
+      db,
+      {
+        type: 'reviewSettings.upsert',
+        operationId: this.uuid(),
+        deviceId: this.deviceId,
+        createdAt: this.now(),
+        baseVersion: baseline?.version ?? old?.version ?? 0,
+        payload: input,
+      },
+      baseline,
+    );
+    await this.materialize(db, 'reviewSettings', this.ownerId);
+  }
+  async saveReviewSettings(input: ReviewSettingsInput, baseline?: ReviewSettings) {
+    await this.db.transaction((db) => this.saveReviewSettingsTransaction(db, input, baseline));
+  }
+  private async setDeckCategoryTransaction(
+    db: SqlExecutor,
+    deckId: string,
+    categoryId: string | null,
+  ) {
+    const current = await this.visibleReviewSettings(db);
+    const input = reviewSettingsContent(current ?? defaultReviewSettingsInput(this.ownerId));
+    const deck = await this.get<Deck>(db, 'entities', 'deck', deckId);
+    if (!deck || deck.deletedAt) throw new Error('Choose an available deck.');
+    if (categoryId !== null && !input.categories.some((category) => category.id === categoryId))
+      throw new Error('Choose an available category.');
+    input.deckCategories = { ...input.deckCategories };
+    if (categoryId === null) delete input.deckCategories[deckId];
+    else input.deckCategories[deckId] = categoryId;
+    await this.saveReviewSettingsTransaction(db, input);
+  }
+  async setDeckCategory(deckId: string, categoryId: string | null) {
+    await this.db.transaction((db) => this.setDeckCategoryTransaction(db, deckId, categoryId));
+  }
+  async saveCategory(category: Category) {
+    await this.db.transaction(async (db) => {
+      const current = await this.visibleReviewSettings(db);
+      const input = reviewSettingsContent(current ?? defaultReviewSettingsInput(this.ownerId));
+      const exists = input.categories.some((item) => item.id === category.id);
+      input.categories = exists
+        ? input.categories.map((item) => (item.id === category.id ? category : item))
+        : [...input.categories, category];
+      await this.saveReviewSettingsTransaction(db, input);
+    });
+  }
+  async removeCategory(categoryId: string) {
+    await this.db.transaction(async (db) => {
+      const current = await this.visibleReviewSettings(db);
+      if (!current || !current.categories.some((item) => item.id === categoryId)) return;
+      await this.saveReviewSettingsTransaction(db, {
+        ...reviewSettingsContent(current),
+        categories: current.categories.filter((item) => item.id !== categoryId),
+        deckCategories: Object.fromEntries(
+          Object.entries(current.deckCategories).filter(([, id]) => id !== categoryId),
+        ),
+      });
     });
   }
   async saveCard(input: CardInput, baseline?: Card) {
@@ -356,7 +550,7 @@ export class Repository {
       await this.materialize(db, 'card', input.id);
     });
   }
-  async remove(kind: EntityKind, id: string, baseline?: Entity) {
+  async remove(kind: 'deck' | 'card', id: string, baseline?: Deck | Card) {
     await this.db.transaction(async (db) => {
       const old = await this.get<Entity>(db, 'remote_entities', kind, id);
       const base = {
@@ -392,6 +586,7 @@ export class Repository {
         [this.ownerId, 'deviceSequence', String(sequence)],
       );
       const reviewedAt = this.now();
+      const settings = await this.visibleReviewSettings(db);
       const event: ReviewEvent = {
         id: this.uuid(),
         cardId,
@@ -402,6 +597,7 @@ export class Repository {
         reviewedAt,
         elapsedMs: Math.min(86_400_000, Math.max(0, Math.round(elapsedMs))),
         algorithmVersion: ALGORITHM_VERSION,
+        cadence: effectiveReviewCadence(settings, card.deckId),
       };
       await db.run('INSERT INTO reviews(owner,id,card_id,data) VALUES(?,?,?,?)', [
         this.ownerId,
@@ -454,7 +650,15 @@ export class Repository {
       message: r.error ?? 'This change needs your attention.',
       canonical: r.canonical ? (JSON.parse(r.canonical) as Entity) : null,
     }));
-    return { decks, cards, reviews, pending, issues };
+    const reviewSettings = rows.find((row) => row.kind === 'reviewSettings');
+    return {
+      decks,
+      cards,
+      reviews,
+      pending,
+      issues,
+      reviewSettings: reviewSettings ? (JSON.parse(reviewSettings.data) as ReviewSettings) : null,
+    };
   }
   /** Freeze command contents before network I/O. Retried attempts keep their ID and payload. */
   async nextOperation(): Promise<SyncOperation | null> {
@@ -465,6 +669,23 @@ export class Repository {
       );
       let row: OperationRow | undefined;
       for (const candidate of rows) {
+        if (candidate.entity === 'reviewSettings') {
+          const command = JSON.parse(candidate.data) as SyncOperation;
+          if (command.type === 'reviewSettings.upsert') {
+            let waitingForDeck = false;
+            for (const deckId of Object.keys(command.payload.deckCategories)) {
+              const parents = await db.all<{ n: number }>(
+                'SELECT COUNT(*) AS n FROM outbox WHERE owner=? AND entity=? AND entity_id=? AND sequence<?',
+                [this.ownerId, 'deck', deckId, candidate.sequence],
+              );
+              if ((parents[0]?.n ?? 0) > 0) {
+                waitingForDeck = true;
+                break;
+              }
+            }
+            if (waitingForDeck) continue;
+          }
+        }
         if (candidate.entity === 'card') {
           const card = await this.get<Card>(db, 'entities', 'card', candidate.entity_id);
           if (card) {
@@ -537,14 +758,17 @@ export class Repository {
           // Only our acknowledged predecessor may advance this edit's base.
           // A pull from another device must still produce an explicit conflict.
           const receiptContent = receipt.canonical
-            ? JSON.stringify(
-                receipt.canonical.entity === 'card'
-                  ? cardContent(receipt.canonical.data as Card)
-                  : deckContent(receipt.canonical.data as Deck),
-              )
+            ? JSON.stringify(entityContent(receipt.canonical.data))
             : null;
           const contentUnchanged =
-            dependent.base_content !== null && dependent.base_content === receiptContent;
+            dependent.base_content !== null &&
+            (dependent.base_content === receiptContent ||
+              (command.type === 'reviewSettings.upsert' &&
+                settingsAcknowledgementMatches(
+                  dependent.base_content,
+                  operation,
+                  receipt.canonical,
+                )));
           const rebased =
             command.type !== 'review.append' &&
             receipt.canonical &&
@@ -600,14 +824,16 @@ export class Repository {
       if (cursor !== undefined)
         await db.run(
           'INSERT INTO metadata(owner,key,value) VALUES(?,?,?) ON CONFLICT(owner,key) DO UPDATE SET value=excluded.value',
-          [this.ownerId, 'cursor', cursor],
+          [this.ownerId, 'cursorV2', cursor],
         );
     });
   }
   async cursor() {
     const rows = await this.db.all<{ value: string }>(
       'SELECT value FROM metadata WHERE owner=? AND key=?',
-      [this.ownerId, 'cursor'],
+      // V1 omitted settings revisions. Starting v2 at zero reads those once
+      // without clearing canonical entities, pending commands, or recovery data.
+      [this.ownerId, 'cursorV2'],
     );
     return rows[0]?.value ?? '0';
   }
@@ -780,8 +1006,8 @@ export class Repository {
     ).map((r) => JSON.parse(r.data));
     const workflows = (
       await this.db.all<{ key: string; value: string }>(
-        'SELECT key,value FROM metadata WHERE owner=? AND key NOT IN (?,?)',
-        [this.ownerId, 'deviceSequence', 'cursor'],
+        'SELECT key,value FROM metadata WHERE owner=? AND key NOT IN (?,?,?)',
+        [this.ownerId, 'deviceSequence', 'cursor', 'cursorV2'],
       )
     ).map((row) => ({ key: row.key, value: JSON.parse(row.value) }));
     const workflowReceipts = (
@@ -828,10 +1054,27 @@ export function activeDeck(deck: Deck, now = Date.now()) {
       (deck.silencedUntil !== null && new Date(deck.silencedUntil).getTime() <= now))
   );
 }
-export function dueCards(snapshot: Pick<LocalSnapshot, 'decks' | 'cards'>, now = Date.now()) {
-  const enabled = new Set(snapshot.decks.filter((d) => activeDeck(d, now)).map((d) => d.id));
+export function dueCards(
+  snapshot: Pick<LocalSnapshot, 'decks' | 'cards' | 'reviewSettings'>,
+  now = Date.now(),
+  categoryId?: string | null,
+) {
+  const settings = snapshot.reviewSettings;
+  const enabled = new Set(
+    snapshot.decks
+      .filter(
+        (deck) =>
+          activeDeck(deck, now) &&
+          scheduledReviewEnabled(settings, deck.id) &&
+          (categoryId === undefined ||
+            (categoryForDeck(settings, deck.id)?.id ?? null) === categoryId),
+      )
+      .map((deck) => deck.id),
+  );
   return snapshot.cards
-    .filter((c) => enabled.has(c.deckId) && new Date(c.schedule.dueAt).getTime() <= now)
+    .filter(
+      (c) => !c.deletedAt && enabled.has(c.deckId) && new Date(c.schedule.dueAt).getTime() <= now,
+    )
     .sort(
       (a, b) =>
         a.schedule.dueAt.localeCompare(b.schedule.dueAt) || a.createdAt.localeCompare(b.createdAt),

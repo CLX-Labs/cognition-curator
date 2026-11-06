@@ -18,11 +18,19 @@ Recollect AI version **7.0.0** was verified publicly available on the App Store 
 
 ## Historical submission preparation status — October 28, 2026
 
-- On October 28, App Store Connect had an iOS version **7.0.0** in **Prepare for Submission**, with product copy, review notes, and the owner-provided private review contact saved.
-- The latest completed store/TestFlight binary at that time was **6.0.0 (7)**, EAS build `b65e3fd7-a51f-479f-93ef-f6e3b8c53d38`, built on October 24 from `bad082c46725bc8f2993b2adaaf7c34ffb5b296c`. Its embedded bundle predated the review improvements.
-- Main at that time was `1c1812c43a31df4e58385a0b8a6e5c6ea9483d01`, delivered as OTA **6.7.0** for native version **6.0.0**. An installed OTA does not change the embedded bundle in the binary selected for App Review.
-- A fresh **7.0.0** native release was planned. The first cloud attempt exhausted the account's free iOS build allowance; it did not deliver a new binary.
-- Native screenshots, App Privacy declarations, required App Review fields, and submission still needed verification on October 28. These historical pending items are superseded by the verified public 7.0.0 listing above; no private build number or submission timestamp was inferred from that public listing.
+- On October 28, App Store Connect confirmed **7.0.0 (10)** was submitted and **Waiting for Review**. Public availability was separately verified on November 5.
+- That build came from main `f3aaa74f167ac1f4026f83bebeb064aff7393cc4`, native GitHub run `40637895074`, with runtime `663e1a26c733f6898f78fc8f655563e2ca287587` on the `testflight` update channel. The same binary retains that channel after App Store promotion.
+- Six current-app iPhone and six iPad screenshots finished processing. Metadata, the original icon, ten App Privacy data types, content rights, worldwide availability and the owner-declared non-trader DSA classification were saved. Release after approval was automatic.
+- Apple account-deletion credentials were installed in the existing Railway service, deployment succeeded, and `/health` returned ok. Local key signing passed; this does not prove an end-to-end production account deletion.
+
+## Categories and generation-token foundation — November 6, 2026
+
+The next native release integrates private deck categories and configurable global/category review rules. Additive migrations `0008` through `0010` prepare the token ledger, generation modes and review settings while keeping installed 7.0.0 clients compatible. The new category client uses v2 sync; existing clients continue on v1.
+
+The native StoreKit foundation requires a new binary, so this release uses a `feature/*` branch and the automated native build/TestFlight pipeline. Do not publish these changes as an OTA to 7.0.0. Website changes and the CI/CD-only deployment instructions on main must be preserved.
+
+Token charging and Apple billing remain disabled. Production configuration was checked on November 6: `GENERATION_TOKENS_ENABLED`, `APPLE_BILLING_ENABLED` and `APPLE_BILLING_ENVIRONMENT` are absent, so the disabled defaults apply. Inactive token plans and balances are hidden in the mobile UI. Before activating paid plans, complete the subscription setup, purchase-history privacy disclosures, owner agreements/banking/commercial-classification review, environment-isolated Sandbox testing and native/IAP review described in [architecture](architecture.md#remaining-billing-release-gates).
+
 
 The simulator EAS profile retains its development-client behavior. The local Xcode 16.3 toolchain cannot compile Expo SDK 57, which requires Xcode 26.4 or newer. The manual `recollect-ios-simulator.yml` workflow builds with EAS `--local` on a GitHub-hosted macOS 26 runner using Xcode 26.4.1, then uploads the verified simulator app as a short-lived artifact for native screenshot capture. It does not use an EAS cloud build slot.
 

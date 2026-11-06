@@ -54,6 +54,7 @@ vi.mock('../src/store', () => ({
 }));
 vi.mock('../src/api', () => ({ api: { request: rig.request } }));
 vi.mock('../src/brand-patterns', () => ({ BrandPattern: () => null, DeckArtwork: () => null }));
+vi.mock('../src/tokens-ui', () => ({ GenerationTokenNotice: () => null }));
 vi.mock('../src/ui', () => ({
   Text: ({ children, ...props }: { children: React.ReactNode }) =>
     React.createElement('text', props, children),
@@ -120,6 +121,21 @@ function workflow(generated: GenerationJob): GenerationWorkflow {
     accepted: false,
   };
 }
+function answerWorkflow(): GenerationWorkflow {
+  const generated = { ...job(decks[0]!.id), count: 1 };
+  generated.candidates = generated.candidates.slice(0, 1);
+  return {
+    ...workflow(generated),
+    sourceQuestion: 'What is ATP?',
+    request: {
+      operationId: randomUUID(),
+      deckId: generated.deckId,
+      prompt: generated.prompt,
+      count: 1,
+      mode: 'answer',
+    },
+  };
+}
 function button(title: string) {
   return renderer!.root.findAllByType('button').find((node) => node.props.title === title)!;
 }
@@ -138,6 +154,7 @@ async function mount() {
   });
 }
 beforeEach(async () => {
+  rig.request.mockReset();
   vi.useFakeTimers();
   vi.setSystemTime(new Date(timestamp));
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -229,6 +246,7 @@ it('never overwrites another deck’s saved suggestions until the learner choose
   await press('Set aside & switch decks');
   expect(await rig.repo!.getState('generation')).toEqual(saved);
   const choices = rig.alert.mock.calls.at(-1)![2];
+  rig.request.mockResolvedValueOnce({ ...saved.job!, status: 'canceled' });
   await act(async () => {
     await choices.find((choice: { text: string }) => choice.text === 'Set aside').onPress();
   });
@@ -237,7 +255,7 @@ it('never overwrites another deck’s saved suggestions until the learner choose
   expect(renderer!.root.findByType('field').props.value).toBe('World history');
   rig.request.mockResolvedValue(job(decks[1]!.id));
   await press('Suggest cards');
-  expect(rig.request.mock.calls[0]![1].body.deckId).toBe(decks[1]!.id);
+  expect(rig.request.mock.calls.at(-1)![1].body.deckId).toBe(decks[1]!.id);
 });
 
 it('preserves the reviewed selection and exact acceptance receipt across a lost response, then switches decks only after completing it', async () => {
@@ -336,6 +354,7 @@ it('keeps an interrupted answer request blocking the editor until exact retry co
   rig.request.mockRejectedValueOnce(new Error('Offline'));
   await press('✦ Generate answer');
   const body = rig.request.mock.calls[0]![1].body;
+  expect(body.mode).toBe('answer');
   const key = 'answer:' + decks[0]!.id + ':new';
   const saved = (await rig.repo!.getState<GenerationWorkflow>(key))!;
   expect(saved.request.operationId).toBe(body.operationId);
@@ -351,9 +370,113 @@ it('keeps an interrupted answer request blocking the editor until exact retry co
   expect(rig.request.mock.calls[1]![1].body).toEqual(body);
   expect(pendingChanged).toHaveBeenLastCalledWith(false);
   expect(use).not.toHaveBeenCalled();
+  rig.request.mockResolvedValueOnce({ answer: generated.candidates[0]!.back, tokenCharged: true });
   await press('Use this answer');
   expect(use).toHaveBeenCalledWith(generated.candidates[0]!.back);
   expect((await rig.repo!.snapshot()).cards).toHaveLength(1);
+});
+
+it('confirms replacement before accepting and reuses the saved answer receipt after a network error', async () => {
+  const generated = { ...job(decks[0]!.id), count: 1 };
+  generated.candidates = generated.candidates.slice(0, 1);
+  const saved: GenerationWorkflow = {
+    ...workflow(generated),
+    sourceQuestion: 'What is ATP?',
+    request: {
+      operationId: randomUUID(),
+      deckId: generated.deckId,
+      prompt: generated.prompt,
+      count: 1,
+      mode: 'answer',
+    },
+  };
+  const key = 'answer:' + generated.deckId + ':new';
+  await rig.repo!.setState(key, saved);
+  const use = vi.fn();
+  const confirm = vi.fn().mockResolvedValueOnce(false).mockResolvedValue(true);
+  const accepting = vi.fn();
+  await act(async () => {
+    renderer = create(
+      React.createElement(AnswerGenerator, {
+        cardId: 'new',
+        deckId: generated.deckId,
+        question: 'What is ATP?',
+        onUse: use,
+        confirmUse: confirm,
+        onRestoreQuestion: vi.fn(),
+        onAcceptingChange: accepting,
+      }),
+    );
+  });
+  await press('Use this answer');
+  expect(rig.request).not.toHaveBeenCalled();
+  expect(use).not.toHaveBeenCalled();
+  expect((await rig.repo!.getState<GenerationWorkflow>(key))!.answerAcceptance).toBeUndefined();
+  rig.request.mockRejectedValueOnce(new Error('Connection lost after accepting'));
+  await press('Use this answer');
+  const receipt = rig.request.mock.calls[0]![1].body;
+  expect(use).not.toHaveBeenCalled();
+  expect(button('Dismiss suggestion').props.disabled).toBe(true);
+  rig.request.mockResolvedValueOnce({ answer: generated.candidates[0]!.back, tokenCharged: true });
+  await press('Retry using answer');
+  expect(rig.request.mock.calls[1]![1].body).toEqual(receipt);
+  expect(use).toHaveBeenCalledExactlyOnceWith(generated.candidates[0]!.back);
+  expect(accepting).toHaveBeenLastCalledWith(false);
+});
+
+it('keeps an accepted answer recoverable if the question changes during acceptance, without charging again', async () => {
+  const generated = { ...job(decks[0]!.id), count: 1 };
+  generated.candidates = generated.candidates.slice(0, 1);
+  const saved: GenerationWorkflow = {
+    ...workflow(generated),
+    sourceQuestion: 'What is ATP?',
+    request: {
+      operationId: randomUUID(),
+      deckId: generated.deckId,
+      prompt: generated.prompt,
+      count: 1,
+      mode: 'answer',
+    },
+  };
+  const key = 'answer:' + generated.deckId + ':new';
+  await rig.repo!.setState(key, saved);
+  const use = vi.fn();
+  const props = {
+    cardId: 'new',
+    deckId: generated.deckId,
+    question: 'What is ATP?',
+    onUse: use,
+    onRestoreQuestion: vi.fn(),
+  };
+  await act(async () => {
+    renderer = create(React.createElement(AnswerGenerator, props));
+  });
+  let finish!: (value: object) => void;
+  rig.request.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await press('Use this answer');
+  await press('Use this answer');
+  expect(rig.request).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    renderer!.update(React.createElement(AnswerGenerator, { ...props, question: 'What is DNA?' }));
+  });
+  await act(async () => {
+    finish({ answer: generated.candidates[0]!.back, tokenCharged: true });
+  });
+  expect(use).not.toHaveBeenCalled();
+  expect((await rig.repo!.getState<GenerationWorkflow>(key))!.answerAcceptance!.answer).toBe(
+    generated.candidates[0]!.back,
+  );
+  await act(async () => {
+    renderer!.update(React.createElement(AnswerGenerator, props));
+  });
+  await press('Use this answer');
+  expect(rig.request).toHaveBeenCalledTimes(1);
+  expect(use).toHaveBeenCalledExactlyOnceWith(generated.candidates[0]!.back);
 });
 
 it('can set an unfinished answer aside to unlock manual saving while retaining a recovery copy', async () => {
@@ -382,10 +505,119 @@ it('can set an unfinished answer aside to unlock manual saving while retaining a
   expect(pendingChanged).toHaveBeenLastCalledWith(true);
   await press('Restore saved question');
   expect(restore).toHaveBeenCalledWith('Saved question');
+  rig.request.mockResolvedValueOnce({ canceled: true });
   await press('Set request aside');
   expect(archive).toHaveBeenCalledWith({ answerGeneration: saved });
   expect(await rig.repo!.getState(key)).toBeNull();
   expect(pendingChanged).toHaveBeenLastCalledWith(false);
+});
+
+it('releases each unaccepted answer before generating another and keeps the original if release fails', async () => {
+  const saved = answerWorkflow();
+  const key = 'answer:' + saved.request.deckId + ':new';
+  await rig.repo!.setState(key, saved);
+  await act(async () => {
+    renderer = create(
+      React.createElement(AnswerGenerator, {
+        cardId: 'new',
+        deckId: saved.request.deckId,
+        question: saved.sourceQuestion!,
+        onUse: vi.fn(),
+        onRestoreQuestion: vi.fn(),
+      }),
+    );
+  });
+  rig.request.mockRejectedValueOnce(new Error('Could not release the current draft'));
+  await press('Try another answer');
+  expect(rig.request).toHaveBeenCalledExactlyOnceWith('/v1/generations/' + saved.job!.id, {
+    method: 'DELETE',
+    ownerId: rig.repo!.ownerId,
+  });
+  expect(await rig.repo!.getState(key)).toEqual(saved);
+  expect(content()).toContain(saved.job!.candidates[0]!.back);
+  let previous = saved;
+  for (let i = 0; i < 2; i++) {
+    rig.request.mockClear();
+    const next = answerWorkflow().job!;
+    rig.request
+      .mockResolvedValueOnce({ ...previous.job!, status: 'canceled' })
+      .mockResolvedValueOnce(next);
+    await press('Try another answer');
+    expect(rig.request.mock.calls.map(([path, options]) => [path, options.method])).toEqual([
+      ['/v1/generations/' + previous.job!.id, 'DELETE'],
+      ['/v1/generations', 'POST'],
+    ]);
+    const current = (await rig.repo!.getState<GenerationWorkflow>(key))!;
+    expect(current.job!.id).toBe(next.id);
+    expect(current.request.operationId).not.toBe(previous.request.operationId);
+    previous = current;
+  }
+});
+
+it('keeps a failed deck request when cancellation fails before replacing it', async () => {
+  const failed = { ...job(decks[0]!.id), status: 'failed' as const, candidates: [] };
+  const saved = workflow(failed);
+  await rig.repo!.setState('generation', saved);
+  await mount();
+  rig.request.mockRejectedValueOnce(new Error('Could not release this draft'));
+  await press('Try this topic again');
+  expect(await rig.repo!.getState('generation')).toEqual(saved);
+  expect(rig.request.mock.calls.map(([, options]) => options.method)).toEqual(['DELETE']);
+  const next = job(decks[0]!.id);
+  rig.request.mockClear();
+  rig.request.mockResolvedValueOnce(failed).mockResolvedValueOnce(next);
+  await press('Try this topic again');
+  expect(rig.request.mock.calls.map(([, options]) => options.method)).toEqual(['DELETE', 'POST']);
+  expect((await rig.repo!.getState<GenerationWorkflow>('generation'))!.job!.id).toBe(next.id);
+});
+
+it('does not clear a new card acceptance lock when an old card acceptance finishes', async () => {
+  const old = answerWorkflow();
+  const next = answerWorkflow();
+  await rig.repo!.setState('answer:' + old.request.deckId + ':old', old);
+  await rig.repo!.setState('answer:' + next.request.deckId + ':new', next);
+  const changed = vi.fn();
+  const use = vi.fn();
+  const props = {
+    deckId: old.request.deckId,
+    question: old.sourceQuestion!,
+    onUse: use,
+    onRestoreQuestion: vi.fn(),
+    onAcceptingChange: changed,
+  };
+  await act(async () => {
+    renderer = create(React.createElement(AnswerGenerator, { ...props, cardId: 'old' }));
+  });
+  let finishOld!: (answer: object) => void;
+  let finishNew!: (answer: object) => void;
+  rig.request.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishOld = resolve;
+      }),
+  );
+  await press('Use this answer');
+  await act(async () => {
+    renderer!.update(React.createElement(AnswerGenerator, { ...props, cardId: 'new' }));
+  });
+  rig.request.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishNew = resolve;
+      }),
+  );
+  await press('Use this answer');
+  expect(changed).toHaveBeenLastCalledWith(true);
+  await act(async () => {
+    finishOld({ answer: old.job!.candidates[0]!.back, tokenCharged: true });
+  });
+  expect(changed).toHaveBeenLastCalledWith(true);
+  expect(use).not.toHaveBeenCalled();
+  await act(async () => {
+    finishNew({ answer: next.job!.candidates[0]!.back, tokenCharged: true });
+  });
+  expect(changed).toHaveBeenLastCalledWith(false);
+  expect(use).toHaveBeenCalledTimes(1);
 });
 
 it('automatically checks an interrupted saved request using its original operation ID', async () => {

@@ -10,6 +10,8 @@ vi.mock('../src/api', () => ({ api: { request } }));
 import {
   answerForQuestion,
   answerRequestLabel,
+  acceptGenerationAnswer,
+  discardGeneration,
   fetchGeneration,
   prepareGeneration,
   type GenerationWorkflow,
@@ -146,5 +148,75 @@ describe('subject decks and answer drafts', () => {
       false,
     );
     expect(answerForQuestion({ ...state, sourceQuestion: 'Q' }, 'Q')).toBeNull();
+  });
+
+  it('reuses a durable answer acceptance receipt after a lost response and stores no duplicate card', async () => {
+    const { repo, state } = await fixture();
+    request.mockReset();
+    const now = new Date().toISOString();
+    const answer: GenerationWorkflow = {
+      ...state,
+      sourceQuestion: 'What is ATP?',
+      request: { ...state.request, count: 1, mode: 'answer' },
+      job: {
+        id: randomUUID(),
+        deckId: state.request.deckId,
+        status: 'succeeded',
+        prompt: state.request.prompt,
+        count: 1,
+        error: null,
+        createdAt: now,
+        updatedAt: now,
+        acceptedCandidateIds: [],
+        candidates: [
+          {
+            id: randomUUID(),
+            front: 'ATP',
+            back: 'An energy-carrying molecule.',
+            hint: '',
+            explanation: '',
+            tags: [],
+          },
+        ],
+      },
+    };
+    await repo.setState('answer:test', answer);
+    request.mockRejectedValueOnce(new Error('Connection lost after acceptance'));
+    await expect(acceptGenerationAnswer(repo, answer, 'answer:test')).rejects.toThrow(
+      'Connection lost',
+    );
+    const receipt = (await repo.getState<GenerationWorkflow>('answer:test'))!.answerAcceptance!;
+    expect(receipt.operationId).toBe(request.mock.calls[0]![1].body.operationId);
+    expect((await repo.getState<GenerationWorkflow>('answer:test'))!.accepted).toBe(false);
+    request.mockResolvedValueOnce({ answer: 'An energy-carrying molecule.', tokenCharged: true });
+    const complete = await acceptGenerationAnswer(repo, answer, 'answer:test');
+    expect(request.mock.calls[1]![1].body).toEqual({ operationId: receipt.operationId });
+    expect(complete.answerAcceptance!.answer).toBe('An energy-carrying molecule.');
+    expect(complete.accepted).toBe(true);
+    expect(await acceptGenerationAnswer(repo, answer, 'answer:test')).toEqual(complete);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect((await repo.snapshot()).cards).toHaveLength(0);
+  });
+
+  it('cancels an unknown job by its saved operation without resubmitting inference and preserves failed discard recovery', async () => {
+    const { repo, state } = await fixture();
+    request.mockReset();
+    await repo.setState('generation', state);
+    request.mockRejectedValueOnce(new Error('Offline'));
+    await expect(discardGeneration(repo, state)).rejects.toThrow('Offline');
+    expect(await repo.getState('generation')).toEqual(state);
+    request.mockResolvedValueOnce({ canceled: true });
+    await discardGeneration(repo, state);
+    expect(request).toHaveBeenLastCalledWith(
+      '/v1/generations/by-operation/' + state.request.operationId,
+      {
+        method: 'DELETE',
+        ownerId: repo.ownerId,
+      },
+    );
+    expect(
+      request.mock.calls.every(([, options]) => options.method === 'DELETE' && !options.body),
+    ).toBe(true);
+    expect(await repo.getState('generation')).toEqual(state);
   });
 });

@@ -250,6 +250,7 @@ describe('durable owner-isolated SQLite repository', () => {
       reviews: [],
       pending: 0,
       issues: [],
+      reviewSettings: null,
     });
     expect(await other.nextOperation()).toBeNull();
     expect(await other.getState('generation')).toBeNull();

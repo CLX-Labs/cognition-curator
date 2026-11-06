@@ -25,6 +25,7 @@ import {
   hash,
   lockOwner,
   transaction,
+  rewardMarketplaceDownload,
   type Change,
   type Database,
   type Transaction,
@@ -90,7 +91,10 @@ function band(value: number, limits: number[], labels: string[]) {
 }
 
 export class MarketplaceService {
-  constructor(private db: Database) {}
+  constructor(
+    private db: Database,
+    private tokensEnabled = false,
+  ) {}
 
   private async throttle(owner: string, action: string, limit: number) {
     const row = (
@@ -572,6 +576,15 @@ export class MarketplaceService {
         await tx.query(
           `INSERT INTO recollect.marketplace_card_mappings(download_id,source_card_id,recipient_card_id,content_hash,content) VALUES($1,$2,$3,$4,$5)`,
           [downloadId, source.id, card.id, hash(content(source)), content(source)],
+        );
+      if (this.tokensEnabled)
+        await rewardMarketplaceDownload(
+          tx,
+          row.owner_id,
+          owner,
+          row.source_deck_id,
+          row.id,
+          imported.id,
         );
       return receipt(imported);
     });

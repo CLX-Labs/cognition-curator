@@ -2,6 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppState, StatusBar, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { previewIntervals } from '@recollect/scheduler';
+import {
+  categoryForDeck,
+  effectiveReviewCadence,
+  scheduledReviewEnabled,
+} from '@recollect/contracts';
 import { useStore } from './store';
 import { activeDeck, dueCards, type LocalSnapshot } from './repository';
 import { Back, Button, Panel, Screen, Text, colors, reportError, s } from './ui';
@@ -11,14 +16,37 @@ import { ReviewFeedbackCue, type ReviewFeedback } from './review-feedback';
 import { ReviewReadingSheet } from './review-reading-sheet';
 import { BrandPattern } from './brand-patterns';
 
-type ReviewParams = { deckId?: string; practice?: string; cardId?: string; id?: string };
+type ReviewParams = {
+  deckId?: string;
+  categoryId?: string;
+  practice?: string;
+  cardId?: string;
+  id?: string;
+};
 type ReadingSection = 'card' | 'hint' | 'context';
-function eligibleCard(data: LocalSnapshot, id: string, practice: boolean, now = Date.now()) {
+function inScope(data: LocalSnapshot, deckId: string, params: ReviewParams) {
+  return (
+    (!params.deckId || params.deckId === deckId) &&
+    (!params.categoryId ||
+      (categoryForDeck(data.reviewSettings, deckId)?.id ?? 'uncategorized') === params.categoryId)
+  );
+}
+function eligibleCard(
+  data: LocalSnapshot,
+  id: string,
+  practice: boolean,
+  params: ReviewParams = {},
+  now = Date.now(),
+) {
   const card = data.cards.find((item) => item.id === id && !item.deletedAt);
   const deck = card && data.decks.find((item) => item.id === card.deckId && !item.deletedAt);
   return card &&
     deck &&
-    (practice || (activeDeck(deck, now) && Date.parse(card.schedule.dueAt) <= now))
+    inScope(data, deck.id, params) &&
+    (practice ||
+      (activeDeck(deck, now) &&
+        scheduledReviewEnabled(data.reviewSettings, deck.id) &&
+        Date.parse(card.schedule.dueAt) <= now))
     ? card
     : undefined;
 }
@@ -32,7 +60,9 @@ export default function ReviewScreen() {
   const params = useLocalSearchParams<ReviewParams>();
   return (
     <ReviewSession
-      key={[params.deckId, params.practice, params.cardId ?? params.id].join(':')}
+      key={[params.deckId, params.categoryId, params.practice, params.cardId ?? params.id].join(
+        ':',
+      )}
       params={params}
     />
   );
@@ -58,7 +88,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
           ? data.cards
           : dueCards(data)
     )
-      .filter((c) => !params.deckId || c.deckId === params.deckId)
+      .filter((c) => inScope(data, c.deckId, params))
       .map((c) => c.id);
     if (!params.deckId && !specific) {
       for (let i = ids.length - 1; i > 0; i--) {
@@ -93,9 +123,13 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     const decks = new Set(data.decks.filter((deck) => !deck.deletedAt).map((deck) => deck.id));
     const cards = practice ? data.cards : dueCards(data);
     return new Set(
-      cards.filter((card) => !card.deletedAt && decks.has(card.deckId)).map((card) => card.id),
+      cards
+        .filter(
+          (card) => !card.deletedAt && decks.has(card.deckId) && inScope(data, card.deckId, params),
+        )
+        .map((card) => card.id),
     );
-  }, [data, practice]);
+  }, [data, practice, params.deckId, params.categoryId]);
   const availableQueue = queue.filter((id) => id === savingCard.current || eligibleIds.has(id));
   const card = data.cards.find((item) => item.id === availableQueue[0] && !item.deletedAt);
   const currentCard = useRef(card?.id);
@@ -166,7 +200,7 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       reading
     )
       return;
-    if (!eligibleCard(latestData.current, card.id, practice)) {
+    if (!eligibleCard(latestData.current, card.id, practice, params)) {
       setQueue((current) => current.filter((id) => id !== card.id));
       return;
     }
@@ -233,11 +267,22 @@ function ReviewSession({ params }: { params: ReviewParams }) {
         footer={
           <>
             <Button
-              title={params.deckId ? 'Back to deck' : 'Back to today'}
+              title={
+                params.deckId
+                  ? 'Back to deck'
+                  : params.categoryId
+                    ? 'Back to category'
+                    : 'Back to today'
+              }
               onPress={() =>
                 params.deckId
                   ? router.dismissTo({ pathname: '/decks/[id]', params: { id: params.deckId } })
-                  : router.dismissTo('/')
+                  : params.categoryId
+                    ? router.dismissTo({
+                        pathname: '/categories/[id]',
+                        params: { id: params.categoryId },
+                      })
+                    : router.dismissTo('/')
               }
             />
             <ReviewFeedbackCue feedback={feedback} />
@@ -253,19 +298,22 @@ function ReviewSession({ params }: { params: ReviewParams }) {
           </Text>
         </Panel>
         <Text style={s.editorial}>A little more stays.</Text>
-        {!reviewed &&
-          data.cards.some((item) => !params.deckId || item.deckId === params.deckId) && (
-            <Button
-              title="Practice all cards"
-              variant="secondary"
-              onPress={() =>
-                router.replace({
-                  pathname: '/review',
-                  params: { practice: 'true', ...(params.deckId ? { deckId: params.deckId } : {}) },
-                })
-              }
-            />
-          )}
+        {!reviewed && data.cards.some((item) => inScope(data, item.deckId, params)) && (
+          <Button
+            title="Practice all cards"
+            variant="secondary"
+            onPress={() =>
+              router.replace({
+                pathname: '/review',
+                params: {
+                  practice: 'true',
+                  ...(params.deckId ? { deckId: params.deckId } : {}),
+                  ...(params.categoryId ? { categoryId: params.categoryId } : {}),
+                },
+              })
+            }
+          />
+        )}
       </Screen>
     );
 
@@ -275,6 +323,8 @@ function ReviewSession({ params }: { params: ReviewParams }) {
     new Date(
       Math.max(Date.now(), Date.parse(card.schedule.lastReviewedAt ?? '') || 0),
     ).toISOString(),
+    undefined,
+    effectiveReviewCadence(data.reviewSettings, card.deckId),
   );
   return (
     <Screen
@@ -282,7 +332,14 @@ function ReviewSession({ params }: { params: ReviewParams }) {
       syncFeedback="errors"
       title={deck?.name ?? 'Your review'}
       appearance="focus"
-      eyebrow={practice ? 'FREE PRACTICE' : 'DAILY REVIEW'}
+      eyebrow={
+        practice
+          ? 'FREE PRACTICE'
+          : params.categoryId
+            ? (data.reviewSettings?.categories.find((category) => category.id === params.categoryId)
+                ?.name ?? 'Uncategorized') + ' / REVIEW'
+            : 'DAILY REVIEW'
+      }
       subtitle={
         practice
           ? specific && Date.parse(card.schedule.dueAt) > Date.now()

@@ -1,12 +1,15 @@
 import {
   ALGORITHM_VERSION,
+  DEFAULT_REVIEW_CADENCE,
   LEGACY_ALGORITHM_VERSION,
   algorithmVersionSchema,
   dateTimeSchema,
   ratingSchema,
+  reviewCadenceSchema,
   scheduleStateSchema,
   type Rating,
   type ReviewEvent,
+  type ReviewCadence,
   type ScheduleState,
   type AlgorithmVersion,
 } from '@recollect/contracts';
@@ -25,8 +28,8 @@ function timestamp(value: string): number {
 function clampEase(value: number): number {
   return Math.round(Math.min(3, Math.max(1.3, value)) * 100) / 100;
 }
-function boundedInterval(value: number): number {
-  return Math.min(MAX_INTERVAL_SECONDS, Math.max(1, Math.round(value)));
+function boundedInterval(value: number, maximum = MAX_INTERVAL_SECONDS): number {
+  return Math.min(maximum, Math.max(1, Math.round(value)));
 }
 
 /** No ambient clock or randomness: use exactly the same input on the server and device. */
@@ -49,7 +52,9 @@ export function initialSchedule(now: string): ScheduleState {
 
 export function reviewSchedule(
   previous: ScheduleState,
-  event: Pick<ReviewEvent, 'rating' | 'reviewedAt'> & { algorithmVersion?: AlgorithmVersion },
+  event: Pick<ReviewEvent, 'rating' | 'reviewedAt' | 'cadence'> & {
+    algorithmVersion?: AlgorithmVersion;
+  },
 ): ScheduleState {
   const state = scheduleStateSchema.parse(previous);
   const rating = ratingSchema.parse(event.rating);
@@ -63,14 +68,20 @@ export function reviewSchedule(
     // recall starts at a week and extends an established review interval.
     const established = state.phase === 'review';
     const ease = clampEase(state.easeFactor);
+    const cadence = reviewCadenceSchema.parse(event.cadence ?? DEFAULT_REVIEW_CADENCE);
+    const canGrow = cadence.growIntervals && established;
     const interval = boundedInterval(
       rating === 'again'
-        ? 3 * DAY_SECONDS
+        ? cadence.againDays * DAY_SECONDS
         : rating === 'hard'
-          ? Math.max(3 * DAY_SECONDS, established ? state.intervalSeconds * 1.2 : 0)
+          ? Math.max(cadence.hardDays * DAY_SECONDS, canGrow ? state.intervalSeconds * 1.2 : 0)
           : rating === 'easy'
-            ? Math.max(14 * DAY_SECONDS, established ? state.intervalSeconds * ease * 1.3 : 0)
-            : Math.max(7 * DAY_SECONDS, established ? state.intervalSeconds * ease : 0),
+            ? Math.max(
+                cadence.easyDays * DAY_SECONDS,
+                canGrow ? state.intervalSeconds * ease * 1.3 : 0,
+              )
+            : Math.max(cadence.goodDays * DAY_SECONDS, canGrow ? state.intervalSeconds * ease : 0),
+      cadence.maxIntervalDays * DAY_SECONDS,
     );
     return {
       algorithmVersion: version,
@@ -177,6 +188,17 @@ function eventIdentity(e: ReviewEvent): string {
     e.reviewedAt,
     e.elapsedMs,
     e.algorithmVersion,
+    // Explicit field order prevents object insertion order affecting identity.
+    e.cadence
+      ? [
+          e.cadence.againDays,
+          e.cadence.hardDays,
+          e.cadence.goodDays,
+          e.cadence.easyDays,
+          e.cadence.maxIntervalDays,
+          e.cadence.growIntervals,
+        ]
+      : null,
   ]);
 }
 
@@ -205,11 +227,17 @@ export function previewIntervals(
   schedule: ScheduleState,
   now: string,
   algorithmVersion: AlgorithmVersion = ALGORITHM_VERSION,
+  cadence?: ReviewCadence,
 ): Record<Rating, number> {
   return Object.fromEntries(
     ratingSchema.options.map((rating) => [
       rating,
-      reviewSchedule(schedule, { rating, reviewedAt: now, algorithmVersion }).intervalSeconds,
+      reviewSchedule(schedule, {
+        rating,
+        reviewedAt: now,
+        algorithmVersion,
+        ...(cadence ? { cadence } : {}),
+      }).intervalSeconds,
     ]),
   ) as Record<Rating, number>;
 }

@@ -33,7 +33,7 @@ export class SyncEngine {
       if (!operation) break;
       try {
         const response = pushResponseSchema.parse(
-          await this.transport.request('/v1/sync/push', {
+          await this.transport.request('/v2/sync/push', {
             method: 'POST',
             body: { operations: [operation] },
           }),
@@ -56,7 +56,7 @@ export class SyncEngine {
     let highWatermark: string | undefined;
     for (let pages = 0; pages < 10_000 && !this.stopped; pages++) {
       const path =
-        '/v1/sync/pull?cursor=' +
+        '/v2/sync/pull?cursor=' +
         encodeURIComponent(cursor) +
         '&limit=100' +
         (highWatermark === undefined ? '' : '&until=' + encodeURIComponent(highWatermark));

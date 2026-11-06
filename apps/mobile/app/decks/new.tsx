@@ -1,7 +1,9 @@
 import React from 'react';
 import DeckForm from '../../src/deck-form';
 import { Back, Panel, Screen } from '../../src/ui';
+import { useLocalSearchParams } from 'expo-router';
 export default function NewDeck() {
+  const { categoryId } = useLocalSearchParams<{ categoryId?: string }>();
   return (
     <Screen
       title="New deck"
@@ -10,7 +12,7 @@ export default function NewDeck() {
       leading={<Back label="Decks" />}
     >
       <Panel>
-        <DeckForm />
+        <DeckForm categoryId={categoryId} />
       </Panel>
     </Screen>
   );

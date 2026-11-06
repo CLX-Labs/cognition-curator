@@ -1477,3 +1477,48 @@
     max-width: calc(100% - 22px);
   }
 }
+
+/* Live launch: installation leads; email updates remain an optional second step. */
+.editorial-closing .closing-download {
+  margin-top: 28px;
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--ink);
+}
+.editorial-closing .closing-download:hover {
+  background: var(--paper);
+  border-color: var(--paper);
+}
+.editorial-closing .closing-small {
+  margin-top: 14px;
+}
+.editorial-home .waitlist-form {
+  padding: 28px;
+  border: 1px solid #f0eee64d;
+  border-radius: 3px;
+}
+.editorial-home .waitlist-form h3 {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+.editorial-home .waitlist-form .updates-intro {
+  margin: 12px 0 24px;
+  color: #bfc0b6;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.editorial-home .waitlist-form .editorial-button {
+  background: transparent;
+  border-color: #f0eee670;
+  color: var(--paper);
+}
+.editorial-home .waitlist-form .editorial-button:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+@media (max-width: 560px) {
+  .editorial-home .waitlist-form { padding: 22px; }
+  .editorial-header .nav-cta { max-width: 170px; gap: 12px; }
+}

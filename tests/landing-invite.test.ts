@@ -28,9 +28,9 @@ function setup({
   ]) {
     elements[id] = {
       hidden: ['invite-ready', 'invite-invalid'].includes(id),
-      textContent: id === 'invite-download' ? 'Join the waitlist ↗' : '',
+      textContent: id === 'invite-download' ? 'Download on the App Store ↗' : '',
       value: '',
-      href: id === 'invite-download' ? '/#get-recollect' : '',
+      href: id === 'invite-download' ? 'https://apps.apple.com/app/id6749138102' : '',
       focus: vi.fn(), select: vi.fn(), setSelectionRange: vi.fn(),
       addEventListener: (type, callback) => { handlers.set(`${id}:${type}`, callback); },
     };
@@ -109,8 +109,8 @@ describe('public friend invitation', () => {
   });
 
   it.each([
-    ['https://apps.apple.com/us/app/recollect/id6749138102', 'Get Recollect for iPhone'],
-    ['https://apps.apple.com/app/id6749138102', 'Get Recollect for iPhone'],
+    ['https://apps.apple.com/us/app/recollect/id6749138102', 'Download on the App Store'],
+    ['https://apps.apple.com/app/id6749138102', 'Download on the App Store'],
     ['https://testflight.apple.com/join/AbCd1234', 'Join the iPhone beta'],
   ])('uses only the configured official Apple download destination %s', (downloadUrl, label) => {
     const page = setup({ downloadUrl });
@@ -125,26 +125,28 @@ describe('public friend invitation', () => {
     'https://apps.apple.com.evil.example/app/id123', 'https://evil.example/download',
     'https://testflight.apple.com/join/not-a-public-invite', 'https://apps.apple.com/login',
     'https://user:password@apps.apple.com/app/id123', 'https://apps.apple.com:8443/app/id123',
-  ])('keeps the availability waitlist fallback for unconfigured or unsafe download URL %s', (downloadUrl) => {
+  ])('keeps the static App Store fallback for unconfigured or unsafe download URL %s', (downloadUrl) => {
     const page = setup({ downloadUrl });
-    expect(page.elements['invite-download']!.href).toBe('/#get-recollect');
-    expect(page.elements['invite-download']!.textContent).toContain('Join the waitlist');
+    expect(page.elements['invite-download']!.href).toBe('https://apps.apple.com/app/id6749138102');
+    expect(page.elements['invite-download']!.textContent).toContain('Download on the App Store');
   });
 
   it('does not use a download destination supplied through invite query parameters', () => {
     const page = setup({ search: `?invite=${invite}&downloadUrl=https://evil.example` });
-    expect(page.elements['invite-download']!.href).toBe('/#get-recollect');
+    expect(page.elements['invite-download']!.href).toBe('https://apps.apple.com/app/id6749138102');
   });
 
   it('has non-personal link previews, no-referrer policy, and useful static installation instructions', () => {
     expect(html).toContain('<meta name="referrer" content="no-referrer" />');
     expect(html).toContain('href="https://recollect-ai.netlify.app/friends/"');
     expect(html).toContain('property="og:url" content="https://recollect-ai.netlify.app/friends/"');
-    expect(html).toContain('id="invite-download" href="/#get-recollect" referrerpolicy="no-referrer"');
+    expect(html).toContain('id="invite-download" href="https://apps.apple.com/app/id6749138102" referrerpolicy="no-referrer"');
     expect(html).toContain('<noscript>');
     expect(html).toContain('Your invitation.');
-    expect(html).toContain('A public download link isn’t available yet.');
-    expect(html).toContain('Join the waitlist for availability updates');
+    expect(html).toContain('Download Recollect from the App Store');
+    expect(html).toContain('come back to this invitation');
+    expect(html).not.toContain('Join the waitlist');
+    expect(html).not.toContain('in testing');
     expect(html).not.toContain('Get beta access');
     expect(html).toContain('You → Friends');
     expect(html).not.toMatch(/<script[^>]*>[^<]*location\s*[=.]/);

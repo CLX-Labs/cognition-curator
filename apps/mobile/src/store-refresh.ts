@@ -3,9 +3,7 @@ import type { LocalSnapshot } from './repository';
 function shareArray<T>(previous: T[], next: T[]): T[] {
   const shared = next.map((item, index) => {
     const prior = previous[index];
-    return prior !== undefined && JSON.stringify(prior) === JSON.stringify(item)
-      ? prior
-      : item;
+    return prior !== undefined && JSON.stringify(prior) === JSON.stringify(item) ? prior : item;
   });
   return previous.length === shared.length &&
     shared.every((item, index) => item === previous[index])
@@ -21,6 +19,10 @@ export function shareSnapshot(previous: LocalSnapshot, next: LocalSnapshot): Loc
     reviews: shareArray(previous.reviews, next.reviews),
     issues: shareArray(previous.issues, next.issues),
     pending: next.pending,
+    reviewSettings:
+      JSON.stringify(previous.reviewSettings) === JSON.stringify(next.reviewSettings)
+        ? previous.reviewSettings
+        : next.reviewSettings,
   };
   return Object.entries(shared).every(
     ([key, value]) => value === previous[key as keyof LocalSnapshot],

@@ -9,6 +9,7 @@ import { useProfile } from '../../src/profile';
 import Avatar from '../../src/avatar';
 import { BrandPattern, DeckArtwork } from '../../src/brand-patterns';
 import { MarketplaceEntry } from '../../src/marketplace-ui';
+import { CategoryReviewRows } from '../../src/review-settings-ui';
 
 export default function Home() {
   const { data } = useStore();
@@ -92,6 +93,7 @@ export default function Home() {
           }}
         />
       </Panel>
+      <CategoryReviewRows compact />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Create cards or a deck"

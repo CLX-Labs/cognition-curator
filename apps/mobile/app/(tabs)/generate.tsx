@@ -6,6 +6,7 @@ import { generationRequestSchema, type GenerationCandidate } from '@recollect/co
 import { useStore } from '../../src/store';
 import {
   acceptGeneration,
+  discardGeneration,
   fetchGeneration,
   generationPrompt,
   prepareGeneration,
@@ -16,6 +17,7 @@ import { Back, Button, Field, Panel, Screen, colors, s, Text } from '../../src/u
 import { useAppActive, usePolling } from '../../src/polling';
 import { BrandPattern } from '../../src/brand-patterns';
 import { AIPermissionPanel, useAIConsent } from '../../src/ai-consent-ui';
+import { GenerationTokenNotice } from '../../src/tokens-ui';
 
 export default function GenerateScreen() {
   const focused = useIsFocused();
@@ -208,6 +210,7 @@ export default function GenerateScreen() {
             : data.cards.filter((card) => card.deckId === destinationId).map((card) => card.front),
         ),
         count: replacement?.count ?? count,
+        mode: 'cards',
       });
       const pending: GenerationWorkflow = {
         topic,
@@ -232,7 +235,10 @@ export default function GenerateScreen() {
         accepted: false,
       };
       await writes.current;
-      if (replacement && current.current) await repository.archive({ generation: current.current });
+      if (replacement && current.current) {
+        await discardGeneration(repository, current.current);
+        await repository.archive({ generation: current.current });
+      }
       await repository.setState(GENERATION_KEY, pending);
       if (!live(epoch)) return;
       current.current = pending;
@@ -316,7 +322,10 @@ export default function GenerateScreen() {
     setBusy(true);
     try {
       await writes.current;
-      if (before) await repository.archive({ generation: before });
+      if (before) {
+        await discardGeneration(repository, before);
+        await repository.archive({ generation: before });
+      }
       await repository.setState(GENERATION_KEY, null);
       if (!live(epoch)) return false;
       current.current = null;
@@ -419,6 +428,7 @@ export default function GenerateScreen() {
       }
     >
       <AIPermissionPanel consent={consent} />
+      <GenerationTokenNotice refreshKey={state?.accepted ? 'accepted' : state?.job?.id} />
       {!loaded && !error && <ActivityIndicator color={colors.ink} />}
       {requestedDeck && state && (
         <Panel tint>

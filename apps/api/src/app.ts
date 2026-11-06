@@ -3,14 +3,28 @@ import { z, ZodError } from 'zod';
 import {
   ALGORITHM_VERSION,
   generationAcceptSchema,
+  generationAnswerAcceptSchema,
   generationRequestSchema,
   importRequestSchema,
+  legacyPushRequestSchema,
+  legacyPullResponseSchema,
+  legacySnapshotSchema,
+  legacySyncOperationSchema,
   pushRequestSchema,
   revisionSchema,
-  syncOperationSchema,
+  scheduledReviewEnabled,
+  type Snapshot,
+  type PullResponse,
   type GenerationJob,
+  tokenWalletSchema,
+  PAID_MONTHLY_TOKENS,
+  TOKEN_SUBSCRIPTION_PRICE_USD,
+  TOKEN_SUBSCRIPTION_PRODUCT_ID,
+  appleTokenPurchaseSchema,
+  appleTokenPurchaseResponseSchema,
+  appleBillingNotificationSchema,
 } from '@recollect/contracts';
-import { DomainError, type Database } from '@recollect/db';
+import { DomainError, tokenBalance, transaction, type Database } from '@recollect/db';
 import { AuthService, type AppleVerifier } from './auth.js';
 import type { ApiConfig } from './config.js';
 import { SyncService } from './sync.js';
@@ -21,6 +35,7 @@ import { CommunityService } from './community.js';
 import { CommunitySafetyService } from './community-safety.js';
 import { MarketplaceService } from './marketplace.js';
 import { legacyDeckImageResponse } from './deck-images.js';
+import { createAppleBillingService } from './billing.js';
 
 function generationLog(job: GenerationJob) {
   return {
@@ -30,6 +45,28 @@ function generationLog(job: GenerationJob) {
     candidateCount: job.candidates.length,
     errorCode: job.error?.code ?? null,
   };
+}
+
+/** Installed clients decode strict v1 records. Projection happens after paging
+ * so settings-only revisions still advance their cursors without losing data. */
+function legacySnapshot(snapshot: Snapshot) {
+  const { reviewSettings, ...legacy } = snapshot;
+  return legacySnapshotSchema.parse({
+    ...legacy,
+    reviews: snapshot.reviews.map(({ cadence, ...review }) => review),
+  });
+}
+function legacyPull(response: PullResponse) {
+  return legacyPullResponseSchema.parse({
+    ...response,
+    changes: response.changes
+      .filter((change) => change.entity !== 'reviewSettings')
+      .map((change) => {
+        if (change.entity !== 'review') return change;
+        const { cadence, ...data } = change.data;
+        return { ...change, data };
+      }),
+  });
 }
 
 export async function buildApp(options: {
@@ -46,15 +83,28 @@ export async function buildApp(options: {
   });
   const { db, config } = options;
   app.addHook('onRequest', async (request, reply) => {
-    if (request.url.startsWith('/v1/marketplace')) reply.header('Cache-Control', 'no-store');
+    if (/^\/v1\/(marketplace|tokens|billing)/.test(request.url))
+      reply.header('Cache-Control', 'no-store');
+  });
+  const billing = createAppleBillingService(db, {
+    environment: 'Production',
+    bundleId: config.appleAudience,
+    appAppleId: 6749138102,
+    productId: TOKEN_SUBSCRIPTION_PRODUCT_ID,
+    ...config.appleBilling,
+    enabled: Boolean(config.generationTokensEnabled && config.appleBilling?.enabled),
   });
   const auth = new AuthService(db, config, options.appleVerifier),
     sync = new SyncService(db),
     profile = new ProfileService(db),
     community = new CommunityService(db),
     safety = new CommunitySafetyService(db),
-    marketplace = new MarketplaceService(db),
-    generation = new GenerationService(db, config.dailyGenerationCards);
+    marketplace = new MarketplaceService(db, config.generationTokensEnabled ?? false),
+    generation = new GenerationService(
+      db,
+      config.dailyGenerationCards,
+      config.generationTokensEnabled ?? false,
+    );
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError)
       return reply.code(400).send({
@@ -97,6 +147,9 @@ export async function buildApp(options: {
     return { status: 'ok', service: 'recollect-api' };
   });
   app.get('/ping', async () => ({ status: 'ok' }));
+  app.post('/v1/billing/apple/notifications', (request) =>
+    billing.notification(appleBillingNotificationSchema.parse(request.body).signedPayload),
+  );
   // Legacy writers are deliberately gated until a recovery-capable client is released.
   app.all('/api/*', async (_request, reply) =>
     reply.code(426).send({
@@ -137,6 +190,27 @@ export async function buildApp(options: {
         );
     });
     secured.get('/v1/profile', (request) => profile.get(request.identity!.ownerId));
+    secured.get('/v1/tokens', async (request) => {
+      const balance = await transaction(db, (tx) => tokenBalance(tx, request.identity!.ownerId));
+      return tokenWalletSchema.parse({
+        ...balance,
+        enabled: config.generationTokensEnabled ?? false,
+        billing: {
+          available: billing.config.enabled,
+          productId: TOKEN_SUBSCRIPTION_PRODUCT_ID,
+          monthlyTokens: PAID_MONTHLY_TOKENS,
+          priceUsd: TOKEN_SUBSCRIPTION_PRICE_USD,
+        },
+      });
+    });
+    secured.post('/v1/billing/apple/transactions', async (request) => {
+      const body = appleTokenPurchaseSchema.parse(request.body);
+      const result = await billing.purchase(request.identity!.ownerId, body.signedTransaction);
+      return appleTokenPurchaseResponseSchema.parse({
+        transactionId: result.transactionId,
+        balance: await transaction(db, (tx) => tokenBalance(tx, request.identity!.ownerId)),
+      });
+    });
     secured.patch('/v1/profile', (request) =>
       profile.update(request.identity!.ownerId, request.body),
     );
@@ -237,20 +311,32 @@ export async function buildApp(options: {
       return community.shareInsights(request.identity!.ownerId, id, userId, request.query);
     });
     secured.get('/v1/me', async (request) => (await sync.snapshot(request.identity!.ownerId)).user);
-    secured.get('/v1/snapshot', (request) => sync.snapshot(request.identity!.ownerId));
-    secured.get('/v1/sync/snapshot', (request) => sync.snapshot(request.identity!.ownerId));
+    secured.get('/v1/snapshot', async (request) =>
+      legacySnapshot(await sync.snapshot(request.identity!.ownerId)),
+    );
+    secured.get('/v1/sync/snapshot', async (request) =>
+      legacySnapshot(await sync.snapshot(request.identity!.ownerId)),
+    );
+    secured.get('/v2/sync/snapshot', (request) => sync.snapshot(request.identity!.ownerId));
     secured.post('/v1/sync/push', (request) =>
+      sync.push(request.identity!.ownerId, legacyPushRequestSchema.parse(request.body).operations),
+    );
+    secured.post('/v2/sync/push', (request) =>
       sync.push(request.identity!.ownerId, pushRequestSchema.parse(request.body).operations),
     );
-    secured.get('/v1/sync/pull', (request) => {
-      const q = z
-        .object({
-          cursor: revisionSchema.default('0'),
-          until: revisionSchema.optional(),
-          limit: z.coerce.number().int().min(1).max(100).default(30),
-        })
-        .strict()
-        .parse(request.query);
+    const pullQuerySchema = z
+      .object({
+        cursor: revisionSchema.default('0'),
+        until: revisionSchema.optional(),
+        limit: z.coerce.number().int().min(1).max(100).default(30),
+      })
+      .strict();
+    secured.get('/v1/sync/pull', async (request) => {
+      const q = pullQuerySchema.parse(request.query);
+      return legacyPull(await sync.pull(request.identity!.ownerId, q.cursor, q.until, q.limit));
+    });
+    secured.get('/v2/sync/pull', (request) => {
+      const q = pullQuerySchema.parse(request.query);
       return sync.pull(request.identity!.ownerId, q.cursor, q.until, q.limit);
     });
     secured.get('/v1/decks', async (request) => ({
@@ -269,7 +355,7 @@ export async function buildApp(options: {
       ['/v1/cards/commands', 'card'],
     ] as const)
       secured.post(path, async (request) => {
-        const op = syncOperationSchema.parse(request.body);
+        const op = legacySyncOperationSchema.parse(request.body);
         if (!op.type.startsWith(kind + '.'))
           throw new DomainError('invalid_operation', 'Command type does not match the route.');
         return sync.push(request.identity!.ownerId, [op]);
@@ -294,7 +380,8 @@ export async function buildApp(options: {
           activeDecks
             .filter(
               (d) =>
-                !d.isSilenced || Boolean(d.silencedUntil && Date.parse(d.silencedUntil) <= now),
+                scheduledReviewEnabled(s.reviewSettings, d.id) &&
+                (!d.isSilenced || Boolean(d.silencedUntil && Date.parse(d.silencedUntil) <= now)),
             )
             .map((d) => d.id),
         );
@@ -342,6 +429,12 @@ export async function buildApp(options: {
       request.log.info(generationLog(job), 'Generation status checked');
       return job;
     });
+    secured.delete('/v1/generations/by-operation/:operationId', (request) =>
+      generation.cancelByOperation(
+        request.identity!.ownerId,
+        z.object({ operationId: z.uuid().toLowerCase() }).parse(request.params).operationId,
+      ),
+    );
     secured.delete('/v1/generations/:id', (request) =>
       generation.cancel(
         request.identity!.ownerId,
@@ -353,6 +446,13 @@ export async function buildApp(options: {
         request.identity!.ownerId,
         z.object({ id: z.uuid().toLowerCase() }).parse(request.params).id,
         generationAcceptSchema.parse(request.body),
+      ),
+    );
+    secured.post('/v1/generations/:id/accept-answer', (request) =>
+      generation.acceptAnswer(
+        request.identity!.ownerId,
+        z.object({ id: z.uuid().toLowerCase() }).parse(request.params).id,
+        generationAnswerAcceptSchema.parse(request.body),
       ),
     );
     secured.post('/v1/imports', (request) =>

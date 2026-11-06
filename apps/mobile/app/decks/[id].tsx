@@ -7,6 +7,8 @@ import DeckForm from '../../src/deck-form';
 import { DeckArtwork } from '../../src/brand-patterns';
 import DeckSharing from '../../src/deck-sharing';
 import DeckMarketplace from '../../src/deck-marketplace';
+import { DeckCategoryPicker } from '../../src/review-settings-ui';
+import { scheduledReviewEnabled } from '@recollect/contracts';
 import {
   Back,
   Button,
@@ -122,7 +124,11 @@ export default function DeckDetail() {
         </Pressable>
       }
       subtitle={
-        cards.length + ' cards · ' + (activeDeck(deck) ? due.length + ' due' : 'Reviews paused')
+        cards.length +
+        ' cards · ' +
+        (activeDeck(deck) && scheduledReviewEnabled(data.reviewSettings, deck.id)
+          ? due.length + ' due'
+          : 'Reviews paused')
       }
       footer={
         <View style={s.row}>
@@ -135,6 +141,7 @@ export default function DeckDetail() {
         </View>
       }
     >
+      <DeckCategoryPicker key={deck.id} deckId={deck.id} />
       {settingsOpen && (
         <Panel style={{ padding: 18 }}>
           {editing ? (

@@ -6,6 +6,8 @@ import { activeDeck, dueCards } from '../../src/repository';
 import { Button, Empty, Field, Panel, Screen, colors, s, Text } from '../../src/ui';
 import { DeckArtwork } from '../../src/brand-patterns';
 import { MarketplaceEntry } from '../../src/marketplace-ui';
+import { CategoryReviewRows } from '../../src/review-settings-ui';
+import { categoryForDeck, scheduledReviewEnabled } from '@recollect/contracts';
 
 export default function Decks() {
   const { data } = useStore();
@@ -24,6 +26,13 @@ export default function Decks() {
       action={<Button title="+ New deck" size="compact" onPress={create} />}
     >
       <MarketplaceEntry />
+      <CategoryReviewRows compact />
+      <Button
+        title="Categories & review rules →"
+        variant="secondary"
+        size="compact"
+        onPress={() => router.push('/categories')}
+      />
       <Field
         label="Search decks"
         placeholder="Name or subject"
@@ -48,7 +57,8 @@ export default function Decks() {
         {decks.map((deck) => {
           const count = data.cards.filter((card) => card.deckId === deck.id).length;
           const dueCount = due.filter((card) => card.deckId === deck.id).length;
-          const paused = !activeDeck(deck);
+          const paused = !activeDeck(deck) || !scheduledReviewEnabled(data.reviewSettings, deck.id);
+          const category = categoryForDeck(data.reviewSettings, deck.id);
           return (
             <Pressable
               key={deck.id}
@@ -68,6 +78,9 @@ export default function Decks() {
                   />
                   <View style={{ flex: 1, gap: 5 }}>
                     <Text style={[s.sectionTitle, { fontSize: 18 }]}>{deck.name}</Text>
+                    {!!category && (
+                      <Text style={[s.caption, { color: colors.accent }]}>{category.name}</Text>
+                    )}
                     {!!deck.description && (
                       <Text numberOfLines={2} style={s.caption}>
                         {deck.description}

@@ -31,6 +31,7 @@ export default function CardEditor() {
   const [tags, setTags] = useState(existing?.tags.join(', ') ?? '');
   const [busy, setBusy] = useState(false);
   const [answerPending, setAnswerPending] = useState(false);
+  const [answerAccepting, setAnswerAccepting] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [aiGenerated, setAiGenerated] = useState(existing?.aiGenerated ?? false);
@@ -181,7 +182,7 @@ export default function CardEditor() {
         multiline
         maxLength={20000}
         inputRef={questionRef}
-        editable={!busy}
+        editable={!busy && !answerAccepting}
         onChangeText={(value) => {
           setFront(value);
           setSavedNotice(null);
@@ -193,7 +194,7 @@ export default function CardEditor() {
         value={back}
         multiline
         maxLength={30000}
-        editable={!busy}
+        editable={!busy && !answerAccepting}
         onChangeText={setBack}
       />
       <AnswerGenerator
@@ -201,22 +202,26 @@ export default function CardEditor() {
         deckId={parentId!}
         question={front}
         onPendingChange={setAnswerPending}
+        onAcceptingChange={setAnswerAccepting}
         onRestoreQuestion={setFront}
-        onUse={(answer) => {
-          const apply = () => {
-            setBack(answer);
-            setAiGenerated(true);
-          };
+        confirmUse={(answer) => {
           if (back.trim() && back !== answer)
-            Alert.alert(
-              'Replace your answer?',
-              'Your current answer will be replaced with this draft. You can edit it before saving.',
-              [
-                { text: 'Keep mine', style: 'cancel' },
-                { text: 'Use draft', onPress: apply },
-              ],
+            return new Promise<boolean>((resolve) =>
+              Alert.alert(
+                'Replace your answer?',
+                'Your current answer will be replaced with this draft. You can edit it before saving.',
+                [
+                  { text: 'Keep mine', style: 'cancel', onPress: () => resolve(false) },
+                  { text: 'Use draft', onPress: () => resolve(true) },
+                ],
+                { cancelable: true, onDismiss: () => resolve(false) },
+              ),
             );
-          else apply();
+          return Promise.resolve(true);
+        }}
+        onUse={(answer) => {
+          setBack(answer);
+          setAiGenerated(true);
         }}
       />
       <Panel style={{ padding: 18 }}>

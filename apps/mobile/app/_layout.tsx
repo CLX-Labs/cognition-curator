@@ -11,6 +11,7 @@ import { AppUpdateProvider, UpdateNotice } from '../src/app-updates';
 import { TypographyContext } from '../src/brand';
 import { ProfileProvider } from '../src/profile';
 import { AccountDeletionRecoveryScreen } from '../src/account-deletion';
+import TokenPurchaseObserver from '../src/token-purchase-observer';
 import manropeRegular from '../assets/fonts/Manrope-Regular.ttf';
 import manropeSemibold from '../assets/fonts/Manrope-SemiBold.ttf';
 import manropeBold from '../assets/fonts/Manrope-Bold.ttf';
@@ -83,6 +84,7 @@ export default function RootLayout() {
         <StoreProvider>
           <ProfileProvider>
             <AppUpdateProvider>
+              <TokenPurchaseObserver />
               <StatusBar style="dark" />
               <View style={{ flex: 1 }}>
                 {fontsLoaded || fontError ? (

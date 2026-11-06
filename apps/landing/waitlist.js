@@ -43,7 +43,7 @@
       saved = true;
       form.reset();
       fields.hidden = true;
-      status.textContent = 'You’re on the list. We’ll email you when Recollect is available.';
+      status.textContent = 'You’re on the list. Look out for new decks and Recollect updates.';
       status.focus({ preventScroll: true });
     } catch {
       fields.disabled = false;

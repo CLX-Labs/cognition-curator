@@ -10,7 +10,7 @@ function setup(location = { protocol: 'https:', hostname: 'recollect.netlify.app
     email: 'alex+beta@example.com',
     interest: 'languages',
     source: 'landing-page',
-    consent: 'recollect-availability-updates',
+    consent: 'recollect-product-updates',
     website: '',
   });
   const attributes = new Map<string, string>();
@@ -92,7 +92,7 @@ describe('landing waitlist', () => {
     await first;
     expect(page.form.reset).toHaveBeenCalledOnce();
     expect(page.fields.hidden).toBe(true);
-    expect(page.status.textContent).toContain('You’re on the list');
+    expect(page.status.textContent).toBe('You’re on the list. Look out for new decks and Recollect updates.');
     expect(page.attributes.has('aria-busy')).toBe(false);
     await page.submit();
     expect(page.fetch).toHaveBeenCalledTimes(1);
@@ -110,7 +110,7 @@ describe('landing waitlist', () => {
     await page.submit();
     expect(page.fetch).toHaveBeenCalledTimes(2);
     expect(page.fetch.mock.calls[1]![1].body).toBe(page.fetch.mock.calls[0]![1].body);
-    expect(page.status.textContent).toContain('You’re on the list');
+    expect(page.status.textContent).toBe('You’re on the list. Look out for new decks and Recollect updates.');
   });
 
   it('handles network errors without reporting a signup', async () => {

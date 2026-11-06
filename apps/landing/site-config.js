@@ -1,6 +1,6 @@
-// Public links only. A verified App Store or public TestFlight URL can be added here.
+// Public download destination, verified against Apple’s live listing on November 5, 2026.
 window.RECOLLECT_SITE = Object.freeze({
-  downloadUrl: null,
+  downloadUrl: 'https://apps.apple.com/app/id6749138102',
   publisherName: 'Collect Software',
   supportEmail: 'collectsoftwarev2@gmail.com',
 });

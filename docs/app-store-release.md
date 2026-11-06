@@ -1,6 +1,6 @@
-# Recollect App Store release draft
+# Recollect App Store release notes
 
-This is a preparation document, not proof that an app has been approved, submitted, or released. Preserve the existing App Store artwork and icon. Check current App Store Connect metadata before replacing any assets.
+Recollect AI version **7.0.0** was verified publicly available on the App Store on **November 5, 2026**. The public listing supports iPhone and iPad and requires iOS/iPadOS 18.4 or later. Preserve the existing App Store artwork and icon. Historical preparation notes below describe the status at the time they were recorded; they are not the current release status.
 
 ## Known identifiers and public pages
 
@@ -12,16 +12,17 @@ This is a preparation document, not proof that an app has been approved, submitt
 - Privacy URL: `https://recollect-ai.netlify.app/privacy/`.
 - Community guidelines URL: `https://recollect-ai.netlify.app/community-guidelines/`.
 - Friend invitations: `https://recollect-ai.netlify.app/friends?invite=…`.
-- Download destination is intentionally `null` in `apps/landing/site-config.js` until a public App Store or TestFlight URL is verified.
+- Public App Store download URL: `https://apps.apple.com/app/id6749138102` (region-neutral).
+- Verified US listing: `https://apps.apple.com/us/app/recollect-ai/id6749138102`.
+- `apps/landing/site-config.js` and static website download links use the region-neutral App Store URL. The website now presents downloading as the primary action and retains optional interest tracking for new decks and product updates.
 
-## Submission preparation status — October 28, 2026
+## Historical submission preparation status — October 28, 2026
 
-- App Store Connect currently has an iOS version **7.0.0** in **Prepare for Submission**, with product copy, review notes, and the owner-provided private review contact saved. This is a draft, not a submitted or approved release.
-- The latest completed store/TestFlight binary is **6.0.0 (7)**, EAS build `b65e3fd7-a51f-479f-93ef-f6e3b8c53d38`, built on October 24 from `bad082c46725bc8f2993b2adaaf7c34ffb5b296c`. Its embedded bundle predates the current review improvements.
-- Current main is `1c1812c43a31df4e58385a0b8a6e5c6ea9483d01`, delivered as OTA **6.7.0** for native version **6.0.0**. An installed OTA does not change the embedded bundle in the binary selected for App Review.
-- A fresh **7.0.0** native release is planned. The first cloud attempt exhausted the account's free iOS build allowance; it did not deliver a new binary. The release pipeline must complete its build and upload before that build can be selected for review. Match the processed candidate to the draft version; do not select the older binary by accident.
-- Capture actual current-app iPhone and iPad screenshots at accepted device resolutions. The screenshot upload, App Privacy declarations, and required App Review contact fields are still pending.
-- Submission has not been confirmed. Record the selected build and App Store Connect submission status only after those actions succeed.
+- On October 28, App Store Connect had an iOS version **7.0.0** in **Prepare for Submission**, with product copy, review notes, and the owner-provided private review contact saved.
+- The latest completed store/TestFlight binary at that time was **6.0.0 (7)**, EAS build `b65e3fd7-a51f-479f-93ef-f6e3b8c53d38`, built on October 24 from `bad082c46725bc8f2993b2adaaf7c34ffb5b296c`. Its embedded bundle predated the review improvements.
+- Main at that time was `1c1812c43a31df4e58385a0b8a6e5c6ea9483d01`, delivered as OTA **6.7.0** for native version **6.0.0**. An installed OTA does not change the embedded bundle in the binary selected for App Review.
+- A fresh **7.0.0** native release was planned. The first cloud attempt exhausted the account's free iOS build allowance; it did not deliver a new binary.
+- Native screenshots, App Privacy declarations, required App Review fields, and submission still needed verification on October 28. These historical pending items are superseded by the verified public 7.0.0 listing above; no private build number or submission timestamp was inferred from that public listing.
 
 The simulator EAS profile retains its development-client behavior. The local Xcode 16.3 toolchain cannot compile Expo SDK 57, which requires Xcode 26.4 or newer. The manual `recollect-ios-simulator.yml` workflow builds with EAS `--local` on a GitHub-hosted macOS 26 runner using Xcode 26.4.1, then uploads the verified simulator app as a short-lived artifact for native screenshot capture. It does not use an EAS cloud build slot.
 
@@ -29,9 +30,9 @@ Native releases also use EAS `--local` on that runner, with the existing managed
 
 Both native workflows prefetch the installed React Native version's official debug and release dependency archives with bounded retries and SHA-256 verification before CocoaPods runs. The workspace pins React and native peer packages to Expo SDK 57-compatible versions to avoid conflicting auto-installed copies. Local build failures expose only capped, filtered technical errors; raw output and credential material are not published.
 
-## Remaining release verification
+## Operational verification
 
-The latest verified public website deployment is Netlify `6ae10686a6d66236429082f9`, published October 27, 2026 from the editorial website changes merged in `9eb469b`. Netlify lists `recollect-support` and `recollect-waitlist` as active forms with detection enabled. No support message was submitted as a test. This document is not part of the published static directory.
+The public website deployment last recorded before the launch-copy update was Netlify `6ae10686a6d66236429082f9`, published October 27, 2026 from the editorial website changes merged in `9eb469b`. Netlify lists `recollect-support` and `recollect-waitlist` as active forms with detection enabled. No support message was submitted as a test. This document is not part of the published static directory.
 
 - Confirm receipt when an actual support message is submitted. A native POST fallback and success page are provided; form detection alone does not prove delivery to a person's inbox.
 - Verify deletion in the production service: confirm Apple revocation credentials and processing configuration, test fresh Apple confirmation, distinguish accepted/pending from completed, and inspect a real request’s final status. A request must stay pending until Apple revocation and owned-data erasure complete.

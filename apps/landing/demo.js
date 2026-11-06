@@ -357,31 +357,31 @@
         throw new Error('Use an official public Apple download URL.');
       }
       const beta = url.hostname === 'testflight.apple.com';
-      const label = beta ? 'Join the iPhone beta' : 'Get Recollect for iPhone';
+      const label = beta ? 'Join the iPhone beta' : 'Download on the App Store';
       document.querySelectorAll('[data-download-link]').forEach((link) => {
         link.href = url.href;
         link.textContent = `${label} ↗`;
       });
       document.querySelectorAll('[data-availability]').forEach((item) => {
-        item.textContent = beta ? 'In beta for iPhone' : 'Made for iPhone';
+        item.textContent = beta ? 'In beta for iPhone' : 'Now on the App Store';
       });
       const note = document.querySelector('[data-download-note]');
       if (note)
         note.textContent = beta
           ? 'Available in TestFlight for iPhone.'
-          : 'Available on the App Store for iPhone.';
+          : 'Available for iPhone and iPad. Requires iOS 18.4 or later.';
       const downloadFaq = document.getElementById('download-faq');
       if (downloadFaq)
         downloadFaq.textContent = beta
           ? 'Recollect is available to test on iPhone through TestFlight. Use “Join the iPhone beta” to check whether places are available.'
-          : 'Recollect is available on the App Store for iPhone. Choose “Get Recollect for iPhone” to download it.';
+          : 'Yes. Recollect is available on the App Store for iPhone and iPad. Download it and start with a deck that catches your eye.';
       const availabilityDescription = document.getElementById('availability-description');
       if (availabilityDescription)
         availabilityDescription.textContent = beta
           ? 'Try Recollect on iPhone through TestFlight, or join the waitlist for availability updates.'
-          : 'Get Recollect for iPhone, or join the waitlist for availability updates.';
+          : 'Pick your first deck. Follow a curiosity. Recollect is ready when you are.';
     } catch {
-      // Keep the preview links when a public download URL has not been configured.
+      // Keep the verified App Store links in the HTML when configuration is unavailable.
     }
   }
 })();

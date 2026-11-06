@@ -101,12 +101,16 @@ function setup(
   );
   const controls = ['unsure', 'known'].map((confidence) => new Element({ confidence }));
   const downloadLinks = [new Element(), new Element()];
+  downloadLinks.forEach((link) => {
+    link.href = 'https://apps.apple.com/app/id6749138102';
+    link.textContent = 'Download on the App Store ↗';
+  });
   const availability = [new Element()];
   const downloadNote = new Element();
-  availability[0]!.textContent = 'Existing availability label.';
-  downloadNote.textContent = 'Existing download note.';
-  el('download-faq').textContent = 'Existing FAQ copy.';
-  el('availability-description').textContent = 'Existing availability description.';
+  availability[0]!.textContent = 'Now on the App Store';
+  downloadNote.textContent = 'Available for iPhone and iPad. Requires iOS 18.4 or later.';
+  el('download-faq').textContent = 'Yes. Recollect is available on the App Store for iPhone and iPad. Download it and start with a deck that catches your eye.';
+  el('availability-description').textContent = 'Pick your first deck. Follow a curiosity. Recollect is ready when you are.';
   const selectors: Record<string, Element[]> = {
     '[data-deck]': deckButtons,
     '[data-demo-deck]': tiles,
@@ -374,11 +378,11 @@ describe('landing public download configuration', () => {
     },
     {
       url: 'https://apps.apple.com/us/app/recollect/id123456',
-      label: 'Get Recollect for iPhone ↗',
-      note: 'Available on the App Store for iPhone.',
-      availability: 'Made for iPhone',
-      faq: 'Recollect is available on the App Store for iPhone. Choose “Get Recollect for iPhone” to download it.',
-      description: 'Get Recollect for iPhone, or join the waitlist for availability updates.',
+      label: 'Download on the App Store ↗',
+      note: 'Available for iPhone and iPad. Requires iOS 18.4 or later.',
+      availability: 'Now on the App Store',
+      faq: 'Yes. Recollect is available on the App Store for iPhone and iPad. Download it and start with a deck that catches your eye.',
+      description: 'Pick your first deck. Follow a curiosity. Recollect is ready when you are.',
     },
   ])(
     'uses an official public Apple link: $url',
@@ -407,14 +411,14 @@ describe('landing public download configuration', () => {
     'https://someone:secret@apps.apple.com/app',
     'https://testflight.apple.com:444/join/Example',
     'javascript:alert(1)',
-  ])('keeps the preview link for unsafe or missing configuration: %s', (downloadUrl) => {
+  ])('keeps the static App Store link for unsafe or missing configuration: %s', (downloadUrl) => {
     const page = setup({ downloadUrl });
-    expect(page.downloadLinks.every((link) => link.href === '#get-recollect')).toBe(true);
-    expect(page.downloadNote.textContent).toBe('Existing download note.');
-    expect(page.availability[0]!.textContent).toBe('Existing availability label.');
-    expect(page.el('download-faq').textContent).toBe('Existing FAQ copy.');
+    expect(page.downloadLinks.every((link) => link.href === 'https://apps.apple.com/app/id6749138102' && link.textContent === 'Download on the App Store ↗')).toBe(true);
+    expect(page.downloadNote.textContent).toBe('Available for iPhone and iPad. Requires iOS 18.4 or later.');
+    expect(page.availability[0]!.textContent).toBe('Now on the App Store');
+    expect(page.el('download-faq').textContent).toBe('Yes. Recollect is available on the App Store for iPhone and iPad. Download it and start with a deck that catches your eye.');
     expect(page.el('availability-description').textContent).toBe(
-      'Existing availability description.',
+      'Pick your first deck. Follow a curiosity. Recollect is ready when you are.',
     );
     expect(page.el('demo-answer').hidden).toBe(true);
   });

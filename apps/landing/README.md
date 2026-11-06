@@ -21,7 +21,7 @@ python3 -m http.server 4178 --bind 127.0.0.1 --directory apps/landing
 
 Project: `recollect-ai` in the Collect Software team, ID `97e0b691-ea61-4f19-a2ce-28ca29ecb524`. Public URL: <https://recollect-ai.netlify.app/>. Dashboard: <https://app.netlify.com/projects/recollect-ai>.
 
-Upload this directory through Netlify's manual deploy interface, or use the root `netlify.toml` when connecting the repository. No build command or framework is required. The deploy contains only these public website files.
+Publish through CI/CD: merge reviewed website changes to `main` and let the connected Netlify Git deployment publish `apps/landing`, using the root `netlify.toml`. No build command or framework is required. Verify the resulting production deployment and public App Store links. Never deploy from a local CLI or upload files in the dashboard; repair the Git integration if automatic deployment is unavailable. Mobile releases likewise use the automated release workflows, with no manual App Store Connect submission.
 
 Recollect AI version **7.0.0** was verified publicly available on the App Store on November 5, 2026. The primary calls to action download the app; “Try a card” opens the working card preview. The app supports iPhone and iPad and requires iOS/iPadOS 18.4 or later.
 

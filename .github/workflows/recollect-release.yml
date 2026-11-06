@@ -3,6 +3,14 @@ name: Recollect main and TestFlight
 on:
   push:
     branches: [main]
+    # Website, documentation, and release-configuration changes deploy without a mobile release.
+    paths-ignore:
+      - 'apps/landing/**'
+      - 'tests/landing-*.test.ts'
+      - 'docs/**'
+      - 'netlify.toml'
+      - 'AGENTS.md'
+      - '.github/workflows/recollect-release.yml'
   workflow_dispatch:
     inputs:
       release_type:

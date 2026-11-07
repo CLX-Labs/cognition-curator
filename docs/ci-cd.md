@@ -14,14 +14,40 @@ Set `NODE_ENV=production`, `PORT=8080`, `APPLE_BUNDLE_ID`, a strong
 `ACCESS_TOKEN_SECRET`, and `ANTHROPIC_MODEL` on that service. It uses the existing
 database and Anthropic key. No Railway token or GitHub deployment job is needed.
 
-`.github/workflows/recollect-release.yml` handles only the app: main push → checks
-→ version stamp → Expo OTA or native TestFlight release → tag and notifications.
+`.github/workflows/recollect-release.yml` checks each main push for mobile changes.
+Main checks still run for backend-only pushes. App planning, version stamps,
+Expo delivery, release tags and release notifications run only when the push
+changes the app or its shared runtime/build dependencies.
 It does not deploy Railway services, poll their status, check API health, or require
 Railway tokens/service IDs. App release runs are serialized.
 
-## Branch names choose the release
+## Mobile changes and branch names choose the release
 
-Merge a pull request into `main` using one of these source branch names:
+The scope job compares the exact push's `before` and head commits with local Git
+and full history. It includes both sides of deletions/renames and does not rely
+on a workflow path filter's limited file list. An invalid or unavailable comparison
+fails the scope check and prevents app publication, while ordinary checks still run.
+
+Mobile source, assets, local native modules, plugins, app/build configuration and
+shared mobile workspaces count as app changes. The current shared workspaces are
+`packages/contracts` and `packages/scheduler`; the check follows the app's workspace
+dependency graph. Backend code in `apps/api`, `apps/worker`, `packages/db` and
+`packages/ai`, benchmarks, tests, documentation, website files and release
+orchestration changes skip app publication.
+
+Root package changes are checked semantically: adding a benchmark script does not
+release the app, while dependency settings, install/build hooks or build-tool
+configuration can. The npm lockfile comparison follows dependencies reachable
+from mobile, including nested installs and workspace links. A backend-only lock
+update skips release when the mobile dependency tree stays the same.
+
+A backend-only merge still deploys through Railway's existing main connection.
+It creates no app version or release tag and sends no app-release notification.
+It therefore leaves the next mobile version number available for an actual app
+change. Website deployment remains through its existing CI/CD connection.
+
+For changes that require an app release, merge a pull request into `main` using
+one of these source branch names:
 
 | Source branch | Delivery | Version example |
 | --- | --- | --- |
@@ -30,8 +56,10 @@ Merge a pull request into `main` using one of these source branch names:
 
 The workflow resolves the merged PR from the exact main commit through GitHub's
 API, including squash/rebase merges; commit messages and deleted branch refs are
-not needed. Direct pushes and other branch prefixes stop with an actionable error.
-For these, manually dispatch on main with `release_type=ota` or `native`.
+not needed. Direct pushes containing mobile changes and other branch prefixes
+stop with an actionable error. For these, explicitly dispatch on main with
+`release_type=ota` or `native`. An explicit workflow dispatch bypasses the change
+filter so a release can be retried or intentionally rebuilt without another app edit.
 
 The version starts from `2.0.0`. After successful delivery, CI creates an annotated
 `recollect/v<version>` Git tag on that main commit. Its JSON records the release
@@ -203,13 +231,14 @@ does not undo SQLite/PostgreSQL migrations or restore records.
 ## Validation
 
 ```sh
-node --test scripts/test-release-pipeline.mjs scripts/test-release-delivery.mjs scripts/test-release-metadata.mjs scripts/test-release-policy.mjs scripts/test-release-notifications.mjs
+node --test scripts/test-mobile-release-scope.mjs scripts/test-release-pipeline.mjs scripts/test-release-delivery.mjs scripts/test-release-metadata.mjs scripts/test-release-policy.mjs scripts/test-release-notifications.mjs
 npm run typecheck
 cd apps/mobile
 npm exec --yes --package=node@24 --package=eas-cli@24.12.1 -- eas workflow:validate .eas/workflows/testflight-release.yml --non-interactive
 ```
 
-References: [EAS Build from GitHub/other CI](https://docs.expo.dev/build/building-on-ci/),
+References: [GitHub job dependencies and conditions](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idneeds),
+[EAS Build from GitHub/other CI](https://docs.expo.dev/build/building-on-ci/),
 [EAS Submit from CI](https://docs.expo.dev/submit/ios/),
 [EAS Updates](https://docs.expo.dev/eas-update/how-it-works/).
 

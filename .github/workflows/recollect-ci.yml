@@ -62,6 +62,7 @@ jobs:
       - run: node --test scripts/test-prepare-ios-dependencies.mjs
       - run: node --test scripts/test-release-metadata.mjs
       - run: node --test scripts/test-release-policy.mjs
+      - run: node --test scripts/test-mobile-release-scope.mjs
       - run: node --test scripts/test-release-notifications.mjs
       - run: node --test scripts/test-start-backend.mjs
       - run: node --test scripts/test-setup-backend.mjs

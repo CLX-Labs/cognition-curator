@@ -8,6 +8,38 @@ import {
   transaction,
   type Database,
 } from '@recollect/db';
+import { resolveWorkerConfig, type WorkerConfig } from './config.js';
+
+type GenerationOutcome = 'completed' | 'ignored' | 'retry' | 'failed';
+type AttemptIdentity = {
+  component: 'generation-worker';
+  jobId: string;
+  attempt: number;
+  cardCount: number;
+  queueWaitMs: number;
+};
+export type GenerationAttemptEvent = AttemptIdentity &
+  (
+    | { event: 'attempt-started' }
+    | {
+        event: 'attempt-finished';
+        outcome: GenerationOutcome;
+        providerMs: number;
+        persistMs: number;
+        totalMs: number;
+        errorCode: string | null;
+      }
+  );
+export type GenerationObserver = (event: GenerationAttemptEvent) => void;
+export type WorkerOptions = Partial<WorkerConfig> & { observer?: GenerationObserver };
+
+function observe(observer: GenerationObserver | undefined, event: GenerationAttemptEvent) {
+  try {
+    observer?.(event);
+  } catch {
+    // Telemetry cannot turn committed results into retries or trigger more inference.
+  }
+}
 
 type ClaimedJob = {
   id: string;
@@ -15,6 +47,7 @@ type ClaimedJob = {
   card_count: number;
   attempt: number;
   fence: string;
+  queue_wait_ms: number;
 };
 async function releaseFailedGenerationToken(db: Database, jobId: string): Promise<void> {
   // Worker claims lock the job first. Release in a separate transaction to preserve the
@@ -40,7 +73,9 @@ export async function runGeneration(
   db: Database,
   provider: GenerationProvider,
   jobId: string,
-): Promise<'completed' | 'ignored' | 'retry' | 'failed'> {
+  observer?: GenerationObserver,
+): Promise<GenerationOutcome> {
+  const started = performance.now();
   const claimed = await transaction(db, async (tx) => {
     const row = (
       await tx.query<{
@@ -69,7 +104,7 @@ export async function runGeneration(
     }
     return (
       await tx.query<ClaimedJob>(
-        "UPDATE recollect.generation_jobs SET status='running',attempt=attempt+1,fence=$2,lease_until=now()+interval '120 seconds',updated_at=now() WHERE id=$1 RETURNING id,prompt,card_count,attempt,fence",
+        "UPDATE recollect.generation_jobs SET status='running',attempt=attempt+1,fence=$2,lease_until=now()+interval '120 seconds',updated_at=now() WHERE id=$1 RETURNING id,prompt,card_count,attempt,fence,GREATEST(0,EXTRACT(EPOCH FROM (clock_timestamp()-available_at))*1000)::double precision AS queue_wait_ms",
         [jobId, randomUUID()],
       )
     ).rows[0]!;
@@ -78,35 +113,80 @@ export async function runGeneration(
     await releaseFailedGenerationToken(db, jobId);
     return 'ignored';
   }
+  const identity: AttemptIdentity = {
+    component: 'generation-worker',
+    jobId,
+    attempt: claimed.attempt,
+    cardCount: claimed.card_count,
+    // Use database timestamps so queue eligibility and the claim share one clock.
+    queueWaitMs: Math.round(claimed.queue_wait_ms),
+  };
+  observe(observer, { ...identity, event: 'attempt-started' });
+  let providerMs = 0,
+    persistMs = 0;
+  const persist = async <T>(write: () => Promise<T>): Promise<T> => {
+    const persistStarted = performance.now();
+    try {
+      return await write();
+    } finally {
+      persistMs += Math.round(performance.now() - persistStarted);
+    }
+  };
+  const finish = (outcome: GenerationOutcome, errorCode: string | null): GenerationOutcome => {
+    observe(observer, {
+      ...identity,
+      event: 'attempt-finished',
+      outcome,
+      providerMs,
+      persistMs,
+      totalMs: Math.round(performance.now() - started),
+      errorCode,
+    });
+    return outcome;
+  };
   try {
-    const result = await provider.generate({ prompt: claimed.prompt, count: claimed.card_count });
+    const result = await (async () => {
+      const providerStarted = performance.now();
+      try {
+        return await provider.generate({ prompt: claimed.prompt, count: claimed.card_count });
+      } finally {
+        providerMs = Math.round(performance.now() - providerStarted);
+      }
+    })();
     const candidates = result.cards.map((card) => ({ ...card, id: randomUUID() }));
     // Fencing makes retries/cancel safe even when a slow previous provider call eventually returns.
-    const saved = await db.query(
-      "UPDATE recollect.generation_jobs SET status='succeeded',candidates=$3,usage=$4,error=NULL,fence=NULL,lease_until=NULL,updated_at=now() WHERE id=$1 AND status='running' AND fence=$2 AND lease_until>now()",
-      [jobId, claimed.fence, JSON.stringify(candidates), result.usage],
+    const saved = await persist(() =>
+      db.query(
+        "UPDATE recollect.generation_jobs SET status='succeeded',candidates=$3,usage=$4,error=NULL,fence=NULL,lease_until=NULL,updated_at=now() WHERE id=$1 AND status='running' AND fence=$2 AND lease_until>now()",
+        [jobId, claimed.fence, JSON.stringify(candidates), result.usage],
+      ),
     );
-    return saved.rowCount ? 'completed' : 'ignored';
+    return finish(saved.rowCount ? 'completed' : 'ignored', null);
   } catch (error) {
     const retry = error instanceof ProviderError && error.retryable && claimed.attempt < 3;
     const code = error instanceof ProviderError ? error.code : 'generation_failed';
-    const saved = await db.query(
-      "UPDATE recollect.generation_jobs SET status=$3,error=$4,fence=NULL,lease_until=NULL,dispatched_at=CASE WHEN $3='queued' THEN NULL ELSE dispatched_at END,available_at=CASE WHEN $3='queued' THEN now()+($5::int*interval '1 second') ELSE available_at END,updated_at=now() WHERE id=$1 AND status='running' AND fence=$2 AND lease_until>now()",
-      [
-        jobId,
-        claimed.fence,
-        retry ? 'queued' : 'failed',
-        {
-          code,
-          message: retry
-            ? 'Generation will retry within its attempt limit.'
-            : 'Generation failed. No fallback cards were created.',
-        },
-        10 * 2 ** claimed.attempt,
-      ],
+    const saved = await persist(() =>
+      db.query(
+        "UPDATE recollect.generation_jobs SET status=$3,error=$4,fence=NULL,lease_until=NULL,dispatched_at=CASE WHEN $3='queued' THEN NULL ELSE dispatched_at END,available_at=CASE WHEN $3='queued' THEN now()+($5::int*interval '1 second') ELSE available_at END,updated_at=now() WHERE id=$1 AND status='running' AND fence=$2 AND lease_until>now()",
+        [
+          jobId,
+          claimed.fence,
+          retry ? 'queued' : 'failed',
+          {
+            code,
+            message: retry
+              ? 'Generation will retry within its attempt limit.'
+              : 'Generation failed. No fallback cards were created.',
+          },
+          10 * 2 ** claimed.attempt,
+        ],
+      ),
     );
     if (saved.rowCount && !retry) await releaseFailedGenerationToken(db, jobId);
-    return saved.rowCount ? (retry ? 'retry' : 'failed') : 'ignored';
+    return finish(
+      saved.rowCount ? (retry ? 'retry' : 'failed') : 'ignored',
+      /^[a-z][a-z0-9_]{0,63}$/u.test(code) ? code : 'generation_failed',
+    );
   }
 }
 
@@ -141,7 +221,10 @@ export async function startWorker(
   db: Database,
   databaseUrl: string,
   provider: GenerationProvider,
+  options: WorkerOptions = {},
 ): Promise<() => Promise<void>> {
+  const { observer, ...overrides } = options;
+  const config = resolveWorkerConfig(overrides);
   const boss = new PgBoss({
     connectionString: databaseUrl,
     schema: 'recollect_boss',
@@ -156,19 +239,27 @@ export async function startWorker(
     await boss.stop();
     throw new Error('Queue not initialized. Run the explicit worker setup command first.');
   }
-  await boss.work<{ jobId: string }>('recollect-generation', { batchSize: 1 }, async (jobs) => {
-    for (const job of jobs) {
-      const outcome = await runGeneration(db, provider, job.data.jobId);
-      if (outcome === 'retry') throw new Error('Generation retry scheduled');
-    }
-  });
+  await boss.work<{ jobId: string }>(
+    'recollect-generation',
+    {
+      batchSize: 1,
+      localConcurrency: config.concurrency,
+      pollingIntervalSeconds: config.pollingIntervalMs / 1000,
+    },
+    async (jobs) => {
+      for (const job of jobs) {
+        const outcome = await runGeneration(db, provider, job.data.jobId, observer);
+        if (outcome === 'retry') throw new Error('Generation retry scheduled');
+      }
+    },
+  );
   let stopped = false,
-    running: Promise<void> | null = null;
+    running: Promise<void> | null = null,
+    recovering: Promise<void> | null = null;
   const tick = (): Promise<void> => {
     if (stopped || running) return running ?? Promise.resolve();
     running = (async () => {
       try {
-        await recoverAbandonedJobs(db);
         await dispatchPending(db, async (jobId) => {
           const id = await boss.send('recollect-generation', { jobId });
           if (!id) throw new Error('Queue did not accept dispatch');
@@ -183,12 +274,30 @@ export async function startWorker(
     })();
     return running;
   };
+  const recover = (): Promise<void> => {
+    if (stopped || recovering) return recovering ?? Promise.resolve();
+    recovering = (async () => {
+      try {
+        await recoverAbandonedJobs(db);
+      } catch (error) {
+        process.stderr.write(
+          `Recovery failed: ${error instanceof Error ? error.name : 'unknown'}\n`,
+        );
+      } finally {
+        recovering = null;
+      }
+    })();
+    return recovering;
+  };
+  await recover();
   await tick();
-  const timer = setInterval(() => void tick(), 3000);
+  const timer = setInterval(() => void tick(), config.dispatchIntervalMs);
+  const recoveryTimer = setInterval(() => void recover(), config.recoveryIntervalMs);
   return async () => {
     stopped = true;
     clearInterval(timer);
-    await running;
+    clearInterval(recoveryTimer);
+    await Promise.all([running, recovering]);
     await boss.stop({ graceful: true, timeout: 100_000 });
   };
 }

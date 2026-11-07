@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 1,
+  "metadata": {
+    "startedAt": "2026-11-07T03:46:03.680Z",
+    "completedAt": "2026-11-07T03:47:55.693Z",
+    "commit": "8da51a79ce298c2abf9ac4305593f076e48e8949",
+    "trackedChanges": false,
+    "sourceHashes": {
+      "scripts/benchmark-generations.mjs": "469ed7f86dfb62351aa923cb056c0bf911806effaa4a3353426fd1d13e4e5ebb",
+      "apps/worker/src/worker.ts": "a826c387d4d263476bb29e5d052015366986bba0ed80c53512c2e3cfb73fb65e",
+      "packages/ai/src/index.ts": "4615fac1d130f85eaec95a3b8f230ae6724d2ea51843bd0ea5b448b7d94e7b72",
+      "apps/api/src/generations.ts": "009e1eea4b2a6a6c367235aea6830e00d2435e62d689e850ae9cd8141d99a153"
+    },
+    "node": "v24.22.2",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "mode": "provider",
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "scenarioSet": "generation-fixtures-v1",
+    "samplesPerScenario": 3,
+    "warmupPerScenario": 0,
+    "clientConcurrency": 1,
+    "fakeDelayMs": null,
+    "submissionGapMs": 0,
+    "timeoutMs": 120000,
+    "observeIntervalMs": null,
+    "database": null,
+    "scope": "provider adapter only; excludes API, queue and database"
+  },
+  "summary": {
+    "samples": 9,
+    "succeeded": 9,
+    "failed": 0,
+    "errorRate": 0,
+    "attempts": 9,
+    "inputTokens": 9618,
+    "outputTokens": 6996,
+    "metrics": {
+      "enqueueMs": {
+        "samples": 9,
+        "p50": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "queueWaitMs": {
+        "samples": 9,
+        "p50": 0.01,
+        "p95": 0.03,
+        "min": 0,
+        "max": 0.03,
+        "mean": 0.01
+      },
+      "providerMs": {
+        "samples": 9,
+        "p50": 12919.36,
+        "p95": 21948.04,
+        "min": 2939.42,
+        "max": 21948.04,
+        "mean": 12440.76
+      },
+      "completionObserveMs": {
+        "samples": 9,
+        "p50": 0,
+        "p95": 0.01,
+        "min": 0,
+        "max": 0.01,
+        "mean": 0
+      },
+      "totalMs": {
+        "samples": 9,
+        "p50": 12919.37,
+        "p95": 21948.04,
+        "min": 2939.42,
+        "max": 21948.04,
+        "mean": 12440.77
+      }
+    }
+  },
+  "scenarios": {
+    "answer": {
+      "samples": 3,
+      "succeeded": 3,
+      "failed": 0,
+      "errorRate": 0,
+      "attempts": 3,
+      "inputTokens": 3204,
+      "outputTokens": 498,
+      "metrics": {
+        "enqueueMs": {
+          "samples": 3,
+          "p50": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "queueWaitMs": {
+          "samples": 3,
+          "p50": 0,
+          "p95": 0.03,
+          "min": 0,
+          "max": 0.03,
+          "mean": 0.01
+        },
+        "providerMs": {
+          "samples": 3,
+          "p50": 3100.85,
+          "p95": 3166.01,
+          "min": 2939.42,
+          "max": 3166.01,
+          "mean": 3068.76
+        },
+        "completionObserveMs": {
+          "samples": 3,
+          "p50": 0,
+          "p95": 0.01,
+          "min": 0,
+          "max": 0.01,
+          "mean": 0
+        },
+        "totalMs": {
+          "samples": 3,
+          "p50": 3100.86,
+          "p95": 3166.05,
+          "min": 2939.42,
+          "max": 3166.05,
+          "mean": 3068.78
+        }
+      }
+    },
+    "cards5": {
+      "samples": 3,
+      "succeeded": 3,
+      "failed": 0,
+      "errorRate": 0,
+      "attempts": 3,
+      "inputTokens": 3204,
+      "outputTokens": 2442,
+      "metrics": {
+        "enqueueMs": {
+          "samples": 3,
+          "p50": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "queueWaitMs": {
+          "samples": 3,
+          "p50": 0,
+          "p95": 0.01,
+          "min": 0,
+          "max": 0.01,
+          "mean": 0
+        },
+        "providerMs": {
+          "samples": 3,
+          "p50": 12919.36,
+          "p95": 14064.97,
+          "min": 12369.08,
+          "max": 14064.97,
+          "mean": 13117.8
+        },
+        "completionObserveMs": {
+          "samples": 3,
+          "p50": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "totalMs": {
+          "samples": 3,
+          "p50": 12919.37,
+          "p95": 14064.97,
+          "min": 12369.09,
+          "max": 14064.97,
+          "mean": 13117.81
+        }
+      }
+    },
+    "cards10": {
+      "samples": 3,
+      "succeeded": 3,
+      "failed": 0,
+      "errorRate": 0,
+      "attempts": 3,
+      "inputTokens": 3210,
+      "outputTokens": 4056,
+      "metrics": {
+        "enqueueMs": {
+          "samples": 3,
+          "p50": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "queueWaitMs": {
+          "samples": 3,
+          "p50": 0.01,
+          "p95": 0.02,
+          "min": 0.01,
+          "max": 0.02,
+          "mean": 0.01
+        },
+        "providerMs": {
+          "samples": 3,
+          "p50": 21748.89,
+          "p95": 21948.04,
+          "min": 19710.26,
+          "max": 21948.04,
+          "mean": 21135.73
+        },
+        "completionObserveMs": {
+          "samples": 3,
+          "p50": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0,
+          "mean": 0
+        },
+        "totalMs": {
+          "samples": 3,
+          "p50": 21748.91,
+          "p95": 21948.04,
+          "min": 19710.26,
+          "max": 21948.04,
+          "mean": 21135.74
+        }
+      }
+    }
+  },
+  "warmupSummary": {
+    "samples": 0,
+    "succeeded": 0,
+    "failed": 0,
+    "errorRate": 0,
+    "attempts": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "metrics": {
+      "enqueueMs": {
+        "samples": 0,
+        "p50": null,
+        "p95": null,
+        "min": null,
+        "max": null,
+        "mean": null
+      },
+      "queueWaitMs": {
+        "samples": 0,
+        "p50": null,
+        "p95": null,
+        "min": null,
+        "max": null,
+        "mean": null
+      },
+      "providerMs": {
+        "samples": 0,
+        "p50": null,
+        "p95": null,
+        "min": null,
+        "max": null,
+        "mean": null
+      },
+      "completionObserveMs": {
+        "samples": 0,
+        "p50": null,
+        "p95": null,
+        "min": null,
+        "max": null,
+        "mean": null
+      },
+      "totalMs": {
+        "samples": 0,
+        "p50": null,
+        "p95": null,
+        "min": null,
+        "max": null,
+        "mean": null
+      }
+    }
+  },
+  "samples": [
+    {
+      "scenario": "answer",
+      "sample": 1,
+      "warmup": false,
+      "count": 1,
+      "mode": "answer",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 3166.01,
+      "inputTokens": 1068,
+      "outputTokens": 161,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0.03,
+      "completionObserveMs": 0.01,
+      "totalMs": 3166.05
+    },
+    {
+      "scenario": "answer",
+      "sample": 2,
+      "warmup": false,
+      "count": 1,
+      "mode": "answer",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 2939.42,
+      "inputTokens": 1068,
+      "outputTokens": 170,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0,
+      "completionObserveMs": 0,
+      "totalMs": 2939.42
+    },
+    {
+      "scenario": "answer",
+      "sample": 3,
+      "warmup": false,
+      "count": 1,
+      "mode": "answer",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 3100.85,
+      "inputTokens": 1068,
+      "outputTokens": 167,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0,
+      "completionObserveMs": 0,
+      "totalMs": 3100.86
+    },
+    {
+      "scenario": "cards10",
+      "sample": 1,
+      "warmup": false,
+      "count": 10,
+      "mode": "cards",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 19710.26,
+      "inputTokens": 1070,
+      "outputTokens": 1274,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0.01,
+      "completionObserveMs": 0,
+      "totalMs": 19710.26
+    },
+    {
+      "scenario": "cards10",
+      "sample": 2,
+      "warmup": false,
+      "count": 10,
+      "mode": "cards",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 21948.04,
+      "inputTokens": 1070,
+      "outputTokens": 1397,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0.01,
+      "completionObserveMs": 0,
+      "totalMs": 21948.04
+    },
+    {
+      "scenario": "cards10",
+      "sample": 3,
+      "warmup": false,
+      "count": 10,
+      "mode": "cards",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 21748.89,
+      "inputTokens": 1070,
+      "outputTokens": 1385,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0.02,
+      "completionObserveMs": 0,
+      "totalMs": 21748.91
+    },
+    {
+      "scenario": "cards5",
+      "sample": 1,
+      "warmup": false,
+      "count": 5,
+      "mode": "cards",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 14064.97,
+      "inputTokens": 1068,
+      "outputTokens": 878,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0,
+      "completionObserveMs": 0,
+      "totalMs": 14064.97
+    },
+    {
+      "scenario": "cards5",
+      "sample": 2,
+      "warmup": false,
+      "count": 5,
+      "mode": "cards",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 12919.36,
+      "inputTokens": 1068,
+      "outputTokens": 793,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0,
+      "completionObserveMs": 0,
+      "totalMs": 12919.37
+    },
+    {
+      "scenario": "cards5",
+      "sample": 3,
+      "warmup": false,
+      "count": 5,
+      "mode": "cards",
+      "status": "succeeded",
+      "attempts": 1,
+      "providerMs": 12369.08,
+      "inputTokens": 1068,
+      "outputTokens": 771,
+      "promptVersion": "flashcards-v2-concept-titles",
+      "enqueueMs": 0,
+      "queueWaitMs": 0.01,
+      "completionObserveMs": 0,
+      "totalMs": 12369.09
+    }
+  ]
+}

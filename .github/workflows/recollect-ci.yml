@@ -55,6 +55,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:benchmarks
       - run: node --test scripts/test-release-pipeline.mjs
       - run: node --test scripts/test-release-delivery.mjs
       - run: node --test scripts/test-local-ios-release.mjs

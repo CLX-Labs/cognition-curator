@@ -22,6 +22,8 @@
     "test:watch": "vitest",
     "check": "npm run typecheck && npm test",
     "test:embedded": "node scripts/run-embedded-tests.mjs",
+    "benchmark:generations": "node --import=tsx scripts/benchmark-generations.mjs",
+    "test:benchmarks": "node --test scripts/test-benchmark-generations.mjs",
     "setup": "node scripts/setup-local.mjs",
     "db:queue:setup": "npm run setup --workspace @recollect/worker"
   },

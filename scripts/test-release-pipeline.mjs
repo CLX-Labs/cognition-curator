@@ -27,6 +27,35 @@ test('rejects temporary or credential-bearing API origins in the app configurati
     assert.throws(() => validateConfig({ ...env, API_URL: url }), /stable HTTPS/);
 });
 
+test('main pushes always run checks while app planning, delivery and reporting require mobile changes', async () => {
+  const github = parse(
+    await readFile(new URL('../.github/workflows/recollect-release.yml', import.meta.url), 'utf8'),
+  );
+  assert.deepEqual(github.on.push, { branches: ['main'] });
+  assert.equal(github.on.workflow_dispatch.inputs.release_type.required, true);
+  const scope = github.jobs.scope;
+  assert.equal(scope.if, "github.ref == 'refs/heads/main'");
+  assert.equal(scope.outputs.release_required, '${{ steps.scope.outputs.release_required }}');
+  assert.equal(scope.steps.find((step) => step.uses === 'actions/checkout@v4').with['fetch-depth'], 0);
+  const scopeStep = scope.steps.find((step) => step.id === 'scope');
+  assert.equal(scopeStep.run, 'node scripts/mobile-release-scope.mjs');
+  assert.equal(scopeStep.env.GITHUB_EVENT_BEFORE, '${{ github.event.before }}');
+  assert.equal(scope.environment, undefined, 'Scope checks must not unlock app delivery credentials.');
+  assert.equal(github.jobs.checks.if, undefined, 'Backend-only main pushes still run CI checks.');
+  assert.equal(github.jobs.checks.needs, undefined, 'A scope-check failure must not hide test results.');
+  for (const name of ['plan', 'release', 'report']) {
+    assert.ok(github.jobs[name].needs.includes('scope'), `${name} must depend on the scope result`);
+    assert.match(github.jobs[name].if, /needs\.scope\.outputs\.release_required == 'true'/u,
+      `${name} must compare the string output explicitly; 'false' is a nonempty string`);
+  }
+  assert.match(github.jobs.report.if, /^always\(\)/u, 'Actual mobile release failures still need a report.');
+  assert.ok(github.jobs.release.needs.includes('checks'));
+  assert.ok(github.jobs.release.needs.includes('plan'));
+  const checks = parse(await readFile(new URL('../.github/workflows/recollect-ci.yml', import.meta.url), 'utf8'));
+  assert.ok(checks.jobs['types-and-tests'].steps.some((step) =>
+    step.run === 'node --test scripts/test-mobile-release-scope.mjs'));
+});
+
 test('GitHub delivers through direct EAS commands and records a version only after delivery succeeds', async () => {
   const github = parse(
     await readFile(new URL('../.github/workflows/recollect-release.yml', import.meta.url), 'utf8'),

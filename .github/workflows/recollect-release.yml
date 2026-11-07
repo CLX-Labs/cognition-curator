@@ -3,14 +3,6 @@ name: Recollect main and TestFlight
 on:
   push:
     branches: [main]
-    # Website, documentation, and release-configuration changes deploy without a mobile release.
-    paths-ignore:
-      - 'apps/landing/**'
-      - 'tests/landing-*.test.ts'
-      - 'docs/**'
-      - 'netlify.toml'
-      - 'AGENTS.md'
-      - '.github/workflows/recollect-release.yml'
   workflow_dispatch:
     inputs:
       release_type:
@@ -28,11 +20,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  scope:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release_required: ${{ steps.scope.outputs.release_required }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Check whether this push changes the mobile app
+        id: scope
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: node scripts/mobile-release-scope.mjs
+
   checks:
     uses: ./.github/workflows/recollect-ci.yml
 
   plan:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && needs.scope.outputs.release_required == 'true'
+    needs: [scope]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,8 +70,8 @@ jobs:
         run: node scripts/release-policy.mjs prepare
 
   release:
-    if: github.ref == 'refs/heads/main' && needs.plan.outputs.already_released != 'true'
-    needs: [checks, plan]
+    if: github.ref == 'refs/heads/main' && needs.scope.outputs.release_required == 'true' && needs.plan.outputs.already_released != 'true'
+    needs: [scope, checks, plan]
     permissions:
       contents: write
     runs-on: ${{ needs.plan.outputs.release_type == 'native' && 'macos-26' || 'ubuntu-latest' }}
@@ -133,8 +145,8 @@ jobs:
       delivery_result: ${{ steps.delivery.outcome }}
 
   report:
-    if: always() && github.ref == 'refs/heads/main' && needs.plan.outputs.already_released != 'true'
-    needs: [plan, checks, release]
+    if: always() && github.ref == 'refs/heads/main' && needs.scope.outputs.release_required == 'true' && needs.plan.outputs.already_released != 'true'
+    needs: [scope, plan, checks, release]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

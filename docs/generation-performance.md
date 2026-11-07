@@ -2,6 +2,8 @@
 
 Measure the existing worker before changing queue or provider behavior. The benchmark uses fixed synthetic answer, five-card and ten-card fixtures. It records no prompts, card contents, API keys, account IDs, job IDs or database URLs. It does not load `.env` and never reads `DATABASE_URL`.
 
+The first [saved baseline and comparison](benchmarks/generations/2026-11-07/README.md) includes controlled queue workloads and a small live Sonnet 4.6 sample.
+
 Use Node 24 and install the locked dependencies with `npm ci`. Run the CLI through the existing `tsx` loader:
 
 ```sh
@@ -32,6 +34,8 @@ Run the same commands with fresh databases and `after` output names after the op
 
 Every artifact includes the git commit, tracked-change flag, source hashes for the harness/worker/provider/API, runtime, model, fixture version, workload settings, individual measurements, per-scenario summaries, p50/p95, error rate, attempts and available input/output token counts. Output files are created with exclusive write and private permissions so a baseline cannot be accidentally overwritten. The harness exits nonzero for failed measured requests or failed warmups. Failed requests count toward error rate, while latency percentiles include successful requests only. Report error rate alongside percentiles; never call a faster failing workload an improvement.
 
+Worker setup/config hashes and resolved defaults are recorded when available. The benchmark passes no environment overrides to `startWorker`; production's explicit `readWorkerConfig(env)` overrides may differ. Source metadata is captured before the workload. The output path is reserved before any inference starts; an initialization failure can leave an empty private file, so use a new path after correcting the configuration.
+
 ### Timing definitions
 
 | Field | Measurement |
@@ -43,6 +47,8 @@ Every artifact includes the git commit, tracked-change flag, source hashes for t
 | `totalMs` | Request start through observed terminal status. |
 
 The measured queue path starts at the generation service rather than an HTTP connection. It excludes network latency, authentication, API rate limiting and mobile polling/rendering. Retry backoff contributes to total latency and queue waits after the first attempt; provider time sums all observed attempts. It therefore need not equal the sum of displayed stages when retries occur. The synthetic model reports zero inference tokens. Local PostgreSQL timings are a controlled comparison, not a claim about production latency under real traffic.
+
+The per-request deadline is an observation deadline, rather than guaranteed cancellation of database queries or an already-running provider call. Graceful worker shutdown can extend process wall time. Per-scenario throughput excludes initialization, warmups and shutdown, and includes any configured client submission gaps. Token counts include only usage actually returned; a timed-out or failed request may have unknown usage.
 
 With ten samples, nearest-rank p95 is the slowest sample. Use at least 20–50 measured requests per scenario for a more stable tail estimate; bounded sample counts allow up to 100 per scenario, 10 warmups and concurrency 10. Small first-pass runs are useful for finding multi-second polling delays or serialized bursts, with uncertainty clearly stated.
 

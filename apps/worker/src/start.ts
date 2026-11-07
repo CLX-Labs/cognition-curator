@@ -1,14 +1,19 @@
 import { createDatabase } from '@recollect/db';
 import { AnthropicProvider } from '@recollect/ai';
 import { startWorker } from './worker.js';
+import { readWorkerConfig } from './config.js';
 if (!process.env.DATABASE_URL)
   throw new Error('DATABASE_URL is required. Run explicit schema migrations before starting.');
+const workerConfig = readWorkerConfig();
 const db = createDatabase(process.env.DATABASE_URL);
 const provider = new AnthropicProvider(
   process.env.ANTHROPIC_API_KEY ?? '',
   process.env.ANTHROPIC_MODEL ?? '',
 );
-const stop = await startWorker(db, process.env.DATABASE_URL, provider);
+const stop = await startWorker(db, process.env.DATABASE_URL, provider, {
+  ...workerConfig,
+  observer: (event) => process.stdout.write(JSON.stringify(event) + '\n'),
+});
 process.stdout.write('Recollect generation worker ready.\n');
 let stopping = false;
 const shutdown = async () => {

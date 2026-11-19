@@ -60,6 +60,11 @@ for (const [name, bundle, entitlements] of [
   );
 }
 const appInfo = plist.parse(fs.readFileSync(path.join(ios, 'RecollectAI/Info.plist'), 'utf8'));
+assert.equal(
+  appInfo['com.posthog.posthog.CAPTURE_PUSH_NOTIFICATION_OPENED'],
+  false,
+  'PostHog must not install launch-time push-open capture before analytics consent.',
+);
 assert(
   appInfo.CFBundleURLTypes.some((entry) => entry.CFBundleURLSchemes.includes('cognitioncurator')),
 );

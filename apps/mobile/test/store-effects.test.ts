@@ -137,6 +137,11 @@ vi.mock('../src/app-updates', () => ({
   AppUpdateProvider: ({ children }: { children: React.ReactNode }) => children,
   UpdateNotice: () => null,
 }));
+// Analytics has its own consent and native lifecycle integration suites.
+vi.mock('../src/analytics', () => ({ AnalyticsObserver: () => null }));
+vi.mock('../src/analytics-consent', () => ({
+  AnalyticsConsentProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 vi.mock('../src/profile', () => ({
   ProfileProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

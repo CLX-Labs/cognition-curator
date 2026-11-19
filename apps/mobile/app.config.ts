@@ -30,7 +30,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     entitlements: {
       'com.apple.security.application-groups': ['group.collect.software.cognition-curator'],
     },
-    infoPlist: { ITSAppUsesNonExemptEncryption: false },
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+      'com.posthog.posthog.CAPTURE_PUSH_NOTIFICATION_OPENED': false,
+    },
   },
   android: { package: 'collect.software.cognitioncurator' },
   plugins: [
@@ -38,6 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-apple-authentication',
     'expo-secure-store',
     'expo-sqlite',
+    'expo-localization',
     [
       'expo-image-picker',
       {

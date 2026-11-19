@@ -6,7 +6,7 @@
     <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#f0eee6" />
     <title>Privacy policy — Recollect</title>
-    <meta name="description" content="How Recollect handles account information, learning content, AI requests, shared decks, and support messages." />
+    <meta name="description" content="How Recollect handles account information, learning content, optional app analytics and replay, AI requests, shared decks, and support messages." />
     <link rel="canonical" href="https://recollect-ai.netlify.app/privacy/" />
     <link rel="icon" type="image/png" href="/assets/app-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -23,7 +23,7 @@
     <main id="main" class="information-page wrap">
       <span class="eyebrow">YOUR INFORMATION</span>
       <h1>Privacy policy.</h1>
-      <p class="information-date">Last updated: November 5, 2026</p>
+      <p class="information-date">Last updated: November 19, 2026</p>
       <p class="information-lede">Recollect is a place for your learning, provided by Collect Software. This policy explains what the Recollect app and website handle, why, and what happens when you share.</p>
       <p>For questions about this policy or your information, use our <a href="/support/">support page</a> or email <a data-support-email href="mailto:collectsoftwarev2@gmail.com">collectsoftwarev2@gmail.com</a>.</p>
       <section aria-labelledby="information-title">
@@ -34,12 +34,20 @@
           <li><strong>Your connections, publications, and safety choices:</strong> friend invitations, accepted connections, shared and Marketplace deck snapshots, publication settings, download records, progress-sharing and practice-contribution permissions, blocked accounts, and reports you submit. Reports can include your description and a snapshot of an identified deck for private review.</li>
           <li><strong>Support and website forms:</strong> the email address and message you submit for support, or your email and optional learning interest when you sign up for new decks and product updates.</li>
           <li><strong>Service diagnostics:</strong> technical request and error information used to operate, secure, and troubleshoot the API, website, and app update delivery.</li>
+          <li><strong>Optional app analytics and replay:</strong> if you enable this choice, limited screen-usage events, technical app and device information, and masked session recordings associated with your internal Recollect account identifier.</li>
         </ul>
       </section>
       <section aria-labelledby="use-title">
         <h2 id="use-title">How information is used</h2>
         <p>We use this information to sign you in, save and synchronize your library, schedule reviews, show your learning history, generate drafts you request, provide sharing features, respond to support messages, and operate the service. New signups receive new-deck and product updates. Earlier availability-waitlist signups remain limited to the availability updates they requested.</p>
-        <p>The current mobile app does not include an advertising or product analytics SDK. Server and hosting diagnostics are used for service operation and troubleshooting.</p>
+        <p>Optional app analytics and masked session replay help us understand how screens are used and investigate usability problems. Server and hosting diagnostics are used separately for service operation and troubleshooting.</p>
+      </section>
+      <section aria-labelledby="analytics-title">
+        <h2 id="analytics-title">Optional app analytics and session replay</h2>
+        <p>App analytics and session replay are off until you choose to enable them in <strong>You → App analytics &amp; replay</strong>. This permission applies to your signed-in account on that device. You can keep using Recollect without enabling it, and you can turn it off in the same place.</p>
+        <p>When enabled, PostHog receives screen names without account, deck, card, or invitation details, technical app and device information, and masked session recordings. We use your internal Recollect account identifier to associate these records with your account; we do not send your name or email as analytics properties.</p>
+        <p>Replay is configured to mask text, typed input, and images, including learning content and profile photos. Replay stays off on sign-in, profile, token/purchase, and account-deletion or recovery screens. We do not collect automatic touch events, network request contents, console logs, or automatic error reports through this feature. Analytics events do not include your learning content, prompts, friend details, invite codes, Apple sign-in credentials, or purchase receipts.</p>
+        <p>Recording stops when you turn this choice off, sign out, change accounts, or start account deletion. Turning it off stops future collection; it does not automatically erase analytics or replay records already sent to PostHog. Contact <a href="/support/">support</a> for questions or requests about those records.</p>
       </section>
       <section aria-labelledby="ai-title">
         <h2 id="ai-title">When you ask AI for help</h2>
@@ -70,6 +78,7 @@
           <li><strong>Railway:</strong> application servers, background generation jobs, and the database used for synced accounts and content.</li>
           <li><strong>Anthropic:</strong> the prompts and context needed for AI requests you make.</li>
           <li><strong>Expo:</strong> app builds and over-the-air update delivery, including technical information needed to request compatible updates.</li>
+          <li><strong>PostHog:</strong> optional app analytics and masked session replay, when you enable them. The service receives the technical requests needed to deliver this feature. See <a href="https://posthog.com/privacy" rel="noopener noreferrer" referrerpolicy="no-referrer">PostHog’s privacy policy</a>.</li>
           <li><strong>Netlify:</strong> website hosting and the product-update and support forms you submit.</li>
           <li><strong>Google Fonts:</strong> fonts loaded by the public website. The font service receives the technical requests needed to deliver them.</li>
         </ul>
@@ -80,12 +89,14 @@
         <p>The app keeps a local library for offline use and sends account content to the server for synchronization. Signing out separates that library from other accounts; it does not delete the account or erase all local recovery information. Device exports and migration backups can contain learning history and should be kept private.</p>
         <p>Service records are kept to provide the account and synced library, reconcile changes, operate generation, and handle security or support needs. Removing a card from the active library does not by itself erase synchronization history, recovery archives, backups, or copies another person already accepted.</p>
         <p>You can edit your name and profile photo, remove the photo, control deck and progress sharing, and export your learning data from the app. For other privacy questions, contact <a href="/support/">Recollect support</a>. Hosting backups and diagnostics may remain outside the active account database; this policy does not state a fixed retention period for every provider backup or service log.</p>
+        <p>Your app analytics and replay choice is separate from AI sharing permission and Marketplace practice-contribution permission. Analytics and replay records are held separately by PostHog under the service’s configured retention and access settings. This policy does not promise a fixed retention period or immediate removal of those records.</p>
       </section>
       <section aria-labelledby="deletion-title">
         <h2 id="deletion-title">Deleting your account</h2>
         <p>In <strong>You → Delete account</strong>, you can export your library first, type <strong>DELETE</strong>, and confirm with a fresh Apple sign-in. When the server accepts the request, account access is disabled. The app distinguishes an accepted request that is still pending from completed permanent deletion. If the connection ends before confirmation, the app keeps a recovery record so you can check or retry the same request.</p>
         <p>After an accepted receipt, the app removes the current account’s local library, drafts, profile cache, and widget data from that device. Server erasure is processed separately and remains pending until the Apple sign-in connection is revoked and owned server records are removed. The app shows an estimated completion time only when one has been configured; otherwise it shows the pending status and any action needed.</p>
         <p>Server erasure removes owned account and learning data, Marketplace listings, sharing access, and associated community records. Other people keep independent deck copies they already downloaded or accepted. A minimal deletion record, including request references, status, and a hashed Apple sign-in identifier, is retained to recognize retries and prevent the erased account from being restored by an older sign-in.</p>
+        <p>Account deletion stops optional app analytics and replay on that device. The account-deletion process does not automatically erase records previously sent to PostHog. Contact <a href="/support/">support</a> to request help with those provider records.</p>
         <p>Exports you saved elsewhere and older native recovery files whose ownership has not been confirmed are separate from the current account’s local library. Contact <a href="/support/">support</a> for help with those files or a pending deletion, and include your request reference if one is shown.</p>
       </section>
       <section aria-labelledby="changes-title">

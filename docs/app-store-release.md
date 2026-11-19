@@ -38,6 +38,16 @@ Native releases also use EAS `--local` on that runner, with the existing managed
 
 Both native workflows prefetch the installed React Native version's official debug and release dependency archives with bounded retries and SHA-256 verification before CocoaPods runs. The workspace pins React and native peer packages to Expo SDK 57-compatible versions to avoid conflicting auto-installed copies. Local build failures expose only capped, filtered technical errors; raw output and credential material are not published.
 
+## Optional app analytics and session replay — November 19, 2026
+
+The iOS-only PostHog integration adds native dependencies and requires its first release from `feature/*` through the automated native build/TestFlight workflow. Do not deliver it as an OTA to a binary without those native modules. The release policy does not accept `codex/*` or `feat/*` as native release branches. Preserve the existing fingerprint compatibility checks, release version stamping, and CI/CD-only deployment rules.
+
+App analytics and masked session replay require explicit permission in **You → App analytics & replay** for the signed-in account on that device. No PostHog collection starts before permission. The internal account UUID identifies consenting sessions; names, emails, learning content, prompts, friend details, invite codes, sign-in credentials, and purchase proofs are excluded from analytics properties. Screen events use route templates without IDs or parameters. Text, inputs, images, and sensitive views are masked; touch autocapture, network/log capture, and automatic error capture are disabled. JavaScript analytics events disable GeoIP enrichment; native replay enrichment requires verification of project settings and captured metadata. Replay is also excluded on sign-in, profile, token/purchase, and account-deletion/recovery screens. Sign-out, account change, deletion activity, and withdrawal stop recording and reset the active analytics identity. Development collection is disabled by default.
+
+Before public release, complete the setup, installed-build replay inspection, consent/lifecycle checks, and App Privacy review in [the PostHog runbook](posthog.md). Confirm the public privacy policy is deployed with the matching feature disclosures before enabling collection. Verify the actual PostHog host, project access, and retention settings; no retention duration or processing region is established by the repository alone. The app stops collection during account deletion, but does not automatically erase previously ingested PostHog records. Provider privacy requests need an operator process.
+
+The native workflow uses EAS `preview` with the `testflight` profile/channel. Configure `EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN` and `EXPO_PUBLIC_POSTHOG_HOST` for that lane and its later compatible OTA releases; setting values only in EAS `production` will not configure this pipeline. These public client values are distinct from a PostHog personal API key, which must never be embedded in the app. A successful native upload proves delivery to Apple, not replay safety, App Privacy completion, review approval, or public availability.
+
 ## Operational verification
 
 The public website deployment last recorded before the launch-copy update was Netlify `6ae10686a6d66236429082f9`, published October 27, 2026 from the editorial website changes merged in `9eb469b`. Netlify lists `recollect-support` and `recollect-waitlist` as active forms with detection enabled. No support message was submitted as a test. This document is not part of the published static directory.
@@ -136,6 +146,8 @@ Suggested subjects: Today/library, a deck with concise cards and Add/Generate ac
 >
 > In You, AI sharing permission can be granted or revoked. Before a new generation or retry, the app checks permission for that account and device to send the question/topic and any included existing-card context to Anthropic. Previously sent requests cannot be recalled.
 >
+> App analytics and masked session replay are optional and off until enabled in You → App analytics & replay for that account and device. Turning the choice off stops further collection. These controls are separate from AI sharing and Marketplace practice-contribution permissions. Learning text, typed input, and images are masked in replay; analytics properties exclude names, emails, content, credentials, and purchase receipts.
+>
 > Account deletion is in You → Delete account. It offers an export first, asks the user to type DELETE, and requires fresh Sign in with Apple confirmation. The app displays whether the accepted deletion request is pending or complete and provides a recovery/status flow for connection interruptions. Local account data and widget content are cleared after acceptance; permanent server deletion waits for Apple revocation and owned-record erasure. Independent recipient deck copies and previously saved exports remain separate.
 >
 > Internet access is required for Apple sign-in, generation, synchronization, and sharing. Saved cards and reviews work offline. AI generation uses Anthropic through the Recollect API.
@@ -147,6 +159,8 @@ Provide the verified review contact name, phone, and email in the private App Re
 Do not select “Data Not Collected.” The account backend stores account identifiers, email/name, optional profile photo, learning content, review history, synchronization records, and community permissions. AI generation sends user-provided prompts and, where applicable, existing card questions to Anthropic. Netlify processes website form submissions; server and delivery systems handle diagnostics.
 
 Select App Store Connect data categories and purposes only after comparing the completed code and provider configuration against Apple’s definitions. Do not infer “tracking” solely from ordinary service diagnostics, and do not claim zero collection because the mobile dependency list has no advertising SDK.
+
+Include the optional PostHog path in that review before public release, even though collection requires permission. Inspect actual payloads and an installed-build replay for usage/product-interaction data, account identifiers, technical device/app metadata, and any diagnostics or other data the SDK sends. The internal account UUID makes these records account-linked; masking does not make them anonymous. Determine the appropriate categories, linkage, purposes, and tracking answers from the complete data flow and provider configuration. Verify the embedded SDK privacy manifests in the generated native app. Do not mark the App Privacy review complete based only on masking options or source-code tests.
 
 Official references:
 

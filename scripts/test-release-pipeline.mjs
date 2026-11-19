@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
-import { validateConfig } from './release-pipeline.mjs';
+import { validateConfig, validatePostHogConfig } from './release-pipeline.mjs';
 
 const env = {
   EXPO_TOKEN: 'test',
@@ -104,4 +104,36 @@ test('the optional legacy submission workflow still targets an exact existing bu
   assert.equal(submission.params.profile, 'testflight');
   assert.equal(submission.env.ASC_APP_ID, '${{ inputs.asc_app_id }}');
   assert.match(submission.hooks.after_checkout[0].run, /release-pipeline\.mjs configure-app/);
+});
+
+const posthogEnv = {
+  EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN: 'phc_test_project',
+  EXPO_PUBLIC_POSTHOG_HOST: 'https://us.i.posthog.com',
+  EXPO_PUBLIC_POSTHOG_ENABLE_DEV: 'false',
+};
+
+test('mobile releases require an explicit matching PostHog client configuration', () => {
+  assert.equal(validatePostHogConfig(posthogEnv), 'https://us.i.posthog.com');
+  for (const name of ['EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN', 'EXPO_PUBLIC_POSTHOG_HOST'])
+    assert.throws(() => validatePostHogConfig({ ...posthogEnv, [name]: '' }));
+  for (const token of ['phc_', 'personal-key', 'phc_a b', 'phc_a\nb'])
+    assert.throws(() => validatePostHogConfig({ ...posthogEnv, EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN: token }));
+  for (const host of ['http://us.i.posthog.com', 'https://user:secret@us.i.posthog.com',
+    'https://us.i.posthog.com/path', 'https://us.i.posthog.com?token=abc', 'https://us.i.posthog.com#hash'])
+    assert.throws(() => validatePostHogConfig({ ...posthogEnv, EXPO_PUBLIC_POSTHOG_HOST: host }));
+  assert.throws(() => validatePostHogConfig({ ...posthogEnv, EXPO_PUBLIC_POSTHOG_ENABLE_DEV: 'true' }));
+});
+
+test('native and OTA delivery share the verified PostHog configuration in EAS preview', async () => {
+  const github = parse(await readFile(new URL('../.github/workflows/recollect-release.yml', import.meta.url), 'utf8'));
+  const job = github.jobs.release;
+  for (const name of ['EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN', 'EXPO_PUBLIC_POSTHOG_HOST'])
+    assert.equal(job.env[name], '${{ vars.' + name + ' }}');
+  assert.equal(job.env.EXPO_PUBLIC_POSTHOG_ENABLE_DEV, 'false');
+  const validation = job.steps.findIndex(step => step.run?.includes('validate-posthog'));
+  const delivery = job.steps.findIndex(step => step.id === 'delivery');
+  assert.ok(validation > -1 && validation < delivery, 'Invalid project configuration must fail before delivery.');
+  const commands = job.steps.map(step => step.run ?? '').join('\n');
+  for (const name of ['EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN', 'EXPO_PUBLIC_POSTHOG_HOST', 'EXPO_PUBLIC_POSTHOG_ENABLE_DEV'])
+    assert.ok(commands.includes('eas env:set preview --name ' + name));
 });

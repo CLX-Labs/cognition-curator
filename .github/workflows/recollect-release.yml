@@ -89,6 +89,9 @@ jobs:
       LOCAL_NATIVE_BUILD: 'true'
       EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
       EXPO_PUBLIC_ENABLE_DEV_AUTH: 'false'
+      EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ vars.EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN }}
+      EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.EXPO_PUBLIC_POSTHOG_HOST }}
+      EXPO_PUBLIC_POSTHOG_ENABLE_DEV: 'false'
       SLACK_RELEASE_WEBHOOK: ${{ secrets.SLACK_RELEASE_WEBHOOK }}
     steps:
       - uses: actions/checkout@v4
@@ -124,16 +127,20 @@ jobs:
         continue-on-error: true
         run: node scripts/release-notifications.mjs start
       - run: node scripts/release-pipeline.mjs validate
+      - run: node scripts/release-pipeline.mjs validate-posthog
       - run: npm ci
       - name: Prepare verified iOS dependency archives
         if: needs.plan.outputs.release_type == 'native'
         run: node scripts/prepare-ios-dependencies.mjs --configuration all
       - run: npm install --global eas-cli@24.12.1
-      - name: Set the stable API address for the app
+      - name: Set stable API and analytics configuration for the app
         working-directory: apps/mobile
         run: |
           eas env:set preview --name EXPO_PUBLIC_API_URL --value "$API_URL" --visibility plaintext --scope project --non-interactive
           eas env:set preview --name EXPO_PUBLIC_ENABLE_DEV_AUTH --value false --visibility plaintext --scope project --non-interactive
+          eas env:set preview --name EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN --value "$EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN" --visibility plaintext --scope project --non-interactive
+          eas env:set preview --name EXPO_PUBLIC_POSTHOG_HOST --value "$EXPO_PUBLIC_POSTHOG_HOST" --visibility plaintext --scope project --non-interactive
+          eas env:set preview --name EXPO_PUBLIC_POSTHOG_ENABLE_DEV --value false --visibility plaintext --scope project --non-interactive
       - name: Release OTA or build and submit to TestFlight
         id: delivery
         env:

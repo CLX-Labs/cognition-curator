@@ -25,6 +25,7 @@ import PublicLinks from '../../src/public-links';
 import { AIPermissionPanel, useAIConsent } from '../../src/ai-consent-ui';
 import { AccountDeletionPanel } from '../../src/account-deletion';
 import TokenBalancePanel from '../../src/tokens-ui';
+import { AnalyticsConsentPanel } from '../../src/analytics-consent';
 
 type ImportWorkflow = {
   legacy: LegacyExport;
@@ -239,6 +240,7 @@ export default function ProfileScreen() {
       </Panel>
       <ReleasePanel />
       <AIPermissionPanel consent={aiConsent} settings />
+      <AnalyticsConsentPanel />
       <Panel>
         <View style={s.between}>
           <Text style={s.sectionTitle}>Your library</Text>
